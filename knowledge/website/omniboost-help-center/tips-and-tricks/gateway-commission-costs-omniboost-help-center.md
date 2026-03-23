@@ -1,0 +1,3 @@
+# Gateway commission costs
+
+Commission costs have to be paid when you receive payments via the gateway. Those payments are usually received via Stripe or Adyen. Stripe and Adyen deduct their commission costs from the total amount they have to pay you. For example when there are gateway payments for 100 Euro, you will receive 90 Euro because 10 Euro commission costs have been deducted. When you enable this option, we post the commission costs to the given ledger account code and post the 90 Euro to the suspense account for the gateway payments. This way you don't have to post the commission costs yourself and it becomes easier to reconcile the payments. Note, this is only possible for the gateway payments.

@@ -1,0 +1,3 @@
+# Suspense account
+
+A suspense account is a general ledger account in which amounts are temporarily recorded. The suspense accounts we use the most are the ones for the different payment methods. For example when a credit card payment is registered in the PMS system, we extract that payment and post is to the given suspense account (debit). Then when the payment is received via the bank in the accounting platform, the suspense account will be posted credit. This way the suspense account is reconciled and the information is processed correctly.

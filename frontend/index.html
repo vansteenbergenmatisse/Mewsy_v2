@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mewsy</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/geist-font/1.0.0/fonts/geist-sans/style.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<button id="chat-widget-button">
+    <span id="chat-unread-badge" style="display:none;"></span>
+    <svg viewBox="0 0 194.9 194.9" xmlns="http://www.w3.org/2000/svg" style="display:block; pointer-events:none; height: 40px; width: 40px;">
+        <style>.st0{fill:#3277A5;}.st1{fill:#FFFFFF;}.st2{fill:#EC6945;}.st3{fill:#F6A03C;}</style>
+        <g>
+            <path class="st0" d="M166.4,28.6c-38.1-38.1-99.8-38.1-137.9,0C5.3,51.8-3.8,83.9,1.4,114c6.4-3.2,14.4-1.7,19.2,4.1c0.2,0.2,0.3,0.4,0.4,0.6c2.5-0.8,5.1-1.2,7.5-1.2c11.9,0,21.7,9.2,22.7,20.8c2-0.6,4.1-0.9,6.2-0.9c5,0,9.7,1.8,13.5,4.8c6.7,3.1,11.4,9.9,11.4,17.8c0,3.4-0.9,6.5-2.3,9.3c4,3.1,6.6,8,6.6,13.5c0,4.2-1.5,8.1-4.1,11.1c29.6,4.5,60.9-4.6,83.7-27.4C204.4,128.3,204.4,66.6,166.4,28.6z"/>
+            <polygon class="st1" points="46.1,177.5 15.6,147.8 109,78 118,87"/>
+            <path class="st2" d="M113.6,81.9c11.8,11.8,14.5,28.8,7.3,40.8c4.6-1.7,8.8-4.3,12.4-7.9c13.9-13.9,13.4-36.8-1.1-51.3S94.8,48.5,81,62.4c-3.5,3.5-6.1,7.6-7.8,12C85.1,67.5,101.9,70.3,113.6,81.9z"/>
+            <path class="st2" d="M177.9,42.6c9-18.3,8.1-31.8,8.1-31.8S172.8,9,153.9,18c4.1,3.9,8.2,7.9,12.3,12.1C170.2,34.3,174.1,38.4,177.9,42.6z"/>
+            <path class="st3" d="M166.4,28.6c-3.9-3.9-8.1-7.4-12.5-10.6c-8.3,4.2-17.7,10.6-27.5,20.3C113,51.6,103.5,65.6,99.3,76.8c4,2.1,7.8,4.9,11.3,8.4c3.6,3.6,6.4,7.5,8.6,11.7c11.5-4.3,25.8-14.1,39.3-27.7c9.3-9.3,15.4-18.4,19.5-26.7C174.6,37.6,170.7,32.9,166.4,28.6z"/>
+            <path class="st2" d="M119.5,83.1C105.1,97.4,97.7,98,97.7,98s0.8-7.6,14.9-21.8c13.3-13.3,21.8-14.9,21.8-14.9S133.1,69.4,119.5,83.1z"/>
+            <circle class="st0" cx="152.2" cy="43.5" r="12.9"/>
+            <circle class="st1" cx="152.2" cy="43.5" r="9.2"/>
+            <path class="st1" d="M80.1,169.2c1.5-2.8,2.3-5.9,2.3-9.3c0-7.9-4.7-14.7-11.4-17.8c-3.8-3-8.4-4.7-13.5-4.8c-2.2,0-4.2,0.3-6.2,0.9c-1-11.6-10.8-20.8-22.7-20.8c-2.4,0-5,0.4-7.5,1.2c-0.2-0.2-0.3-0.4-0.4-0.6c-4.8-5.7-12.7-7.2-19.2-4.1c3.3,19.2,12.3,37.6,27.1,52.4c15.3,15.3,34.3,24.4,54.1,27.4c2.5-3,4-6.8,4-11.1C86.7,177.2,84.1,172.4,80.1,169.2z"/>
+        </g>
+    </svg>
+</button>
+
+<div id="chat-widget-container">
+
+    <div id="chat-widget-header">
+        <div class="header-left">
+            <span>Mewsy</span>
+        </div>
+        <div class="header-buttons">
+            <div id="lang-dropdown-wrapper">
+                <button id="lang-dropdown-btn" title="Select language">
+                    <span id="lang-flag-display">🌐</span>
+                </button>
+                <div id="lang-dropdown-menu"></div>
+            </div>
+            <button id="chat-widget-help" title="Help & Resources">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+            <button id="chat-widget-fullscreen" title="Toggle fullscreen">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <button id="chat-widget-close">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div id="chat-widget-body"></div>
+
+    <!-- Scroll-to-bottom pill — appears when user scrolls up -->
+    <button id="scroll-to-bottom" aria-label="Scroll to latest message">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <polyline points="19 12 12 19 5 12"/>
+        </svg>
+        <span>Latest</span>
+    </button>
+
+    <!-- Help panel -->
+    <div id="help-panel">
+        <div id="help-panel-header">
+            <button id="help-panel-back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12"/>
+                    <polyline points="12 19 5 12 12 5"/>
+                </svg>
+            </button>
+            <span>Help & Resources</span>
+        </div>
+        <div id="help-panel-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" placeholder="Search for help" id="help-search-input">
+        </div>
+        <div id="help-panel-content">
+            <div class="help-item" data-topic="integration">
+                <div class="help-item-icon">🔗</div>
+                <div class="help-item-text">
+                    <div class="help-item-title">Mews x OmniBoost Integration</div>
+                    <div class="help-item-subtitle">Overview of how the integration works</div>
+                </div>
+                <svg class="help-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="help-item" data-topic="onboarding">
+                <div class="help-item-icon">🚀</div>
+                <div class="help-item-text">
+                    <div class="help-item-title">Onboarding & Initial Setup</div>
+                    <div class="help-item-subtitle">Get connected step by step</div>
+                </div>
+                <svg class="help-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="help-item" data-topic="mapping">
+                <div class="help-item-icon">🗂️</div>
+                <div class="help-item-text">
+                    <div class="help-item-title">Mapping Configuration</div>
+                    <div class="help-item-subtitle">Set up revenue categories and accounts</div>
+                </div>
+                <svg class="help-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="help-item" data-topic="revenue-push">
+                <div class="help-item-icon">📊</div>
+                <div class="help-item-text">
+                    <div class="help-item-title">Full Revenue Push</div>
+                    <div class="help-item-subtitle">Automate your daily revenue reports</div>
+                </div>
+                <svg class="help-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="help-item" data-topic="troubleshooting">
+                <div class="help-item-icon">🔧</div>
+                <div class="help-item-text">
+                    <div class="help-item-title">Troubleshooting</div>
+                    <div class="help-item-subtitle">Common issues and how to fix them</div>
+                </div>
+                <svg class="help-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="help-item" data-topic="contact">
+                <div class="help-item-icon">📧</div>
+                <div class="help-item-text">
+                    <div class="help-item-title">Contact Support</div>
+                    <div class="help-item-subtitle">Reach the OmniBoost support team</div>
+                </div>
+                <svg class="help-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help detail panel -->
+    <div id="help-detail-panel">
+        <div id="help-detail-header">
+            <button id="help-detail-back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12"/>
+                    <polyline points="12 19 5 12 12 5"/>
+                </svg>
+            </button>
+            <span id="help-detail-title">Help Topic</span>
+        </div>
+        <div id="help-detail-content"></div>
+    </div>
+
+    <div id="timeout-warning">Mewsy is taking longer than expected. Please try again.</div>
+    <div id="empty-warning">Please enter a message first.</div>
+
+    <div id="chat-widget-footer">
+        <input id="chat-widget-input" type="text" placeholder="Type your message...">
+        <button id="chat-widget-send">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+        </button>
+    </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "confluence": {
+    "syncIntervalMinutes": 600000,
+    "folders": []
+  },
+  "website": {
+    "syncIntervalMinutes": 14400000,
+    "pages": [
+      {
+        "id": "mews-help-center",
+        "label": "Mews Help Center",
+        "type": "multi",
+        "url": "https://help.omniboost.io/en/collections/11529720-mews"
+      },
+      {
+        "id": "omniboost-help-center/tips-and-tricks",
+        "label": "Omniboost Help Center — Tips & Tricks",
+        "type": "multi",
+        "url": "https://help.omniboost.io/en/collections/1832436-tips-trics"
+      },
+      {
+        "id": "omniboost-help-center/accounting-information",
+        "label": "Omniboost Help Center — Accounting Information",
+        "type": "multi",
+        "url": "https://help.omniboost.io/en/collections/1960805-omniboost-accounting-information"
+      }
+    ]
+  }
+}

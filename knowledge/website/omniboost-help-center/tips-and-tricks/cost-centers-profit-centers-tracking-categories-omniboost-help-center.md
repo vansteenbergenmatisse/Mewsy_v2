@@ -1,0 +1,5 @@
+# Cost centers / Profit centers / Tracking categories
+
+The main use of a cost center, profit center or tracking category is to track actual expenses or profits for comparison to budgets or earlier periods. For example in a hotel with a restaurant there are different revenue categories. In your P&L all the revenue is shown in total. But you might want to see how a specific department is functioning financially. In that case you can create these centers to keep track of your department results. Examples of departments are: hotel, restaurant, bar, spa etc.
+
+Another possibility to use cost centers is for example when you have a chain of 3 properties. All 3 properties have a different PMS account, but all the financial information is posted in one account in the accounting platform. To be able to differentiate between the different hotels, you can create different cost centers or tracking categories so you can see the results from the individual hotels in the administration, as well as the total of the chain.

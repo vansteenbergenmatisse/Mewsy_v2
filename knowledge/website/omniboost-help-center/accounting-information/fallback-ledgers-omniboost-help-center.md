@@ -1,0 +1,5 @@
+# Fallback ledgers
+
+Occasionally it happens that in the PMS system, revenue or payment entries are not correctly configured (i.e. fully mapped). This results in a situation where those revenue or payment entries cannot be connected to the right ledger account code and therefore these entries cannot be synchronized with your accounting platform.
+
+For such cases, we use fallback ledger accounts for revenue and for payments to still be able to generate a valid journal entry. We advise you to create at least two different ledgers for the fallbacks (one for revenue and one for payments) so the information is at least posted in the correct category in the accounting platform. When you see amounts coming through on the fallback ledgers you need to check the ledgers you have assigned / entered in the integration.
