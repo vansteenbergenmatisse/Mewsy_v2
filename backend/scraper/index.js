@@ -9,7 +9,8 @@
  * (and re-read on every sync run so changes take effect without restart).
  */
 
-import 'dotenv/config';
+import dotenv from 'dotenv';
+if (process.env.NODE_ENV !== 'production') dotenv.config();
 import cron from 'node-cron';
 import { readFileSync, existsSync, unlinkSync, readdirSync, rmdirSync } from 'fs';
 import { join } from 'path';
@@ -82,7 +83,6 @@ function deleteFileAndPruneEmptyDirs(filePath) {
  */
 function runDeletionCheck(sources) {
   const scraperEntries = getScraperEntries();
-  const manifestPaths = new Set(scraperEntries.map(e => e.path));
 
   // Build sets of currently configured source IDs
   const websiteSingleIds = new Set(

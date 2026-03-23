@@ -13,11 +13,16 @@
  *   PORT — which port the server listens on (default: 3000)
  */
 
-import 'dotenv/config'; // Reads the .env file and loads it into process.env
+// Only load .env file in local development — in production (Railway) all
+// environment variables are injected directly and must not be overridden.
+import dotenv from 'dotenv';
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
-// Railway injects PORT automatically; fall back to 3005 for local dev
+// Railway injects PORT at runtime — fall back to 3005 for local dev
 export const PORT = parseInt(process.env.PORT || '3005', 10);
 
 // Warn at startup if the API key is missing — the server will start but
