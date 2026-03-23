@@ -25,11 +25,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
-// Restrict CORS to localhost only — tighten this to your production domain when deploying
+// Allow localhost in dev and the production domain set via ALLOWED_ORIGIN env var
+const allowedOrigin = process.env.ALLOWED_ORIGIN || null;
 app.use(cors({
   origin: (origin, cb) => {
-    const allowed = !origin || /^https?:\/\/localhost(:\d+)?$/.test(origin);
-    cb(allowed ? null : new Error('CORS blocked'), allowed);
+    const isLocalhost = !origin || /^https?:\/\/localhost(:\d+)?$/.test(origin);
+    const isProduction = allowedOrigin && origin === allowedOrigin;
+    cb(isLocalhost || isProduction ? null : new Error('CORS blocked'), isLocalhost || isProduction);
   },
 }));
 
