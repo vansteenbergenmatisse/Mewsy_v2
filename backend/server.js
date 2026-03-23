@@ -118,7 +118,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 // Start listening immediately so health checks pass, then validate the
 // knowledge manifest in the background. The manifest check is a sanity check
 // only — it does not gate incoming traffic.
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`[server] ${new Date().toISOString()} listening on http://localhost:${PORT}`);
   loadAllDocuments().catch((err) => {
     console.error(`[server] manifest check error: ${err.message}`);

@@ -1,6 +1,6 @@
 // ── Config ────────────────────────────────────────────────────────────────────
-// Update BACKEND_URL when deploying to production.
-const BACKEND_URL = "http://localhost:3001/webhook/chat";
+// Relative URL — works on localhost and any production domain without changes.
+const BACKEND_URL = "/webhook/chat";
 
 // ── Session ID ────────────────────────────────────────────────────────────────
 const getSessionId = () => {

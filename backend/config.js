@@ -17,8 +17,8 @@ import 'dotenv/config'; // Reads the .env file and loads it into process.env
 
 export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
-// Default to port 3000 if PORT is not set in .env
-export const PORT = parseInt(process.env.PORT || '3000', 10);
+// Railway injects PORT automatically; fall back to 3005 for local dev
+export const PORT = parseInt(process.env.PORT || '3005', 10);
 
 // Warn at startup if the API key is missing — the server will start but
 // every chat request will fail without it
