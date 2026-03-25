@@ -13,14 +13,10 @@ const getSessionId = () => {
 };
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
-const widgetBtn    = document.getElementById("chat-widget-button");
 const widget       = document.getElementById("chat-widget-container");
-const closeBtn     = document.getElementById("chat-widget-close");
-const input        = document.getElementById("chat-widget-input");
-const sendBtn      = document.getElementById("chat-widget-send");
+const input        = document.getElementById("chat-input");
+const sendBtn      = document.getElementById("send-button");
 const body         = document.getElementById("chat-widget-body");
-const fullscreenBtn = document.getElementById("chat-widget-fullscreen");
-const helpBtn      = document.getElementById("chat-widget-help");
 const helpPanel    = document.getElementById("help-panel");
 const helpBackBtn  = document.getElementById("help-panel-back");
 const helpDetailPanel   = document.getElementById("help-detail-panel");
@@ -29,7 +25,43 @@ const helpDetailTitle   = document.getElementById("help-detail-title");
 const helpDetailContent = document.getElementById("help-detail-content");
 const unreadBadge  = document.getElementById("chat-unread-badge");
 const helpSearchInput = document.getElementById("help-search-input");
-const scrollToBottomBtn = document.getElementById("scroll-to-bottom");
+const scrollToBottomBtn = document.getElementById("scroll-to-bottom-header");
+
+// ── Widget state ───────────────────────────────────────────────────────────────
+// 'hidden' | 'quarter' | 'full'
+let widgetMode = 'hidden';
+
+function isMobile() { return window.innerWidth <= 768; }
+
+function setWidgetMode(mode) {
+    widgetMode = mode;
+    const container = document.getElementById('chat-widget-container');
+    const bubble    = document.getElementById('mewsy-bubble');
+    container.dataset.mode = mode;
+    bubble.style.display = mode === 'hidden' ? 'flex' : 'none';
+
+    // Dark mode only applies in full mode
+    if (mode !== 'full') {
+        container.classList.remove('dark');
+    }
+
+    // Show/hide expand-compress buttons
+    const btnExpand   = document.getElementById('btn-expand');
+    const btnCompress = document.getElementById('btn-compress');
+    const btnDarkMode = document.getElementById('btn-dark-mode');
+    if (btnExpand)   btnExpand.style.display   = mode === 'quarter' ? 'flex' : 'none';
+    if (btnCompress) btnCompress.style.display = mode === 'full'    ? 'flex' : 'none';
+    if (btnDarkMode) btnDarkMode.style.display = mode === 'full'    ? 'flex' : 'none';
+
+    if (mode !== 'hidden' && !hasShownWelcome) {
+        showWelcomeMessages();
+    }
+}
+
+// Resize listener: if quarter mode on mobile, switch to full
+window.addEventListener('resize', () => {
+    if (widgetMode === 'quarter' && isMobile()) setWidgetMode('full');
+});
 
 // ── Unread badge ──────────────────────────────────────────────────────────────
 let unreadCount = 0;
@@ -52,15 +84,19 @@ function autoScroll() {
     // scroll event will fire and hide the pill automatically
 }
 
-// Show/hide the scroll-to-bottom pill based on scroll position
+// Show/hide the scroll-to-latest header button based on scroll position
 body.addEventListener("scroll", () => {
     const distFromBottom = body.scrollHeight - body.scrollTop - body.clientHeight;
-    scrollToBottomBtn.classList.toggle("show", distFromBottom > 80);
+    if (scrollToBottomBtn) {
+        scrollToBottomBtn.style.display = distFromBottom > 80 ? 'inline-flex' : 'none';
+    }
 }, { passive: true });
 
-scrollToBottomBtn.addEventListener("click", () => {
-    body.scrollTo({ top: body.scrollHeight, behavior: "smooth" });
-});
+if (scrollToBottomBtn) {
+    scrollToBottomBtn.addEventListener("click", () => {
+        body.scrollTo({ top: body.scrollHeight, behavior: "smooth" });
+    });
+}
 
 // ── Accordion for long step lists ─────────────────────────────────────────────
 /*
@@ -516,7 +552,7 @@ function addBotMessage(text, messageId) {
                 container.appendChild(createBotAvatar());
             } else {
                 const spacer = document.createElement("div");
-                spacer.style.cssText = "width:44px; flex-shrink:0;";
+                spacer.style.cssText = "width:28px; flex-shrink:0;";
                 container.appendChild(spacer);
             }
 
@@ -533,7 +569,7 @@ function addBotMessage(text, messageId) {
             body.appendChild(container);
             autoScroll();
 
-            if (widget.style.display === "none") {
+            if (widgetMode === 'hidden') {
                 unreadCount++;
                 updateUnreadUI();
             }
@@ -923,7 +959,7 @@ sendBtn.onclick = () => {
     if (!msg) return; // guard: never send empty
     addUserMessage(msg);
     input.value = "";
-    input.placeholder = "Type your message...";
+    input.placeholder = "Reply…";
     updateSendBtnState();
     setRequestInProgress(true);
     showThinking();
@@ -974,8 +1010,8 @@ function buildLangDropdown() {
 function updateFlagDisplay() {
     const entry = LANGUAGES.find(l => l.code === selectedLanguage);
     langFlagDisplay.textContent = entry ? entry.flag : "🌐";
-    // Keep the scroll-to-bottom pill label in sync with the selected language
-    const labelEl = scrollToBottomBtn.querySelector("span");
+    // Keep the scroll-to-latest header button label in sync with the selected language
+    const labelEl = document.getElementById("scroll-latest-label");
     if (labelEl) labelEl.textContent = uiStr("scrollLatest");
 }
 
@@ -989,35 +1025,34 @@ buildLangDropdown();
 updateFlagDisplay();
 
 // ── Widget open/close ─────────────────────────────────────────────────────────
-widgetBtn.onclick = () => {
-    widget.style.display = "flex";
-    widget.classList.add("opening");
-    widgetBtn.style.display = "none";
+document.getElementById('mewsy-bubble').addEventListener('click', () => {
     unreadCount = 0;
     updateUnreadUI();
-    showWelcomeMessages();
-};
+    setWidgetMode(isMobile() ? 'full' : 'quarter');
+});
 
-closeBtn.onclick = () => {
-    widget.style.display = "none";
-    widgetBtn.style.display = "flex";
-};
+document.getElementById('btn-close').addEventListener('click', () => setWidgetMode('hidden'));
+document.getElementById('btn-expand').addEventListener('click', () => setWidgetMode('full'));
+document.getElementById('btn-compress').addEventListener('click', () => setWidgetMode('quarter'));
 
-// ── Fullscreen ────────────────────────────────────────────────────────────────
-let fullscreen = false;
-fullscreenBtn.onclick = () => {
-    fullscreen = !fullscreen;
-    if (fullscreen) {
-        widget.classList.add("fullscreen");
-        fullscreenBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none"><path d="M5 9h4V5M19 9h-4V5M5 15h4v4M19 15h-4v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    } else {
-        widget.classList.remove("fullscreen");
-        fullscreenBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    }
-};
+// ── Dark mode toggle ──────────────────────────────────────────────────────────
+const darkBtn = document.getElementById('btn-dark-mode');
+let isDark = localStorage.getItem('mewsy-theme') === 'dark';
+function applyTheme() {
+    document.getElementById('chat-widget-container').classList.toggle('dark', isDark);
+}
+if (darkBtn) {
+    darkBtn.addEventListener('click', () => {
+        isDark = !isDark;
+        localStorage.setItem('mewsy-theme', isDark ? 'dark' : 'light');
+        applyTheme();
+    });
+}
+applyTheme();
 
 // ── Help panel ────────────────────────────────────────────────────────────────
-helpBtn.onclick = () => helpPanel.classList.add("show");
+const helpBtnEl = document.getElementById('help-btn');
+if (helpBtnEl) helpBtnEl.onclick = () => helpPanel.classList.add("show");
 helpBackBtn.onclick = () => {
     helpPanel.classList.remove("show");
     helpSearchInput.value = "";
