@@ -138,12 +138,12 @@ In case you would prefer a different end-of-day (for example 02:00AM, which mean
 In case the integration uses a Closed accounting flow, you should run the Accounting report as follows:
 
 - Mode: Closed
-- Date range: 12:00AM to 12:00AM
+- Date filter based on closing date
 
 In case the integration uses a Consumed accounting flow, you should run the Accounting report as follows:
 
 - Mode: Consumed
-- Date range: 12:00AM to 12:00AM
+- Date filter based on consumption date
 
 **Please note that the content of the export file columns and the columns itself are compatible with Abacus data import requirements.**
 

@@ -29,9 +29,11 @@ export async function scrapeStatic(page, forceSync, existingHash) {
 
   let rawMarkdown;
   try {
+    const body = { url, formats: ['markdown'], onlyMainContent: true };
+    if (page.waitFor) body.waitFor = page.waitFor;
     const res = await axios.post(
       `${FIRECRAWL_BASE}/v1/scrape`,
-      { url, formats: ['markdown'] },
+      body,
       {
         headers: {
           Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`,

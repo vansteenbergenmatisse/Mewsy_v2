@@ -124,7 +124,7 @@ Please see the article on fallback ledger accounts for revenues and payments for
 The below summarizes the required accounting information described above.
 
 | |
-| --- |
+|---|
 | **Accounting flow: Closed or Consumed?** |
 | **Guest ledger account** |
 | **Accounts Receivable Information to be included: Yes or No** |

@@ -53,24 +53,15 @@ Please note that Omniboost will handle the provided Basware information with con
 Please find more information on the invoice data transfer from MEWS to Basware below:
 
 - Every **15 minutes,** (new) invoices that have been created in MEWS will be sent over to Basware.
-
 - The integration only sends over **invoices**. So, no bills are sent over from MEWS to Basware.
-
 - Please note that not **all invoices** from MEWS are sent over to Basware. Instead, there is a logic in place within the connection which checks the availability of a value in the Tax Identifier field in the Company profile in MEWS.
-
   - More specifically, here we are referring to the MEWS Company profile which is attached to the invoice.
-
 - **The logic itself is as follows:**
-
   - In case a value is entered in the Tax Identifier field of the MEWS Company profile, the invoice is sent over to Basware.
   - In case there is no value is entered in the Tax Identifier field of the MEWS Company profile, the invoice is **not** sent over to Basware.
-
 - So, the **first step** within the connection logic is to confirm whether an invoice should be pushed over to Basware or not.
-
 - **The second step** for the connection is to **validate** the Tax Identifier number which is entered in the Tax Identifier field in the MEWS Company profile. A Norwegian Tax Identifier number should consists of the prefix 'NO' followed by a 9 Digit ID. **This second step logic works as follows:**
-
   - If the NO + 9 Digit Identifier is entered > All is good, the invoice can be sent to Basware without any problems.
   - If the NO + 9 Digit Identifier is not entered > The invoice cannot be sent to Basware, **however:**
     - Omniboost has implemented a logic within the connection which checks whether the country code NO is included before the 9 Digit identifier. If not, then the connection automatically adds the NO prefix and still sends over the invoice to Basware.
-
 - The MEWS to Basware connection by Omniboost sends over invoices through connection with the the Basware SFTP server.

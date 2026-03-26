@@ -21,7 +21,7 @@ GetConnectors are not native to AFAS and provide users of the platform the freed
 
 ## Setting up the Omniboost GetConnectors
 
-For the correct processing of debtors, Omniboost has created two GetConnectors that we require to receive information from AFAS (**OMNI_countries** and **OMNI_sales_relation**, see attachment). These must be added to the AFAS environment.
+For the correct processing of debtors, Omniboost has created two GetConnectors that we require to receive information from AFAS (**OMNI\_countries** and **OMNI\_sales\_relation**, see attachment). These must be added to the AFAS environment.
 
 A description of this process can be found in the following article:
 

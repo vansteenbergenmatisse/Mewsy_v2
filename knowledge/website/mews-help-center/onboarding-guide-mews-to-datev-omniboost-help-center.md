@@ -188,17 +188,17 @@ As mentioned earlier in this article, the integration is able to generate and se
 
 **2. The name of the Journal Entry file**
 
-By default, the file name of the journal entry file is 'EXTF_(hotel name)'
+By default, the file name of the journal entry file is 'EXTF\_(hotel name)'
 
-For example, when a hotel is named 'Hotel XYZ', then the journal entry file name would be 'EXTF_Hotel_XYZ'.
+For example, when a hotel is named 'Hotel XYZ', then the journal entry file name would be 'EXTF\_Hotel\_XYZ'.
 
 Please reach out to you Omniboost contact person in case you would like to change the file name.
 
 **3. The name of the Debtor file**
 
-By default, the filename of the journal entry file is 'C_(hotel name)'
+By default, the filename of the journal entry file is 'C\_(hotel name)'
 
-For example, when a hotel is named 'Hotel XYZ', then the debtor file name would be 'C_Hotel_XYZ'.
+For example, when a hotel is named 'Hotel XYZ', then the debtor file name would be 'C\_Hotel\_XYZ'.
 
 Please reach out to you Omniboost contact person in case you would like to change the file name.
 

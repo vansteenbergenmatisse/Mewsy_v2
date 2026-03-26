@@ -2,7 +2,7 @@
 
 Understand the Guest Ledger account in your MEWS PMS to Accounting platform connection.
 
-**The article below describes the Guest Ledger account - a piece of accounting information that Omniboost regularly requests from clients who are using a Consumed Accounting Flow.**
+The article below describes the Guest Ledger account - a piece of accounting information that Omniboost regularly requests from clients who are using a Consumed Accounting Flow.
 
 # P1: Understanding the Guest Ledger Account
 

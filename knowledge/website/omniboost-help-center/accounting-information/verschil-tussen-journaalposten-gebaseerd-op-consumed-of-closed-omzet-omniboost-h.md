@@ -14,4 +14,4 @@ Wij halen de omzet uit MEWS gebaseerd op de bills en invoices. Voorbeeld: als er
 
 2. We sturen alle individuele bills en invoices door in het verkoopdagboek. Deze worden dus als debiteur aangemaakt en de omzet en btw wordt per factuur verwerkt. Betalingen kunnen ook worden doorgezet. Dit gebeurt dan meestal via het dagboek memoriaal.
 
-NB, afhankelijk van het boekhoudpakket kan het zijn dat de manier van informatieverwerking in het boekhoudpakket afwijkt van wat er in dit artikel beschreven wordt. Mocht je vragen hebben over de journaalposten, stuur dan een email naar [support@omniboost.io](mailto:support@omniboost.io).
+NB, afhankelijk van het boekhoudpakket kan het zijn dat de manier van informatieverwerking in het boekhoudpakket afwijkt van wat er in dit artikel beschreven wordt. Mocht je vragen hebben over de journaalposten, stuur dan een email naar support@omniboost.io.

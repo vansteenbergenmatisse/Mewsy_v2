@@ -56,7 +56,7 @@ The days-delay with which the accounting integration will send over data from ME
 
 Before Omniboost can build the MEWS to Microsoft Dynamics Business Central accounting integration, you need to specify your preferred accounting flow. Please see PART 2 of this article (https://help.omniboost.io/en/articles/6585772-accounting-setup-in-mews-pms-and-omniboost-accounting-flows) named 'Supported Accounting Flows' and let us know which accounting flow you prefer.
 
-**Please note that the MEWS to Microsoft Dynamics Business Central integration currently only supports the Consumed Accounting Flow and Closed Accounting Flow based on journal entries.**
+#### Please note that the MEWS to Microsoft Dynamics Business Central integration currently only supports the Consumed Accounting Flow and Closed Accounting Flow based on journal entries.
 
 # PART 3: Finish your MEWS (accounting) setup
 
@@ -129,7 +129,7 @@ In case the integration uses a Consumed accounting flow, you should run the Acco
 
 # PART 6: Other features and configurable items of the accounting integration
 
-Please find below an overview of configurable items and features that the MEWS to Microsoft Dynamics Business Central integration can support. In case you would like to use any of these features, please reach out to you Omniboost contact or support@omniboost.io in general.
+Please find below an overview of configurable items and features that the MEWS to Microsoft Dynamics Business Central integration can support. In case you would like to use any of these features, please reach out to you Omniboost contact or [support@omniboost.io](mailto:support@omniboost.io) in general.
 
 ## Configurable variables
 

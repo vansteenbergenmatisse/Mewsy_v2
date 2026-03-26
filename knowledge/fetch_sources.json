@@ -29,6 +29,30 @@
         "label": "Mews Features — All Accounting Integrations",
         "type": "static-split",
         "url": "https://omniboost.io/system-features/mews"
+      },
+      {
+        "id": "mews-pms-docs/create-accounting-category",
+        "label": "Mews — Create an Accounting Category",
+        "type": "static",
+        "url": "https://help.mews.com/s/article/create-an-accounting-category?language=en_US"
+      },
+      {
+        "id": "mews-pms-docs/accounting-configuration",
+        "label": "Mews — What is the Accounting Configuration",
+        "type": "static",
+        "url": "https://help.mews.com/s/article/what-is-the-accounting-configuration?language=en_US"
+      },
+      {
+        "id": "mews-pms-docs/create-product",
+        "label": "Mews — Create or Delete a Product",
+        "type": "static",
+        "url": "https://help.mews.com/s/article/create-or-delete-a-product?language=en_US"
+      },
+      {
+        "id": "mews-pms-docs/accounting-ledger",
+        "label": "Mews — Accounting Ledger",
+        "type": "static",
+        "url": "https://help.mews.com/s/article/accounting-ledger?language=en_US"
       }
     ]
   }
