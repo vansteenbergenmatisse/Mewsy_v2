@@ -135,7 +135,6 @@ export function ChatWidget({
           selectedLanguage={selectedLanguage}
           onChange={onInputChange}
           onSend={onSend}
-          onOpenHelp={onOpenHelp}
         />
       </div>
     </div>

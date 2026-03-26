@@ -15,56 +15,110 @@ body {
     background: #ffffff;
     border-radius: 20px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-    display: none;
-    flex-direction: column;
+    display: none;         /* hidden by default; data-mode rules below show it */
+    flex-direction: row;   /* sidebar + main sit side by side */
     overflow: hidden;
     z-index: 1000;
     transition: all 0.25s ease;
+    animation: widgetSlideOpen 0.28s cubic-bezier(0.24, 0.82, 0.32, 1) forwards;
 }
-#chat-widget-container.fullscreen {
+#chat-widget-container[data-mode="quarter"],
+#chat-widget-container[data-mode="full"] {
+    display: flex;
+}
+#chat-widget-container[data-mode="full"] {
     width: 100vw !important;
     height: 100vh !important;
     bottom: 0 !important;
     right: 0 !important;
     border-radius: 0 !important;
 }
-#chat-widget-container.opening {
-    animation: widgetSlideOpen 0.28s cubic-bezier(0.24, 0.82, 0.32, 1) forwards;
-}
 @keyframes widgetSlideOpen {
     0%   { opacity: 0; transform: translateY(30px) scale(0.90); }
     100% { opacity: 1; transform: translateY(0px)  scale(1); }
 }
 
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+#mewsy-sidebar {
+    width: 0;
+    flex-shrink: 0;
+    background: #000D2F;
+    overflow: hidden;
+    transition: width 0.25s ease;
+    display: flex;
+    flex-direction: column;
+}
+#mewsy-sidebar.open {
+    width: 220px;
+}
+.sidebar-logo-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sidebar-app-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+/* ── Main panel ──────────────────────────────────────────────────────────── */
+#mewsy-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
 /* ── Header ──────────────────────────────────────────────────────────────── */
 #chat-widget-header {
-    padding: 18px 24px;
+    padding: 14px 20px;
     background: #ffffff;
     border-bottom: 1px solid #e0e0e0;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
-.header-left { display: flex; align-items: center; gap: 12px; }
-#chat-widget-header span { font-size: 22px; font-weight: 600; color: #000D2F; }
-.header-buttons { display: flex; gap: 12px; align-items: center; }
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header-title { font-size: 18px; font-weight: 600; color: #000D2F; }
+.header-right { display: flex; gap: 8px; align-items: center; }
+.header-divider { width: 1px; height: 20px; background: #e0e0e0; margin: 0 2px; }
 
-#chat-widget-close,
-#chat-widget-fullscreen,
-#chat-widget-help {
+/* Icon buttons in the header (sidebar toggle, expand, compress, close) */
+.header-icon-btn {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 4px;
+    padding: 6px;
     color: #666666;
-    transition: color 0.2s ease;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, background 0.2s ease;
 }
-#chat-widget-close:hover,
-#chat-widget-fullscreen:hover,
-#chat-widget-help:hover { color: #3277A5; }
-#chat-widget-close svg,
-#chat-widget-fullscreen svg,
-#chat-widget-help svg { width: 22px; height: 22px; }
+.header-icon-btn:hover { color: #3277A5; background: #f0f4f8; }
+.header-icon-btn svg { width: 16px; height: 16px; display: block; }
+
+/* "Help & Resources" pill button in header */
+#help-btn {
+    background: #EDF3FF;
+    border: none;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #3277A5;
+    font-family: inherit;
+    transition: background 0.2s ease;
+    white-space: nowrap;
+}
+#help-btn:hover { background: #ddeaf7; }
 
 /* ── Language dropdown ───────────────────────────────────────────────────── */
 #lang-dropdown-wrapper {
@@ -122,7 +176,9 @@ body {
     flex: 1;
     padding: 20px;
     overflow-y: auto;
+    overflow-x: hidden;
     background: #ffffff;
+    min-height: 0; /* allows flex child to shrink and scroll */
 }
 #chat-widget-body::-webkit-scrollbar { width: 6px; }
 #chat-widget-body::-webkit-scrollbar-track { background: transparent; }
@@ -387,34 +443,87 @@ body {
 /* ── Footer / input area ─────────────────────────────────────────────────── */
 #chat-widget-footer {
     position: relative;
-    display: flex;
-    gap: 12px;
-    padding: 20px 24px 24px;
+    padding: 16px 20px 20px;
     background: #ffffff;
     border-top: 1px solid #e0e0e0;
-    align-items: center;
+    flex-shrink: 0;
 }
-#chat-widget-input {
-    flex: 1;
+/* Inner wrapper: textarea on top, toolbar row below */
+.input-inner {
     border: 1px solid #d0d0d0;
     background: #F5F7FA;
-    color: #000D2F;
-    padding: 16px 20px;
-    border-radius: 28px;
-    font-size: 17px;
-    outline: none;
-    transition: all 0.2s ease;
-    font-family: inherit;
+    border-radius: 16px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
 }
-#chat-widget-input::placeholder { color: #999999; }
-#chat-widget-input:focus { border-color: #3277A5; background: #ffffff; box-shadow: 0 0 0 3px rgba(50, 119, 165, 0.1); }
-#chat-widget-send {
+.input-inner:focus-within {
+    border-color: #3277A5;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(50, 119, 165, 0.1);
+}
+#chat-input {
+    display: block;
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: #000D2F;
+    padding: 14px 16px 6px;
+    font-size: 15px;
+    outline: none;
+    font-family: inherit;
+    resize: none;
+    min-height: 40px;
+    max-height: 120px;
+    overflow-y: auto;
+    box-sizing: border-box;
+    line-height: 1.5;
+}
+#chat-input::placeholder { color: #999999; }
+/* Toolbar: help button + spacer + voice + send */
+.input-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px 8px;
+    gap: 4px;
+}
+.input-toolbar-spacer { flex: 1; }
+.input-help-btn {
+    background: none;
+    border: 1px solid #d0d0d0;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #666666;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+.input-help-btn:hover { color: #3277A5; border-color: #3277A5; }
+.input-voice-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: color 0.2s ease;
+}
+.input-voice-btn:hover { color: #3277A5; }
+#send-button {
     background: #3277A5;
     color: #fff;
     border: none;
     padding: 0;
-    width: 52px;
-    height: 52px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
@@ -424,50 +533,59 @@ body {
     flex-shrink: 0;
     box-shadow: 0 2px 8px rgba(50, 119, 165, 0.25);
 }
-#chat-widget-send svg { width: 24px; height: 24px; }
-#chat-widget-send:hover { background: #296890; transform: scale(1.05); box-shadow: 0 4px 12px rgba(50, 119, 165, 0.35); }
-#chat-widget-send:active { transform: scale(0.95); }
-#chat-widget-send:disabled { opacity: 0.5; cursor: not-allowed; transform: scale(1); }
+#send-button svg { width: 14px; height: 14px; }
+#send-button:hover { background: #296890; transform: scale(1.05); box-shadow: 0 4px 12px rgba(50, 119, 165, 0.35); }
+#send-button:active { transform: scale(0.95); }
+#send-button:disabled { opacity: 0.4; cursor: not-allowed; transform: scale(1); background: #a0b8c8; box-shadow: none; }
 
-/* ── Floating widget button ──────────────────────────────────────────────── */
-#chat-widget-button {
+/* ── Floating bubble button ──────────────────────────────────────────────── */
+/*
+ * The pill button shown when the widget is hidden.
+ * Sits in a fixed wrapper so the unread badge can be positioned relative to it.
+ */
+#mewsy-bubble {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 65px;
-    height: 65px;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
     background: #3277A5;
-    border-radius: 50%;
+    color: #ffffff;
     border: none;
+    border-radius: 999px;
+    padding: 14px 22px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     box-shadow: 0 4px 20px rgba(50, 119, 165, 0.4);
     z-index: 999;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    white-space: nowrap;
 }
-#chat-widget-button:hover { transform: scale(1.05); box-shadow: 0 6px 24px rgba(50, 119, 165, 0.5); background: #296890; }
-#chat-widget-button:active { transform: scale(0.95); }
-#chat-widget-button svg { width: 42px; height: 42px; pointer-events: none; }
+#mewsy-bubble:hover  { background: #296890; box-shadow: 0 6px 24px rgba(50, 119, 165, 0.5); transform: translateX(-50%) translateY(-2px); }
+#mewsy-bubble:active { transform: translateX(-50%) translateY(0); }
 
 /* ── Unread badge ────────────────────────────────────────────────────────── */
+/*
+ * Rendered as a sibling just before #mewsy-bubble so position:fixed lets us
+ * place it in the top-right corner of the bubble.
+ */
 #chat-unread-badge {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    min-width: 26px;
-    height: 26px;
-    padding: 0 7px;
+    position: fixed;
+    bottom: 62px;
+    left: calc(50% + 40px);
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
     background: #ff453a;
     color: #ffffff;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 700;
     border-radius: 999px;
-    display: flex;
     align-items: center;
     justify-content: center;
     pointer-events: none;
+    z-index: 1000;
 }
 
 /* ── Warnings ────────────────────────────────────────────────────────────── */
@@ -651,27 +769,19 @@ body {
     margin-top: 2px;
 }
 
-/* ── Progressive reveal typing indicator ─────────────────────────────────── */
+/* ── Message entry animation ─────────────────────────────────────────────── */
 /*
- * Mini animated dots shown between paragraphs as they reveal one by one.
- * Reuses the typingDot keyframe animation from the thinking indicator.
+ * Each new message bubble (user or bot) flows in with a subtle fade + rise.
+ * Applied once via CSS animation so it plays only on first render.
  */
-.reveal-typing {
-    display: flex;
-    gap: 4px;
-    padding: 5px 0 2px;
-    align-items: center;
+@keyframes msgFlowIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
-.reveal-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #3277A5;
-    opacity: 0.65;
-    animation: typingDot 1.4s infinite;
+.bot-msg-container,
+.user-msg-container {
+    animation: msgFlowIn 0.22s ease forwards;
 }
-.reveal-dot:nth-child(2) { animation-delay: 0.2s; }
-.reveal-dot:nth-child(3) { animation-delay: 0.4s; }
 
 /* ── Response accordion ──────────────────────────────────────────────────── */
 /*

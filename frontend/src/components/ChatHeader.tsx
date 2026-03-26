@@ -34,7 +34,7 @@ export function ChatHeader({
     <div id="chat-widget-header">
       <div className="header-left">
         {/* Sidebar toggle — only shown in full mode */}
-        <button id="btn-sidebar-toggle" className="header-icon-btn" title="Toggle sidebar" onClick={onToggleSidebar}>
+        <button id="btn-sidebar-toggle" className="header-icon-btn" title="Toggle sidebar" style={{ display: widgetMode === 'full' ? 'flex' : 'none' }} onClick={onToggleSidebar}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="3" y1="6" x2="21" y2="6"/>
             <line x1="3" y1="12" x2="21" y2="12"/>

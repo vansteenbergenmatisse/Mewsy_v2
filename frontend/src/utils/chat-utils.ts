@@ -380,51 +380,7 @@ export function initAccordions(container: HTMLElement): void {
  *   - Single-element bubbles (nothing to reveal progressively)
  */
 export function applyProgressiveReveal(msgDiv: HTMLElement, autoScrollFn: () => void): void {
-  const botText = msgDiv.querySelector(".bot-text") as HTMLElement | null;
-  if (!botText) return;
-
-  // Accordions already have collapsed sections — no extra reveal needed
-  if (botText.querySelector(".response-accordion")) return;
-
-  const units = Array.from(botText.children) as HTMLElement[];
-  if (units.length <= 1) return; // single block: show immediately, no animation
-
-  // Hide every unit after the first
-  units.slice(1).forEach(unit => {
-    unit.style.visibility = "hidden";
-    unit.style.opacity = "0";
-    unit.style.transition = "opacity 0.22s ease";
-  });
-
-  // Sequentially: show typing dots → remove dots → fade in next unit
-  const TYPING_MS  = 420; // how long the dots show before the paragraph appears
-  const PAUSE_MS   = 160; // gap between the paragraph appearing and the next dots
-  let delay = 280;        // initial delay before the first typing indicator
-
-  units.slice(1).forEach(unit => {
-    // Insert typing indicator just before this unit
-    const typingEl = document.createElement("div");
-    typingEl.className = "reveal-typing";
-    typingEl.innerHTML =
-      `<span class="reveal-dot"></span>` +
-      `<span class="reveal-dot"></span>` +
-      `<span class="reveal-dot"></span>`;
-
-    setTimeout(() => {
-      botText.insertBefore(typingEl, unit);
-      autoScrollFn();
-    }, delay);
-
-    delay += TYPING_MS;
-
-    // Remove dots, reveal the unit
-    setTimeout(() => {
-      typingEl.remove();
-      unit.style.visibility = "visible";
-      unit.style.opacity = "1";
-      autoScrollFn();
-    }, delay);
-
-    delay += PAUSE_MS;
-  });
+  // No inter-paragraph reveal — content is shown immediately.
+  // Bubble entry animation is handled entirely by CSS (.bot-msg-container).
+  autoScrollFn();
 }

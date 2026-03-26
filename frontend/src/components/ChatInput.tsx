@@ -11,7 +11,6 @@ interface ChatInputProps {
   selectedLanguage: string | null;
   onChange: (value: string) => void;
   onSend: () => void;
-  onOpenHelp: () => void;
 }
 
 export function ChatInput({
@@ -21,7 +20,6 @@ export function ChatInput({
   selectedLanguage,
   onChange,
   onSend,
-  onOpenHelp,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -62,10 +60,8 @@ export function ChatInput({
             id="help-trigger-btn"
             className="input-help-btn"
             type="button"
-            aria-label="Help"
-            title="Help &amp; Resources"
-            onClick={onOpenHelp}
-          >?</button>
+            aria-label="Add"
+          >+</button>
           <div className="input-toolbar-spacer"></div>
           {/* Voice button — visual placeholder only, not wired to speech API */}
           <button className="input-voice-btn" type="button" aria-label="Voice">

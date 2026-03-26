@@ -4,15 +4,27 @@
  * Also checks that the server rejects bad inputs.
  */
 
-import { spawn } from 'child_process';
-import { join }  from 'path';
+import { spawn }        from 'child_process';
+import { join }         from 'path';
+import { createServer } from 'net';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { dirname }      from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT    = join(__dirname, '../..');
-const PORT    = process.env.PORT ?? 3001;
-const BASE    = `http://localhost:${PORT}`;
+const ROOT = join(__dirname, '../..');
+
+// Ask the OS for a free port so we never clash with the real server or other processes
+function getFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const s = createServer();
+    s.unref();
+    s.on('error', reject);
+    s.listen(0, () => {
+      const { port } = s.address() as { port: number };
+      s.close(() => resolve(port));
+    });
+  });
+}
 
 interface TestResult {
   ok: boolean | 'skip';
@@ -34,16 +46,29 @@ async function fetchJson(url: string, options: RequestInit = {}): Promise<{ stat
 }
 
 export async function checkServer({ pass, fail, results }: Reporter): Promise<void> {
+  const PORT = await getFreePort();
+  const BASE = `http://localhost:${PORT}`;
+
+  // Resolve tsx binary — prefer local node_modules/.bin for reliability
+  const tsxBin = join(ROOT, 'node_modules', '.bin', 'tsx');
+
   // Start the server as a child process
-  const server = spawn('tsx', ['backend/server.ts'], {
+  const server = spawn(tsxBin, ['backend/server.ts'], {
     cwd: ROOT,
-    env: { ...process.env },
+    env: { ...process.env, PORT: String(PORT) },
     stdio: 'pipe',
   });
 
+  // Catch ENOENT / EACCES so the suite fails cleanly instead of crashing
+  server.on('error', (err: Error) => startupErrors.push(err.message));
+
   let started = false;
+  const startupErrors: string[] = [];
   server.stdout.on('data', (d: Buffer) => {
     if (d.toString().includes('listening on')) started = true;
+  });
+  server.stderr.on('data', (d: Buffer) => {
+    startupErrors.push(d.toString().trim());
   });
 
   // Wait up to 30 seconds for startup
@@ -53,7 +78,10 @@ export async function checkServer({ pass, fail, results }: Reporter): Promise<vo
   }
 
   if (!started) {
-    fail('server starts within 30 seconds', 'Server did not log "listening on"');
+    const detail = startupErrors.length > 0
+      ? startupErrors.slice(-3).join(' | ')
+      : 'Server did not log "listening on"';
+    fail('server starts successfully', detail);
     results.push({ ok: false });
     server.kill();
     return;

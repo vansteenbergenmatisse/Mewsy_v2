@@ -17,6 +17,8 @@ import { checkScraper }  from './suites/check-scraper.ts';
 import { checkRouting }  from './suites/check-routing.ts';
 import { checkChat }     from './suites/check-chat.ts';
 import { checkServer }   from './suites/check-server.ts';
+import { checkSession }  from './suites/check-session.ts';
+import { checkPipeline } from './suites/check-pipeline.ts';
 
 // ── Colours ───────────────────────────────────────────────────────────────────
 const GREEN  = '\x1b[32m';
@@ -76,6 +78,8 @@ async function runSuite(name: string, fn: (r: Reporter) => Promise<void>): Promi
   }
 
   allResults.push(...(await runSuite('6. Server health',         checkServer)));
+  allResults.push(...(await runSuite('7. Session management',    checkSession)));
+  allResults.push(...(await runSuite('8. Pipeline behaviour',    checkPipeline)));
 
   // ── Summary ───────────────────────────────────────────────────────────────
   const total   = allResults.length;
