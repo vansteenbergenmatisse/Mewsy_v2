@@ -16,7 +16,7 @@ Choosing your preferred Accounting Flow ensures that you comply with the Account
 
 ---
 
-## PART 1: Configure your MEWS Accounting Setup
+# PART 1: Configure your MEWS Accounting Setup
 
 Omniboost can start configuring your hotel's Accounting Integration with MEWS PMS as soon as your Accounting Setup is correctly configured.
 
@@ -109,7 +109,7 @@ Please note that Omniboost will not make any modifications to your MEWS environm
 
 ---
 
-## PART 2: Choose your Accounting Flow
+# PART 2: Choose your Accounting Flow
 
 There are various Accounting Flows which are supported on the Omniboost Platform.
 
@@ -125,8 +125,8 @@ Please find an explanation and the details of both flows below.
 
 In a Closed Accounting Flow, Revenues are accounted for once a guest checks out of the hotel and the corresponding guest bill is closed.
 
-- In case the guest pays the total bill amount at the end of the stay, the entire bill is closed; we then speak of a ***Bill***.
-- In case the guest checks out at the end of the stay but does not pay the total bill amount directly (i.e. the guest is allowed to pay the outstanding amount in the future) we then speak of an ***Invoice***.
+- In case the guest pays the total bill amount at the end of the stay, the entire bill is closed; we then speak of a **_Bill_**.
+- In case the guest checks out at the end of the stay but does not pay the total bill amount directly (i.e. the guest is allowed to pay the outstanding amount in the future) we then speak of an **_Invoice_**.
 
 In a Closed Accounting Flow, the Omniboost accounting integration will extract revenues from the PMS system once a Bill is closed or an Invoice is issued.
 
@@ -139,6 +139,10 @@ There are two different options available within the Closed Accounting Flow. Ple
 - In this Closed Flow option, the Omniboost accounting integration will extract closed revenues (and payments) and create a Journal Entry in your accounting platform based on these closed revenues and payments.
 - Reconciliation of accounting entries between MEWS PMS and the Journal Entry in your accounting platform happens by running the Accounting Report in MEWS on a Closed type.
 
+Navigate to the Accounting Report:
+
+_MEWS Menu > Accounting Report_
+
 Consequently, run the Accounting Report based on the 'Closed' type.
 
 - Please note that by default, Omniboost accounting integrations extract data from the Accounting Report on a 12:00AM to 12:00AM basis.
@@ -149,6 +153,10 @@ Consequently, run the Accounting Report based on the 'Closed' type.
 
 - In this Closed Flow option, the Omniboost accounting integration will extract closed revenues (and payments) and send these over as individual Bills and Invoices (together with corresponding Debtor information) to your accounting platform.
 - Reconciliation of accounting entries between MEWS PMS and the Bills and Invoices in your accounting platform happens by running the Bills and Invoices Report in MEWS.
+
+Navigate to the Bills and Invoices Report:
+
+_MEWS Menu > Bills and Invoices Report_
 
 **Understanding the Accounting Report and Bills and Invoices Report**
 
@@ -162,6 +170,10 @@ Consequently, run the Accounting Report based on the 'Closed' type.
 - In a Consumed Accounting Flow, the accounting integration will extract Consumed revenues (and payments) from the MEWS Accounting Report and create a Journal Entry in your accounting platform based on these Consumed revenues and payments.
 - As you have read in the previous section of this help article, the Omniboost Accounting Integration can extract Closed entries from the MEWS Accounting Report and create a Journal Entry in your accounting platform based on these Closed revenues and payments. The Omniboost accounting integration can do the same for consumed revenues.
 - Reconciliation of accounting entries between MEWS PMS and the Journal Entry in your accounting platform happens by running the Accounting Report in MEWS on a Consumed type.
+
+Navigate to the Accounting Report:
+
+_MEWS Menu > Accounting Report_
 
 Consequently, run the Accounting Report based on the 'Consumed' type.
 
@@ -177,21 +189,15 @@ Accounting laws and practices in some countries require the use of a Hybrid Acco
 - One country where a Hybrid Accounting Flow is common, is Spain. Please find this Omniboost help article (https://help.omniboost.io/en/articles/6909222-general-accounting-flow-spain-sage-es) which explains the details of the Spanish Hybrid Flow.
 - In case such a Hybrid Accounting Flow applies to your property's situation, please inform your Omniboost representative about this. The specifics of such a Hybrid Accounting Flow can then be discussed during a meeting.
 
-## Summary of Accounting flows
+# Summary of Accounting flows
 
 Please find a summary of the different Accounting Flows below:
 
-1. **A Closed Accounting Flow based on Journal Entries**
+1. **A Closed Accounting Flow based on Journal Entries** — In this Closed Flow option, the Omniboost accounting integration will extract closed revenues (and payments) and create a Journal Entry in your accounting platform based on these closed revenues and payments.
 
-In this Closed Flow option, the Omniboost accounting integration will extract closed revenues (and payments) and create a Journal Entry in your accounting platform based on these closed revenues and payments.
+2. **A Closed Accounting Flow based on Bills & Invoices** — In this Closed Flow option, the Omniboost accounting integration will extract closed revenues (and payments) and send these over as individual Bills and Invoices (together with corresponding Debtor information) to your accounting platform.
 
-2. **A Closed Accounting Flow based on Bills & Invoices**
-
-In this Closed Flow option, the Omniboost accounting integration will extract closed revenues (and payments) and send these over as individual Bills and Invoices (together with corresponding Debtor information) to your accounting platform.
-
-3. **A Consumed Accounting Flow**
-
-In a Consumed Accounting Flow, the accounting integration will extract Consumed revenues (and payments) from the MEWS Accounting Report and create a Journal Entry in your accounting platform based on these Consumed revenues and payments.
+3. **A Consumed Accounting Flow** — In a Consumed Accounting Flow, the accounting integration will extract Consumed revenues (and payments) from the MEWS Accounting Report and create a Journal Entry in your accounting platform based on these Consumed revenues and payments.
 
 | **Accounting Flow** | **Closed** | **Closed** | **Consumed** |
 |---|---|---|---|

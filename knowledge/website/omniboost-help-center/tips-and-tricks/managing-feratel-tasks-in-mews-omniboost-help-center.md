@@ -2,9 +2,9 @@
 
 The Mews/Feratel integration can only work properly when the guest details are entered properly in Mews. If any required field is missing, the reservation(s) can't be created in Feratel. Whenever this happens a task is created in Mews with a report why the reservation can't be created in Feratel.
 
-The property should monitor the tasks queue in Mews and should take the proper actions to modify the reservations and customers so they can be synced with Feratel. When this isn't done, not all reservations are synced and this can lead to fines.
+The property should monitor the tasks queue in Mews and should take the proper actions to modify the reservations and customers so they _can_ be synced with Feratel. When this isn't done, not all reservations are synced and this can lead to fines.
 
-The tasks queue can be found on the dashboard.
+The tasks queue can be found on the dashboard:
 
 Or in the menu under the item 'Tasks'.
 

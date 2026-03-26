@@ -22,8 +22,8 @@ if (process.env.NODE_ENV !== 'production') {
 
 export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
-// Railway injects PORT at runtime — fall back to 3005 for local dev
-export const PORT = parseInt(process.env.PORT || '3005', 10);
+// Railway injects PORT at runtime — fall back to 3008 for local dev
+export const PORT = parseInt(process.env.PORT || '4010', 10);
 
 // Warn at startup if the API key is missing — the server will start but
 // every chat request will fail without it

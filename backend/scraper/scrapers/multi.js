@@ -10,7 +10,11 @@ import { slugify } from '../utils/slugify.js';
 import { logger } from '../utils/logger.js';
 
 const FIRECRAWL_BASE = 'https://api.firecrawl.dev';
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let _client;
+function getClient() {
+  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _client;
+}
 
 async function firecrawlScrape(url) {
   const res = await axios.post(
@@ -38,7 +42,7 @@ const MAX_ARTICLES = 100; // hard cap to prevent scraping thousands of links
 async function filterArticleLinks(links) {
   if (!links || links.length === 0) return [];
   try {
-    const response = await client.messages.create({
+    const response = await getClient().messages.create({
       model: config.cleanupModel,
       max_tokens: 2048,
       messages: [{
@@ -125,19 +129,23 @@ export async function scrapeMulti(page, forceSync, existingEntries) {
 
     const { description, keywords } = await generateMetadata(content);
 
-    mkdirSync(outDir, { recursive: true });
-    writeFileSync(outPath, content);
-    logger.info(`Scraped: ${relPath}`);
+    try {
+      mkdirSync(outDir, { recursive: true });
+      writeFileSync(outPath, content);
+      logger.info(`Scraped: ${relPath}`);
 
-    upsertEntry(articleSlug, {
-      title,
-      description,
-      keywords,
-      path: relPath,
-      source_url: articleUrl,
-      source_type: 'website_multi',
-      source_parent_id: id,
-      content_hash: hash,
-    });
+      upsertEntry(articleSlug, {
+        title,
+        description,
+        keywords,
+        path: relPath,
+        source_url: articleUrl,
+        source_type: 'website_multi',
+        source_parent_id: id,
+        content_hash: hash,
+      });
+    } catch (saveErr) {
+      logger.error(`Failed to save article ${articleUrl}: ${saveErr.message} — skipping`);
+    }
   }
 }

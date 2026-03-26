@@ -48,11 +48,11 @@ Once your accounting department has verified the test export file(s) and the fil
 
 # PART 2: Determining the preferred accounting flow: Closed flow or Consumed flow
 
-Before Omniboost can build the MEWS to Abacus accounting integration, you need to specify your preferred accounting flow. Please see PART 2 of this article named 'Supported Accounting Flows' and let us know which accounting flow you prefer.
+Before Omniboost can build the MEWS to Abacus accounting integration, you need to specify your preferred accounting flow. Please see PART 2 of this article (https://help.omniboost.io/en/articles/6585772-accounting-setup-in-mews-pms-and-omniboost-accounting-flows) named 'Supported Accounting Flows' and let us know which accounting flow you prefer.
 
 # PART 3: Finish your MEWS (accounting) setup
 
-Before Omniboost can test the MEWS to Abacus accounting integration, you need to specify finish your MEWS (accounting) setup. Please see PART 1 of this article named 'MEWS Accounting setup'.
+Before Omniboost can test the MEWS to Abacus accounting integration, you need to specify finish your MEWS (accounting) setup. Please see PART 1 of this article (https://help.omniboost.io/en/articles/6585772-accounting-setup-in-mews-pms-and-omniboost-accounting-flows) named 'MEWS Accounting setup'.
 
 # PART 4: Necessary (Accounting) information
 
@@ -64,7 +64,7 @@ Please see PART 2 of this article.
 
 Please note that the current accounting connection with Abacus can offer a consumed accounting flow and a closed accounting flow based on journal entries.
 
-**4.2 Please provide us a Guest Ledger account code.**
+**4.2 Please provide us a Guest Ledger account code. Please see this article (https://help.omniboost.io/en/articles/6593186-understanding-the-guest-ledger-account) which explains the guest ledger account.**
 
 Please note that the Guest ledger account should **not** be created in MEWS. Instead, please provide us the guest ledger account code so that we can enter it into the accounting integration.
 
@@ -74,7 +74,11 @@ In order to transfer VAT amounts from MEWS into Abacus, Omniboost has built a VA
 
 **4.4 Please provide us a Fallback ledger account for revenues.**
 
+Please see this article (https://help.omniboost.io/en/articles/6609704-fallback-ledger-accounts-for-revenues-and-payments) for a detailed explanation regarding the fallback ledgers.
+
 **4.5 Please provide us a Fallback ledger account for payments.**
+
+Please see this article (https://help.omniboost.io/en/articles/6609704-fallback-ledger-accounts-for-revenues-and-payments) for a detailed explanation regarding the fallback ledgers.
 
 **4.6 Please let us know how many digits debtor numbers should be**
 
@@ -133,15 +137,21 @@ In case you would prefer a different end-of-day (for example 02:00AM, which mean
 
 In case the integration uses a Closed accounting flow, you should run the Accounting report as follows:
 
+- Mode: Closed
+- Date range: 12:00AM to 12:00AM
+
 In case the integration uses a Consumed accounting flow, you should run the Accounting report as follows:
+
+- Mode: Consumed
+- Date range: 12:00AM to 12:00AM
 
 **Please note that the content of the export file columns and the columns itself are compatible with Abacus data import requirements.**
 
-In case you are not sure about the contents of any of the columns in the export file, please reach out to support@omniboost.io.
+In case you are not sure about the contents of any of the columns in the export file, please reach out to [support@omniboost.io](mailto:support@omniboost.io).
 
 # PART 6: Other features and configurable items of the accounting integration
 
-Please find below an overview of configurable items and features that the MEWS to Abacus integration can support. In case you would like to use any of these features, please reach out to you Omniboost contact or support@omniboost.io in general.
+Please find below an overview of configurable items and features that the MEWS to Abacus integration can support. In case you would like to use any of these features, please reach out to you Omniboost contact or [support@omniboost.io](mailto:support@omniboost.io) in general.
 
 ## Configurable variables
 

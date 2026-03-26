@@ -1,7 +1,5 @@
 # The difference between a Closed and Consumed accounting flow
 
-Consumed or Closed? What do you prefer?
-
 In our accounting integrations, we make use of either a Closed or Consumed accounting flow.
 
 **Consumed flow:**

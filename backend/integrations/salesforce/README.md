@@ -1,6 +1,6 @@
 # backend/integrations/salesforce/
 
-When a user has been going back and forth with Mewsy without getting their problem solved — or when they explicitly ask to speak to a human — Mewsy offers to create a support ticket. That ticket goes into Salesforce, where the OmniBoost support team picks it up and follows up with the user directly.
+When a user has been going back and forth with Mewsy without getting their problem solved — or when they explicitly ask to speak to a human — Mewsy offers to create a support ticket. That ticket goes into Salesforce, where the Omniboost support team picks it up and follows up with the user directly.
 
 ## Current status
 

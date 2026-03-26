@@ -18,33 +18,33 @@ This article provides details on the MEWS PMS to Unit4 accounting integration. T
 
 The start-to-end process of the MEWS to Unit4 accounting integration goes as follows:
 
-1.1 **Request the Unit4 integration from the MEWS Marketplace**
+**1.1 Request the Unit4 integration from the MEWS Marketplace**
 
 Omniboost will automatically receive the integration request and consequently reach out to you.
 
-1.2 **Share your preferred accounting flow with Omniboost**
+**1.2 Share your preferred accounting flow with Omniboost**
 
 Please see PART 2 of this article.
 
-1.3 **Finish your MEWS (accounting) setup**
+**1.3 Finish your MEWS (accounting) setup**
 
 Please see PART 3 of this article.
 
-1.4 **Provide the necessary (accounting) information with Omniboost**
+**1.4 Provide the necessary (accounting) information with Omniboost**
 
 Please see PART 4 of this article.
 
-1.5 **Omniboost to build the accounting integration**
+**1.5 Omniboost to build the accounting integration**
 
 Once the preferred accounting flow and required accounting information are available, the accounting integration can be setup by your Omniboost contact person within several business days.
 
-1.6 **Omniboost to send test entries to your Unit4 environment and verification of test entries by your accounting department**
+**1.6 Omniboost to send test entries to your Unit4 environment and verification of test entries by your accounting department**
 
 Once there is accounting data available in the MEWS Accounting report, the integration is able to send over test accounting entries to your Unit4 environment.
 
 These test entries usually consist of some journal entries (and Sales entries along with the corresponding debtor information in case you would like to transfer Accounts Receivable information) and can be verified by your accounting department.
 
-1.7 **Integration to be activated by Omniboost**
+**1.7 Integration to be activated by Omniboost**
 
 Once your accounting department has verified the test entries and these are correct, your Omniboost contact person can activate the accounting integration. This means that the integration will fully automatically send over the accounting data to your Unit4 environment on a daily basis.
 
@@ -116,7 +116,7 @@ Please see the fallback ledger accounts article for a detailed explanation regar
 The below summarizes the required accounting information described above.
 
 | |
-| --- |
+|---|
 | **Accounting flow: Closed or Consumed?** |
 | **Guest ledger account** |
 | **Accounts Receivable Information to be included: Yes or No** |
@@ -140,12 +140,12 @@ In case you would prefer a different end-of-day (for example 02:00AM, which mean
 In case the integration uses a Closed accounting flow (based on journal entries), you should run the Accounting report as follows:
 
 - Mode: Closed
-- Date filter: by Start date
+- Date filter: based on the closing date
 
 In case the integration uses a Consumed accounting flow, you should run the Accounting report as follows:
 
 - Mode: Consumed
-- Date filter: by Consumed date
+- Date filter: based on the consumption date
 
 Please note that the MEWS _Accounting report_ shows revenues (and payments) based on an accounting category level.
 

@@ -149,7 +149,7 @@ Please note that the MEWS _Accounting_ _report_ shows revenues (and payments) ba
 
 # PART 6: Other features and configurable items of the accounting integration
 
-Please find below an overview of configurable items and features that the MEWS to 24 Seven Office integration can support. In case you would like to use any of these features, please reach out to you Omniboost contact or [support@omniboost.io](mailto:support@omniboost.io) in general.
+Please find below an overview of configurable items and features that the MEWS to 24 Seven Office integration can support. In case you would like to use any of these features, please reach out to you Omniboost contact or support@omniboost.io in general.
 
 ## Configurable variables
 

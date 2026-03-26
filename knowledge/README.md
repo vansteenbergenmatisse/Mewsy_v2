@@ -41,7 +41,7 @@ Three source types: `single` (one URL → one file), `multi` (index page → man
 
 ## mews.md and omniboost.md
 
-Hand-written documents covering the core OmniBoost × Mews integration. These are the most important documents in the knowledge base — they cover accounting flows, GL mapping, integration tiers, and all the core concepts. Edit them directly when information needs to change.
+Hand-written documents covering the core Omniboost × Mews integration. These are the most important documents in the knowledge base — they cover accounting flows, GL mapping, integration tiers, and all the core concepts. Edit them directly when information needs to change.
 
 ## Adding a new manual document
 

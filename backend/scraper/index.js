@@ -16,6 +16,7 @@ import { readFileSync, existsSync, unlinkSync, readdirSync, rmdirSync } from 'fs
 import { join } from 'path';
 import config from './config.js';
 import { scrapeStatic } from './scrapers/static.js';
+import { scrapeStaticSplit } from './scrapers/static-split.js';
 import { scrapeMulti } from './scrapers/multi.js';
 import { scrapeConfluence } from './scrapers/confluence.js';
 import { getScraperEntries, deleteEntry } from './pipeline/manifest.js';
@@ -86,10 +87,13 @@ function runDeletionCheck(sources) {
 
   // Build sets of currently configured source IDs
   const websiteSingleIds = new Set(
-    (sources.website?.pages ?? []).filter(p => p.type === 'single').map(p => p.id)
+    (sources.website?.pages ?? []).filter(p => p.type === 'single' || p.type === 'static').map(p => p.id)
   );
   const websiteMultiIds = new Set(
     (sources.website?.pages ?? []).filter(p => p.type === 'multi').map(p => p.id)
+  );
+  const websiteSplitIds = new Set(
+    (sources.website?.pages ?? []).filter(p => p.type === 'static-split').map(p => p.id)
   );
   const confluenceFolderIds = new Set(
     (sources.confluence?.folders ?? []).map(f => f.id)
@@ -105,6 +109,8 @@ function runDeletionCheck(sources) {
       // IDs may contain slashes (e.g. "omniboost-help-center/tips-and-tricks"),
       // so check whether any configured multi-ID is a prefix of this slug.
       shouldDelete = !Array.from(websiteMultiIds).some(id => entry.slug.startsWith(id + '/') || entry.slug === id);
+    } else if (entry.source_type === 'website_split') {
+      shouldDelete = !Array.from(websiteSplitIds).some(id => entry.slug.startsWith(id + '/') || entry.slug === id);
     } else if (entry.source_type === 'confluence') {
       shouldDelete = !!entry.source_folder_id && !confluenceFolderIds.has(entry.source_folder_id);
     }
@@ -137,12 +143,18 @@ async function runSync(type) {
     if (type === 'website') {
       for (const page of (sources.website?.pages ?? [])) {
         await new Promise(r => setTimeout(r, config.requestDelayMs));
-        if (page.type === 'single') {
-          await scrapeStatic(page, forceSync, existingEntries[page.id]?.content_hash);
-        } else if (page.type === 'multi') {
-          await scrapeMulti(page, forceSync, existingEntries);
-        } else {
-          logger.warn(`Unknown page type "${page.type}" for "${page.id}" — skipping`);
+        try {
+          if (page.type === 'single' || page.type === 'static') {
+            await scrapeStatic(page, forceSync, existingEntries[page.id]?.content_hash);
+          } else if (page.type === 'static-split') {
+            await scrapeStaticSplit(page, forceSync, existingEntries);
+          } else if (page.type === 'multi') {
+            await scrapeMulti(page, forceSync, existingEntries);
+          } else {
+            logger.warn(`Unknown page type "${page.type}" for "${page.id}" — skipping`);
+          }
+        } catch (pageErr) {
+          logger.error(`Failed to scrape "${page.id}": ${pageErr.message} — continuing`);
         }
       }
     } else if (type === 'confluence') {

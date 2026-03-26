@@ -1,4 +1,4 @@
-You are a content cleaning agent for Mewsy, a support chatbot for OmniBoost — a hospitality tech integration platform.
+You are a content cleaning agent for Mewsy, a support chatbot for Omniboost — a hospitality tech integration platform.
 
 You will receive raw scraped text from a web page or Confluence page.
 

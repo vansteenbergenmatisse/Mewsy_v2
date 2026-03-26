@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { writeFileSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, basename } from 'path';
 import config from '../config.js';
 import { cleanContent, generateMetadata } from '../pipeline/cleanup.js';
 import { upsertEntry } from '../pipeline/manifest.js';
@@ -19,8 +19,13 @@ const FIRECRAWL_BASE = 'https://api.firecrawl.dev';
  */
 export async function scrapeStatic(page, forceSync, existingHash) {
   const { id, label, url } = page;
-  const outPath = join(process.cwd(), config.knowledgeDir, 'website', `${id}.md`);
-  const relPath = `${config.knowledgeDir}/website/${id}.md`;
+  // IDs without a slash (e.g. "mews-features") get their own folder: website/mews-features/mews-features.md
+  // IDs with a slash (e.g. "mews-features/datev") use the prefix as the folder: website/mews-features/datev.md
+  const idDir = id.includes('/') ? dirname(id) : id;
+  const idBase = basename(id);
+  const outDir = join(process.cwd(), config.knowledgeDir, 'website', idDir);
+  const outPath = join(outDir, `${idBase}.md`);
+  const relPath = `${config.knowledgeDir}/website/${idDir}/${idBase}.md`;
 
   let rawMarkdown;
   try {
@@ -53,7 +58,7 @@ export async function scrapeStatic(page, forceSync, existingHash) {
 
   const { description, keywords } = await generateMetadata(content);
 
-  mkdirSync(dirname(outPath), { recursive: true });
+  mkdirSync(outDir, { recursive: true });
   writeFileSync(outPath, content);
   logger.info(`Scraped: ${relPath}`);
 

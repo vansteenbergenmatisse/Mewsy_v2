@@ -4,14 +4,23 @@
  * Also checks that the server rejects bad inputs.
  */
 
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { join }  from 'path';
 
 const ROOT    = join(import.meta.dirname, '../..');
-const PORT    = process.env.PORT ?? 3001;
+const PORT    = process.env.PORT ?? 4010;
 const BASE    = `http://localhost:${PORT}`;
 
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function freePort(port) {
+  try {
+    const pids = execSync(`lsof -ti :${port}`, { encoding: 'utf8' }).trim();
+    if (pids) {
+      execSync(`kill -9 ${pids.split('\n').join(' ')}`, { stdio: 'ignore' });
+    }
+  } catch { /* nothing on the port, that's fine */ }
+}
 
 async function fetchJson(url, options = {}) {
   const res = await fetch(url, options);
@@ -20,6 +29,9 @@ async function fetchJson(url, options = {}) {
 }
 
 export async function checkServer({ pass, fail, results }) {
+  // Kill any process already holding the port so our new server can bind
+  freePort(PORT);
+
   // Start the server as a child process
   const server = spawn('node', ['backend/server.js'], {
     cwd: ROOT,

@@ -44,7 +44,7 @@
     },
     "mews-help-center/onboarding-guide-mews-to-accounting-omniboost-help-center": {
       "title": "Onboarding Guide | Mews to Accounting | Omniboost Help Center",
-      "description": "Step-by-step guide for connecting Mews PMS to accounting software via Omniboost integration, covering setup, onboarding initiation, and invitation process.",
+      "description": "Step-by-step onboarding guide for connecting Mews PMS to accounting software via Omniboost integration platform.",
       "keywords": [
         "Mews",
         "Omniboost",
@@ -53,44 +53,44 @@
         "Xero",
         "Mews Marketplace",
         "Connect Integration",
-        "access token",
         "accounting connection",
+        "access token",
         "PMS",
-        "onboarding invitation",
-        "accounting flows"
+        "accounting flow",
+        "onboarding invitation"
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-accounting-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/10660471-onboarding-guide-mews-to-accounting",
       "source_type": "website_multi",
       "source_parent_id": "mews-help-center",
-      "content_hash": "ac179c9f94f3fee15e3bf9b9b39a43df30dff4763989686ca168e7d272328ce6"
+      "content_hash": "be604e1c2b07b91c764534d878bb6453bf1b7f633662f7cac0c045b4e8365ed7"
     },
     "mews-help-center/onboarding-guide-mews-to-abacus-omniboost-help-center": {
       "title": "Onboarding Guide | MEWS to Abacus | Omniboost Help Center",
-      "description": "Onboarding guide for integrating MEWS PMS with Abacus accounting software via XML export files through Omniboost.",
+      "description": "Onboarding guide for integrating MEWS PMS with Abacus accounting software via XML export files through Omniboost middleware.",
       "keywords": [
         "MEWS",
         "Abacus",
+        "Omniboost",
         "accounting integration",
         "XML export",
-        "Omniboost",
         "PMS",
         "closed flow",
         "consumed flow",
-        "onboarding",
-        "reconciliation",
         "MEWS Marketplace",
-        "accounting setup"
+        "accounting reconciliation",
+        "onboarding",
+        "accounting flow"
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-abacus-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/7930739-onboarding-guide-mews-to-abacus",
       "source_type": "website_multi",
       "source_parent_id": "mews-help-center",
-      "content_hash": "145585dfca4b60a09517aa89e75f0e22ae8c008dad328bb4fde6707d4e608126"
+      "content_hash": "4261d65010be55705146b68559de531382efe1e9264d278729f27dc007cdc1af"
     },
     "mews-help-center/onboarding-guide-mews-to-bmd-omniboost-help-center": {
       "title": "Onboarding Guide | MEWS to BMD | Omniboost Help Center",
-      "description": "Onboarding guide for integrating MEWS property management system with BMD accounting software via automated export files through Omniboost.",
+      "description": "Onboarding guide for integrating MEWS PMS with BMD accounting software via automated export files through Omniboost.",
       "keywords": [
         "MEWS",
         "BMD",
@@ -101,84 +101,84 @@
         "closed flow",
         "consumed flow",
         "MEWS Marketplace",
-        "accounting setup",
         "onboarding",
+        "accounting setup",
         "reconciliation"
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-bmd-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/6896458-onboarding-guide-mews-to-bmd",
       "source_type": "website_multi",
       "source_parent_id": "mews-help-center",
-      "content_hash": "79058b1a9b1b62d00af9cce20c3836fe0ab8bec54525580b4934615e6b738173"
+      "content_hash": "057c52a51fde86dd32810c95338040a97d0e81be659a63780d20454342b5c0c2"
     },
     "mews-help-center/onboarding-guide-mews-to-basware-invoicing-omniboost-help-center": {
       "title": "Onboarding Guide | MEWS to Basware Invoicing | Omniboost Help Center",
-      "description": "Onboarding guide for integrating MEWS PMS with Basware Invoicing via SFTP, covering setup, required configuration details, and invoice transfer logic.",
+      "description": "Onboarding guide for integrating MEWS PMS with Basware Invoicing via SFTP, covering setup process, required configuration details, and invoice transfer logic.",
       "keywords": [
         "MEWS",
         "Basware",
-        "invoicing integration",
-        "SFTP",
-        "Omniboost",
+        "SFTP integration",
         "invoice transfer",
+        "Omniboost",
+        "PMS integration",
         "Tax Identifier",
-        "Company profile",
+        "Basware Company ID",
         "MEWS Marketplace",
         "FTP server",
-        "hotel PMS",
-        "Basware Company ID"
+        "invoice logic",
+        "onboarding"
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-basware-invoicing-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/7937304-onboarding-guide-mews-to-basware-invoicing",
       "source_type": "website_multi",
       "source_parent_id": "mews-help-center",
-      "content_hash": "583cfa671f3b5c1662f170d72b0e97178ea42baa361e43a0a39d4283239928da"
+      "content_hash": "7031915e3a84e5284117589b80e5d4b8ba98531a072d6e6440c549b3391045fc"
     },
     "mews-help-center/onboarding-guide-mews-to-datev-omniboost-help-center": {
       "title": "Onboarding Guide | MEWS to DATEV | Omniboost Help Center",
-      "description": "Onboarding guide for integrating MEWS PMS with DATEV accounting software via export files, covering setup, accounting flows, and reconciliation.",
+      "description": "Onboarding guide for setting up the MEWS PMS to DATEV accounting integration via Omniboost, covering setup steps, accounting flows, and export files.",
       "keywords": [
         "MEWS",
         "DATEV",
-        "accounting integration",
         "Omniboost",
+        "accounting integration",
         "export files",
         "closed flow",
         "consumed flow",
-        "PMS",
-        "onboarding",
         "MEWS Marketplace",
+        "PMS",
+        "accounting setup",
         "reconciliation",
-        "accounting setup"
+        "onboarding"
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-datev-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/6609139-onboarding-guide-mews-to-datev",
       "source_type": "website_multi",
       "source_parent_id": "mews-help-center",
-      "content_hash": "721069388089160ef6feee051390c2eeade44e34714261bc69ad2a45080ade9c"
+      "content_hash": "7609e16e15d433c2c209a1deb52d82fc4e6ff54d291b25670cc9c420629c2c6e"
     },
     "mews-help-center/onboarding-guide-mews-to-feratel-omniboost-help-center": {
       "title": "Onboarding Guide | MEWS to Feratel | Omniboost Help Center",
-      "description": "Onboarding guide for integrating MEWS PMS with Feratel via Omniboost, covering setup process, required credentials, and guest data transfer details.",
+      "description": "Onboarding guide for setting up the MEWS PMS to Feratel integration via Omniboost, covering setup steps, required credentials, and guest data transfer details.",
       "keywords": [
         "MEWS",
         "Feratel",
         "Omniboost",
         "PMS integration",
         "guest data transfer",
-        "MEWS Marketplace",
         "Feratel Oestat number",
         "Feratel Betrieb number",
+        "MEWS Marketplace",
         "Gastekarten",
         "API connection",
         "onboarding",
-        "property management system"
+        "fallback value mapping"
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-feratel-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/7913591-onboarding-guide-mews-to-feratel",
       "source_type": "website_multi",
       "source_parent_id": "mews-help-center",
-      "content_hash": "00036d19788fa65f70a281556bee8967b0761053dd637bb079a3949c3ffd5656"
+      "content_hash": "d0b6eaf0bc91602bfdf5a32dffc8bbdf7018b53ae794f3fbec4fe4787d1252cc"
     },
     "mews-help-center/onboarding-guide-mews-to-invoicexpress-omniboost-help-center": {
       "title": "Onboarding Guide | MEWS to InvoiceXpress | Omniboost Help Center",
@@ -188,14 +188,14 @@
         "InvoiceXpress",
         "integration",
         "API key",
-        "tax rates",
+        "VAT tax rates",
         "IVA",
-        "VAT",
         "Device Commands",
         "invoice synchronization",
         "Portugal",
         "onboarding",
-        "error handling"
+        "invoice sequences",
+        "retry button"
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-invoicexpress-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/4867554-onboarding-guide-mews-to-invoicexpress",
@@ -213,22 +213,22 @@
         "Omniboost",
         "accounting integration",
         "PMS",
-        "journal entries",
+        "Journal Entries",
         "closed flow",
         "consumed flow",
         "MEWS Marketplace",
         "API connection",
-        "reconciliation"
+        "accounting reconciliation"
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-microsoft-dynamics-business-central-mdbc-omniboost-help.md",
       "source_url": "http://help.omniboost.io/en/articles/7280133-onboarding-guide-mews-to-microsoft-dynamics-business-central-mdbc",
       "source_type": "website_multi",
       "source_parent_id": "mews-help-center",
-      "content_hash": "2f58cf152de5be8fb99413b18c114e9096c220163b810438df9e67cce6790c48"
+      "content_hash": "effedbbe9bd9f3dbfa2eb519e0edcbacfb5997bcee3271eda8f0f469cf56d4a5"
     },
     "mews-help-center/onboarding-guide-mews-to-netsuite-omniboost-help-center": {
       "title": "Onboarding Guide | MEWS to Netsuite | Omniboost Help Center",
-      "description": "Onboarding guide for integrating MEWS PMS with NetSuite accounting via Omniboost, covering setup, accounting flows, configuration, and reconciliation.",
+      "description": "Onboarding guide for setting up the MEWS PMS to NetSuite accounting integration via Omniboost, covering setup steps, accounting flows, and reconciliation.",
       "keywords": [
         "MEWS",
         "NetSuite",
@@ -240,26 +240,26 @@
         "closed flow",
         "consumed flow",
         "MEWS Marketplace",
-        "reconciliation",
-        "accounting editable history window"
+        "accounting editable history window",
+        "data transfer"
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-netsuite-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/6765736-onboarding-guide-mews-to-netsuite",
       "source_type": "website_multi",
       "source_parent_id": "mews-help-center",
-      "content_hash": "60dfea4707628657b406a2bfe2543d1e0b6b2ce435a0cb63335d262f9a7d71a3"
+      "content_hash": "9323c4356ee872ae7ced888eb586e027cc47738718c4ebb5a6cc1c0bd261d8a0"
     },
     "mews-help-center/onboarding-guide-mews-to-quickbooks-omniboost-help-center": {
       "title": "Onboarding Guide | MEWS to QuickBooks | Omniboost Help Center",
-      "description": "Onboarding guide for integrating MEWS PMS with QuickBooks accounting software via Omniboost's API-based accounting integration.",
+      "description": "Step-by-step onboarding guide for integrating MEWS PMS with QuickBooks accounting software via Omniboost API connection.",
       "keywords": [
         "MEWS",
         "QuickBooks",
-        "Omniboost",
         "accounting integration",
+        "Omniboost",
         "PMS",
         "journal entries",
-        "Accounts Receivable",
+        "accounts receivable",
         "closed flow",
         "consumed flow",
         "MEWS Marketplace",
@@ -270,11 +270,11 @@
       "source_url": "http://help.omniboost.io/en/articles/6627705-onboarding-guide-mews-to-quickbooks",
       "source_type": "website_multi",
       "source_parent_id": "mews-help-center",
-      "content_hash": "04e05eb340f4be61e00ad9807fcd19959c597494b42822d520e45481f832cc6b"
+      "content_hash": "1d6064a6f4079acd8e9f3b9788cb27806f34e76090275195fd04894537f1e280"
     },
     "mews-help-center/onboarding-guide-mews-to-unit4-omniboost-help-center": {
       "title": "Onboarding Guide | MEWS to Unit4 | Omniboost Help Center",
-      "description": "Onboarding guide for integrating MEWS PMS with Unit4 accounting software via Omniboost API, covering setup, accounting flows, and reconciliation.",
+      "description": "Onboarding guide for setting up the MEWS PMS to Unit4 accounting integration via Omniboost, covering setup steps, accounting flows, and reconciliation.",
       "keywords": [
         "MEWS",
         "Unit4",
@@ -293,30 +293,30 @@
       "source_url": "http://help.omniboost.io/en/articles/6995448-onboarding-guide-mews-to-unit4",
       "source_type": "website_multi",
       "source_parent_id": "mews-help-center",
-      "content_hash": "f1b43d947f07eb6b85ebd0a9f3839dc2443f8c8a7d97157d885334e938d783b0"
+      "content_hash": "0eb7ab6d7b1981ba392a9a3d5d8875f31fc084a50b8f90aee43faced97d96480"
     },
     "mews-help-center/onboarding-guide-mews-to-seven-office-omniboost-help-center": {
       "title": "Onboarding Guide | MEWS to 24 Seven Office | Omniboost Help Center",
-      "description": "Onboarding guide for integrating MEWS PMS with 24 Seven Office accounting software via Omniboost's API connection, covering setup, configuration, and reconciliation.",
+      "description": "Step-by-step onboarding guide for integrating MEWS PMS with 24 Seven Office accounting software via Omniboost API connection.",
       "keywords": [
         "MEWS",
         "24 Seven Office",
         "Omniboost",
         "accounting integration",
         "PMS",
-        "API connection",
-        "journal entries",
-        "accounts receivable",
         "closed flow",
         "consumed flow",
+        "accounts receivable",
+        "journal entries",
+        "MEWS Marketplace",
         "accounting editable history window",
-        "MEWS Marketplace"
+        "data transfer"
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-seven-office-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/6973755-onboarding-guide-mews-to-24-seven-office",
       "source_type": "website_multi",
       "source_parent_id": "mews-help-center",
-      "content_hash": "707f843f3c8a4fcfb388c84be059052c7854533f4c2d8fa1e5f9e33a7c71c207"
+      "content_hash": "d9ef89754f014c7ea18037044641671b1e9429b98156b87421ae3b87b89b1e62"
     },
     "omniboost-help-center/tips-and-tricks/balance-sheet-omniboost-help-center": {
       "title": "Balance sheet | Omniboost Help Center",
@@ -358,20 +358,20 @@
     },
     "omniboost-help-center/tips-and-tricks/cost-centers-profit-centers-tracking-categories-omniboost-help-center": {
       "title": "Cost centers / Profit centers / Tracking categories | Omniboost Help Center",
-      "description": "Explains how to use cost centers, profit centers, and tracking categories to track departmental or multi-property financial performance in accounting.",
+      "description": "Explains how to use cost centers, profit centers, and tracking categories to monitor departmental or multi-property financial performance.",
       "keywords": [
         "cost centers",
         "profit centers",
         "tracking categories",
-        "departmental accounting",
         "P&L",
+        "department tracking",
+        "hotel accounting",
         "multi-property",
         "PMS",
-        "hotel management",
-        "revenue tracking",
-        "budget comparison",
         "financial reporting",
-        "chain properties"
+        "budgets",
+        "revenue categories",
+        "accounting platform"
       ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/cost-centers-profit-centers-tracking-categories-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895867-cost-centers-profit-centers-tracking-categories",
@@ -381,40 +381,40 @@
     },
     "omniboost-help-center/tips-and-tricks/dynamics-between-receivable-tracking-in-mews-and-omniboost-accounting-integratio": {
       "title": "Dynamics between Receivable Tracking in MEWS and Omniboost Accounting Integrations | Omniboost Help Center",
-      "description": "Explains how enabling MEWS receivable tracking causes conflicts with Omniboost accounting integrations, including double payments and reconciliation issues.",
+      "description": "Explains how enabling MEWS receivable tracking conflicts with Omniboost accounting integrations, causing duplicate payments, non-consecutive invoices, and debtor management issues.",
       "keywords": [
         "MEWS",
         "Omniboost",
         "receivable tracking",
         "accounts receivable",
         "accounting integration",
+        "debtor management",
         "invoice posting",
-        "debtor reconciliation",
+        "receivable invoice payment",
         "double payment",
         "guest ledger",
-        "wire transfer",
-        "accounting configuration",
-        "consecutive invoice numbers"
+        "wire transfer reconciliation",
+        "accounting configuration"
       ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/dynamics-between-receivable-tracking-in-mews-and-omniboost-accounting-integratio.md",
       "source_url": "http://help.omniboost.io/en/articles/5106697-dynamics-between-receivable-tracking-in-mews-and-omniboost-accounting-integrations",
       "source_type": "website_multi",
       "source_parent_id": "omniboost-help-center/tips-and-tricks",
-      "content_hash": "06a0e8b03e1119a7b309db962a4a7a4ffdfbe18ba085b41e73fd2de7d4a75c3e"
+      "content_hash": "8ba324dc2d4102554d963e8df416e665c3bec1c2bbbe2dfab702a66bfa57fe43"
     },
     "omniboost-help-center/tips-and-tricks/deposit-ledger-omniboost-help-center": {
       "title": "Deposit ledger | Omniboost Help Center",
-      "description": "Defines the Deposits account as a current liability in the general ledger for customer advance payments before product or service delivery.",
+      "description": "Defines the Deposits account as a current liability in the general ledger for tracking customer advance payments before product or service delivery.",
       "keywords": [
         "deposits",
         "current liability",
         "general ledger",
         "advance payments",
         "customers",
-        "ledger account",
-        "deposit ledger",
-        "service delivery",
         "product delivery",
+        "service delivery",
+        "deposit ledger",
+        "accounts payable",
         "liability account"
       ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/deposit-ledger-omniboost-help-center.md",
@@ -473,8 +473,9 @@
         "ledger account",
         "suspense account",
         "payment reconciliation",
+        "commission deduction",
         "gateway payments",
-        "commission deduction"
+        "accounting automation"
       ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/gateway-commission-costs-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3896006-gateway-commission-costs",
@@ -484,16 +485,16 @@
     },
     "omniboost-help-center/tips-and-tricks/general-journal-code-omniboost-help-center": {
       "title": "General journal code | Omniboost Help Center",
-      "description": "Explains what a general journal code is and its role as a posting source for ledger accounts in accounting integrations.",
+      "description": "Explains what a general journal code is and recommends creating a separate one for accounting integrations.",
       "keywords": [
-        "general journal",
         "journal code",
+        "general journal",
         "ledger account",
         "postings",
         "accounting platform",
         "integration",
-        "journal entry",
-        "source journal"
+        "source journal",
+        "bookkeeping"
       ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/general-journal-code-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895761-general-journal-code",
@@ -503,7 +504,7 @@
     },
     "omniboost-help-center/tips-and-tricks/ledger-account-code-omniboost-help-center": {
       "title": "Ledger account code | Omniboost Help Center",
-      "description": "Explains general ledger account codes, their purpose in recording business transactions, and their relationship to the chart of accounts.",
+      "description": "Explains general ledger account codes, their role in recording business transactions, and their relationship to the chart of accounts.",
       "keywords": [
         "general ledger",
         "GL code",
@@ -522,25 +523,25 @@
     },
     "omniboost-help-center/tips-and-tricks/managing-feratel-tasks-in-mews-omniboost-help-center": {
       "title": "Managing Feratel tasks in Mews | Omniboost Help Center",
-      "description": "Explains how to manage Mews tasks created when reservations fail to sync with Feratel due to missing guest details.",
+      "description": "Explains how to manage Feratel integration tasks in Mews when reservations fail to sync due to missing guest details.",
       "keywords": [
-        "Mews",
         "Feratel",
+        "Mews",
         "integration",
         "tasks queue",
-        "reservation sync",
+        "reservations",
+        "sync",
         "guest details",
         "missing fields",
         "dashboard",
         "task management",
-        "property management",
-        "reservation errors"
+        "property management"
       ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/managing-feratel-tasks-in-mews-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3534954-managing-feratel-tasks-in-mews",
       "source_type": "website_multi",
       "source_parent_id": "omniboost-help-center/tips-and-tricks",
-      "content_hash": "5fced4d43e25b52835fa704541f6c322604249f62135ce0fdfcaa469c5ec9629"
+      "content_hash": "0f000ca8ca825f4048695d83d1a189b9398873809fc5e4465ccd1c3c2aee0eff"
     },
     "omniboost-help-center/tips-and-tricks/posting-accounts-receivables-and-sales-invoices-separately-omniboost-help-center": {
       "title": "Posting accounts receivables and sales invoices separately | Omniboost Help Center",
@@ -548,9 +549,9 @@
       "keywords": [
         "accounts receivables",
         "sales invoices",
-        "journal entries",
         "general journal",
         "sales journal",
+        "journal entries",
         "debtor information",
         "VAT",
         "revenue posting",
@@ -567,16 +568,16 @@
     },
     "omniboost-help-center/tips-and-tricks/prefix-debtor-code-omniboost-help-center": {
       "title": "Prefix debtor code | Omniboost Help Center",
-      "description": "Explains the prefix debtor code setting and total length configuration for debtor codes in the system.",
+      "description": "Configuration setting for defining the total length and prefix of debtor codes in a system.",
       "keywords": [
         "debtor code",
         "prefix",
-        "debtor prefix",
-        "code length",
-        "total length",
         "debtor configuration",
-        "account code",
-        "debtor settings"
+        "code length",
+        "debtor settings",
+        "accounting",
+        "customer code",
+        "system configuration"
       ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/prefix-debtor-code-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3896012-prefix-debtor-code",
@@ -586,7 +587,7 @@
     },
     "omniboost-help-center/tips-and-tricks/profit-loss-statement-omniboost-help-center": {
       "title": "Profit & Loss statement | Omniboost Help Center",
-      "description": "Defines the profit and loss (P&L) statement, explaining its purpose in summarizing revenues, costs, and expenses over a fiscal period.",
+      "description": "Explains what a profit and loss (P&L) statement is, covering revenues, costs, expenses, and profitability over fiscal periods.",
       "keywords": [
         "profit and loss",
         "P&L statement",
@@ -596,9 +597,9 @@
         "expenses",
         "fiscal quarter",
         "fiscal year",
-        "profit generation",
-        "revenue",
-        "financial summary"
+        "profitability",
+        "revenue generation",
+        "cost reduction"
       ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/profit-loss-statement-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895858-profit-loss-statement",
@@ -608,7 +609,7 @@
     },
     "omniboost-help-center/tips-and-tricks/sales-journal-code-omniboost-help-center": {
       "title": "Sales journal code | Omniboost Help Center",
-      "description": "Explains sales journal codes used for posting sales invoices and debtor information to ledger accounts in accounting integrations.",
+      "description": "Explains sales journal codes used for posting to ledger accounts, processing sales invoices, and debtor information in accounting integrations.",
       "keywords": [
         "sales journal",
         "journal code",
@@ -619,7 +620,7 @@
         "general journal",
         "accounting platform",
         "integration",
-        "ledger codes"
+        "accounts receivable"
       ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/sales-journal-code-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895806-sales-journal-code",
@@ -629,19 +630,19 @@
     },
     "omniboost-help-center/tips-and-tricks/suspense-account-omniboost-help-center": {
       "title": "Suspense account | Omniboost Help Center",
-      "description": "Explains what suspense accounts are and how they are used to temporarily record and reconcile payments between PMS and accounting platforms.",
+      "description": "Explains what a suspense account is and how it is used to temporarily record and reconcile payments between PMS and accounting systems.",
       "keywords": [
         "suspense account",
         "general ledger",
         "payment methods",
         "credit card payment",
         "PMS system",
-        "accounting platform",
-        "bank reconciliation",
+        "reconciliation",
         "debit",
         "credit",
-        "temporary recording",
-        "payment reconciliation"
+        "accounting platform",
+        "bank payment",
+        "temporary recording"
       ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/suspense-account-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895884-suspense-account",
@@ -660,11 +661,11 @@
         "debtor",
         "guest ledger",
         "journal entry",
-        "account code",
+        "accounting platform",
         "credit",
         "debit",
-        "accounting platform",
-        "control mechanism"
+        "control mechanism",
+        "account code"
       ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/suspense-account-receivables-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895977-suspense-account-receivables",
@@ -674,16 +675,16 @@
     },
     "omniboost-help-center/tips-and-tricks/update-debtor-information-in-your-accounting-platform-omniboost-help-center": {
       "title": "Update debtor information in your accounting platform | Omniboost Help Center",
-      "description": "Explains the option to sync and update debtor information within an accounting platform, limited to active debtors.",
+      "description": "Explains the feature that updates debtor information in an accounting platform, limited to active debtors only.",
       "keywords": [
         "debtor",
         "accounting platform",
         "debtor information",
         "update",
         "sync",
-        "active debtors",
         "integration",
-        "settings"
+        "active debtors",
+        "accounting settings"
       ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/update-debtor-information-in-your-accounting-platform-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895905-update-debtor-information-in-your-accounting-platform",
@@ -701,8 +702,8 @@
         "net amount",
         "tax configuration",
         "VAT extraction",
-        "accounting settings",
-        "tax codes"
+        "tax codes",
+        "accounting settings"
       ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/vat-code-mappings-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3896026-vat-code-mappings",
@@ -712,7 +713,7 @@
     },
     "omniboost-help-center/tips-and-tricks/what-is-the-difference-between-a-deposit-and-prepayment-omniboost-help-center": {
       "title": "What is the difference between a deposit and prepayment? | Omniboost Help Center",
-      "description": "Explains the distinction between a deposit (frozen funds securing an operation) and a prepayment (advance payment for goods or services).",
+      "description": "Explains the difference between a deposit and a prepayment, covering ownership, fund control, and purpose of each payment type.",
       "keywords": [
         "deposit",
         "prepayment",
@@ -720,9 +721,9 @@
         "frozen funds",
         "power of disposition",
         "ownership",
-        "secure operation",
-        "goods and services",
         "remittance",
+        "goods and services",
+        "financial terms",
         "accounting concepts"
       ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/what-is-the-difference-between-a-deposit-and-prepayment-omniboost-help-center.md",
@@ -738,25 +739,25 @@
         "Omniboost",
         "accounting integration",
         "Accounts Receivable",
-        "Debtors",
-        "ledger account",
+        "Debtor ledger",
         "journal entry",
         "MEWS PMS",
         "Exact Online",
-        "payment posting",
         "chart of accounts",
+        "payment posting error",
         "debtor information",
+        "ledger account mapping",
         "API connection"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/accounting-integration-unable-to-post-payment-entry-to-debtor-ledger-account-omn.md",
       "source_url": "http://help.omniboost.io/en/articles/6639165-accounting-integration-unable-to-post-payment-entry-to-debtor-ledger-account",
       "source_type": "website_multi",
       "source_parent_id": "omniboost-help-center/accounting-information",
-      "content_hash": "f0cf3a8cb44eaffef902c771c3ced7048484058c0b965944b9c8af903b8819ea"
+      "content_hash": "facd4a95db09624e2334c5c26ae2b9b15f1002285d990ea62f34c1dd7cb6f230"
     },
     "omniboost-help-center/accounting-information/accounting-onboarding-omniboost-help-center": {
       "title": "Accounting onboarding | Omniboost Help Center",
-      "description": "Omniboost onboarding guide for hotels integrating PMS/POS systems with accounting platforms, covering access requirements and configuration details.",
+      "description": "Onboarding guide for hotels integrating PMS/POS systems with accounting platforms via Omniboost, covering access requirements and configuration details.",
       "keywords": [
         "Omniboost",
         "accounting onboarding",
@@ -765,11 +766,11 @@
         "hotel integration",
         "journal codes",
         "ledger accounts",
-        "chart of accounts",
+        "Chart of Accounts",
         "VAT codes",
         "fallback revenue",
         "suspense account",
-        "financial integration"
+        "city ledger"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/accounting-onboarding-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3382585-accounting-onboarding",
@@ -779,7 +780,7 @@
     },
     "omniboost-help-center/accounting-information/configure-your-accounting-setup-in-mews-pms-and-choose-your-accounting-flow-omni": {
       "title": "Configure your Accounting Setup in MEWS PMS and choose your Accounting Flow | Omniboost Help Center",
-      "description": "Guide for configuring MEWS PMS accounting setup and choosing accounting flows for Omniboost Platform integration.",
+      "description": "Guide for configuring MEWS PMS accounting setup and selecting accounting flows for Omniboost Platform integration.",
       "keywords": [
         "MEWS PMS",
         "Omniboost Platform",
@@ -790,31 +791,32 @@
         "chart of accounts",
         "receivable tracking",
         "accounting flow",
-        "accounting setup",
-        "property management system"
+        "property management system",
+        "accounting configuration",
+        "finance settings"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/configure-your-accounting-setup-in-mews-pms-and-choose-your-accounting-flow-omni.md",
       "source_url": "http://help.omniboost.io/en/articles/6585772-configure-your-accounting-setup-in-mews-pms-and-choose-your-accounting-flow",
       "source_type": "website_multi",
       "source_parent_id": "omniboost-help-center/accounting-information",
-      "content_hash": "f08c2dd83b56806b9ff7d98bc753ec18fe34e5ec780171cd50a86057372b86eb"
+      "content_hash": "9ff343ce4f76ee85c26ba2dd808c1522658bc5edb5ecbfb91c1866d41d5e5596"
     },
     "omniboost-help-center/accounting-information/fallback-ledgers-omniboost-help-center": {
       "title": "Fallback ledgers | Omniboost Help Center",
-      "description": "Explains fallback ledger accounts used when PMS revenue or payment entries are misconfigured and cannot sync to accounting platforms.",
+      "description": "Explains fallback ledger accounts used when PMS revenue or payment entries are misconfigured and cannot sync with accounting platforms.",
       "keywords": [
         "fallback ledgers",
         "PMS",
         "revenue entries",
         "payment entries",
-        "ledger account code",
+        "ledger accounts",
         "journal entry",
         "accounting platform",
         "synchronization",
         "integration",
         "mapping",
-        "fallback ledger accounts",
-        "configuration"
+        "ledger configuration",
+        "accounting sync"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/fallback-ledgers-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895842-fallback-ledgers",
@@ -824,7 +826,7 @@
     },
     "omniboost-help-center/accounting-information/fallback-ledger-accounts-for-revenues-and-payments-omniboost-help-center": {
       "title": "Fallback ledger accounts for Revenues and Payments | Omniboost Help Center",
-      "description": "Explains why fallback ledger account codes are required for unmapped revenues and payments in Omniboost's MEWS PMS accounting integrations.",
+      "description": "Explains why fallback ledger account codes are required for unmapped revenues and payments in MEWS PMS accounting integrations via Omniboost.",
       "keywords": [
         "fallback ledger account",
         "MEWS PMS",
@@ -832,8 +834,8 @@
         "accounting integration",
         "revenue mapping",
         "payment mapping",
-        "chart of accounts",
         "accounting categories",
+        "chart of accounts",
         "ledger account codes",
         "Accounting report",
         "unmapped revenues",
@@ -843,11 +845,11 @@
       "source_url": "http://help.omniboost.io/en/articles/6609704-fallback-ledger-accounts-for-revenues-and-payments",
       "source_type": "website_multi",
       "source_parent_id": "omniboost-help-center/accounting-information",
-      "content_hash": "ff4301375fd231869843dbd6f63665febfbdd67fc19b76b75a8b0deca97e4337"
+      "content_hash": "2c224ea2c6cc96d6d058284d5f2d65ed5009c5a5da4c2803f15387f4e86d275d"
     },
     "omniboost-help-center/accounting-information/how-to-get-an-authorization-token-from-fortnox-omniboost-help-center": {
       "title": "How to get an authorization token from fortnox? | Omniboost Help Center",
-      "description": "Step-by-step guide to generating a Fortnox authorization token for connecting to Omniboost integration.",
+      "description": "Step-by-step guide for generating a Fortnox authorization token to connect a Fortnox account with Omniboost integration.",
       "keywords": [
         "Fortnox",
         "authorization token",
@@ -855,16 +857,16 @@
         "integration",
         "GRRXwT5AtDYt",
         "manage users",
-        "Add Integration",
         "Integration license",
+        "Add Integration",
         "authorization code",
-        "account connection"
+        "Fortnox connection"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/how-to-get-an-authorization-token-from-fortnox-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/4552471-how-to-get-an-authorization-token-from-fortnox",
       "source_type": "website_multi",
       "source_parent_id": "omniboost-help-center/accounting-information",
-      "content_hash": "c6c47b3e3934a76a96f27a7fd5b7d151cd79ddace8ac1184d670edf1c754bda6"
+      "content_hash": "2135dd3b5ba25593422dab5c09c42958f55471359e62269bfdf0c29cd1d83292"
     },
     "omniboost-help-center/accounting-information/how-to-get-an-employee-token-from-tripletex-omniboost-help-center": {
       "title": "How to get an employee token from tripletex? | Omniboost Help Center",
@@ -877,32 +879,32 @@
         "integration",
         "API access",
         "token generation",
-        "entitlements",
+        "authentication",
         "company employees",
-        "authentication"
+        "entitlements"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/how-to-get-an-employee-token-from-tripletex-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/4553054-how-to-get-an-employee-token-from-tripletex",
       "source_type": "website_multi",
       "source_parent_id": "omniboost-help-center/accounting-information",
-      "content_hash": "51755c0440e612bb1551f14ee9ef6448b8ec343b16e06bad1a159ad7573ff643"
+      "content_hash": "87ad89334e32c30c288c910a540626789a79911ca54e88437d2cba2c5f4b87b6"
     },
     "omniboost-help-center/accounting-information/integration-types-api-vs-financial-export-omniboost-help-center": {
       "title": "Integration types: API vs Financial Export | Omniboost Help Center",
-      "description": "Explains the differences between API and Financial Export integration types offered by Omniboost for accounting data transfer.",
+      "description": "Explains the differences between API and Financial Export integration types offered by Omniboost for accounting software connections.",
       "keywords": [
         "API integration",
-        "financial export",
+        "Financial Export",
         "Omniboost",
-        "accounting software",
         "CSV",
         "TXT file",
         "sFTP",
+        "accounting software",
         "PMS",
         "POS",
         "daily financial journal",
-        "integration types",
-        "accounting information"
+        "financial journal",
+        "export integration"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/integration-types-api-vs-financial-export-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/7262217-integration-types-api-vs-financial-export",
@@ -935,20 +937,20 @@
     },
     "omniboost-help-center/accounting-information/the-difference-between-a-closed-and-consumed-accounting-flow-omniboost-help-cent": {
       "title": "The difference between a Closed and Consumed accounting flow | Omniboost Help Center",
-      "description": "Explains the difference between Consumed and Closed accounting flows in PMS hotel accounting integrations, with examples of revenue and payment posting.",
+      "description": "Explains the difference between Consumed and Closed accounting flows used in PMS accounting integrations, with examples of revenue and payment posting.",
       "keywords": [
         "consumed accounting flow",
         "closed accounting flow",
         "PMS system",
-        "revenue posting",
+        "revenue recognition",
         "bills",
         "folios",
-        "VAT",
+        "VAT posting",
         "general journal",
         "accounting integration",
         "hotel reservation",
-        "Omniboost",
-        "sales entries"
+        "sales entries",
+        "Omniboost"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/the-difference-between-a-closed-and-consumed-accounting-flow-omniboost-help-cent.md",
       "source_url": "http://help.omniboost.io/en/articles/4591164-the-difference-between-a-closed-and-consumed-accounting-flow",
@@ -958,7 +960,7 @@
     },
     "omniboost-help-center/accounting-information/understanding-the-accounting-editable-history-window-dynamics-omniboost-help-cen": {
       "title": "Understanding the Accounting Editable History Window Dynamics | Omniboost Help Center",
-      "description": "Explains how the Accounting Editable History Window (AEHW) in MEWS PMS affects when Omniboost Accounting Connection transfers accounting entries to external accounting platforms.",
+      "description": "Explains how the Accounting Editable History Window (AEHW) in MEWS PMS affects when Omniboost Accounting Connection transfers accounting entries to accounting platforms.",
       "keywords": [
         "Accounting Editable History Window",
         "AEHW",
@@ -969,18 +971,19 @@
         "accounting items",
         "offset time",
         "ledger entries",
+        "PMS arrival time",
         "accounting configuration",
-        "PMS arrival time"
+        "midnight offset"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/understanding-the-accounting-editable-history-window-dynamics-omniboost-help-cen.md",
       "source_url": "http://help.omniboost.io/en/articles/6593276-understanding-the-accounting-editable-history-window-dynamics",
       "source_type": "website_multi",
       "source_parent_id": "omniboost-help-center/accounting-information",
-      "content_hash": "1f2c347de9934ca350abe4a31d69bab35427173b603af141eb4456fdaa2a4229"
+      "content_hash": "3d9b33a23bc032cc1b48803a30db942b6b48f276eb3874e9d1dbfbcd88bcc921"
     },
     "omniboost-help-center/accounting-information/understanding-the-guest-ledger-account-in-mews-pms-to-accounting-connections-omn": {
       "title": "Understanding the Guest Ledger account in MEWS PMS to Accounting connections | Omniboost Help Center",
-      "description": "Explains the Guest Ledger account in MEWS PMS to accounting connections, including its role as a balance account in journal entries using Omniboost's Consumed Accounting Flow.",
+      "description": "Explains the Guest Ledger account in MEWS PMS to accounting connections, including its role as a balance account in journal entries under Consumed Accounting Flow.",
       "keywords": [
         "Guest Ledger",
         "MEWS PMS",
@@ -988,22 +991,22 @@
         "Consumed Accounting Flow",
         "journal entry",
         "accounts receivable",
-        "balance account",
         "deposits",
         "in-house guests",
-        "debit credit",
+        "debit credit balance",
         "accounting connection",
-        "Closed Accounting Flow"
+        "Closed Accounting Flow",
+        "ledger account"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/understanding-the-guest-ledger-account-in-mews-pms-to-accounting-connections-omn.md",
       "source_url": "http://help.omniboost.io/en/articles/6593186-understanding-the-guest-ledger-account-in-mews-pms-to-accounting-connections",
       "source_type": "website_multi",
       "source_parent_id": "omniboost-help-center/accounting-information",
-      "content_hash": "4d5a7fcee496267fd8a3b63bf1ad8fcf42e9cbe9c0f5fff39bbde01cc873922f"
+      "content_hash": "81c4f59c793b40fc0592c443b1adece7a5d093771a0e699fc9ebd56786234ae2"
     },
     "omniboost-help-center/accounting-information/verschil-tussen-journaalposten-gebaseerd-op-consumed-of-closed-omzet-omniboost-h": {
       "title": "Verschil tussen journaalposten gebaseerd op consumed of closed omzet | Omniboost Help Center",
-      "description": "Explains the difference between consumed revenue and closed bills revenue flows in MEWS journal entries for accounting integration.",
+      "description": "Explains the difference between consumed revenue and closed bills revenue flows in MEWS accounting journal entries integration.",
       "keywords": [
         "MEWS",
         "consumed omzet",
@@ -1011,11 +1014,11 @@
         "journaalposten",
         "omzet",
         "BTW",
-        "verkoopdagboek",
         "memoriaal",
-        "invoices",
+        "verkoopdagboek",
         "Omniboost",
-        "boekhoudpakket",
+        "invoices",
+        "boekhouding",
         "diversen dagboek"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/verschil-tussen-journaalposten-gebaseerd-op-consumed-of-closed-omzet-omniboost-h.md",
@@ -1026,39 +1029,39 @@
     },
     "omniboost-help-center/accounting-information/how-to-retrieve-the-correct-yuki-api-key-administration-id-omniboost-help-center": {
       "title": "How to retrieve the correct Yuki API Key & Administration ID | Omniboost Help Center",
-      "description": "Step-by-step guide to retrieve the Yuki API Key and Administration ID for connecting Yuki to PMS or POS systems.",
+      "description": "Step-by-step guide to retrieve the Yuki API Key and Administration ID for connecting Yuki to a PMS or POS system.",
       "keywords": [
         "Yuki",
         "API Key",
         "Administration ID",
+        "Yuki integration",
         "Webservices",
-        "Omniboost",
         "PMS",
         "POS",
-        "Webservice API-Sleutels",
-        "Integraties",
+        "Omniboost",
         "yukiworks",
+        "Webservice API-Sleutels",
         "Mijn domein",
-        "integration"
+        "Integraties"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/how-to-retrieve-the-correct-yuki-api-key-administration-id-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3728559-how-to-retrieve-the-correct-yuki-api-key-administration-id",
       "source_type": "website_multi",
       "source_parent_id": "omniboost-help-center/accounting-information",
-      "content_hash": "d37322f5debfcb0adeda826a120d799222fedcbd33c727baa913ac1dff6b441a"
+      "content_hash": "ab74ab157390dac41550b47794bc6992e4b9a213e62674d1c4dd4384fe6bd379"
     },
     "omniboost-help-center/accounting-information/how-to-locate-the-vat-accounts-for-your-pospms-integration-with-fortnox-omniboos": {
       "title": "How to Locate the VAT Accounts for your POS/PMS integration with Fortnox | Omniboost Help Center",
-      "description": "Step-by-step guide for locating VAT accounts in Fortnox to configure POS/PMS integration mappings in Base.",
+      "description": "Step-by-step guide for locating VAT accounts in Fortnox to configure POS/PMS integration VAT rate mapping in Base.",
       "keywords": [
         "Fortnox",
         "VAT accounts",
         "POS integration",
         "PMS integration",
         "VAT mapping",
-        "Base form",
         "Omniboost",
         "predefined accounts",
+        "Base form",
         "accounting settings",
         "VAT rates",
         "2611",
@@ -1068,11 +1071,11 @@
       "source_url": "http://help.omniboost.io/en/articles/12331326-how-to-locate-the-vat-accounts-for-your-pos-pms-integration-with-fortnox",
       "source_type": "website_multi",
       "source_parent_id": "omniboost-help-center/accounting-information",
-      "content_hash": "359328768f49bdda832784002b30bad95e5a95fa7b5982be9ce5098ac3c0b6f0"
+      "content_hash": "c29695f97e1db73919b9d127900bc582d1699cc8143dbd0768bcbe00b2ff5f33"
     },
     "omniboost-help-center/accounting-information/understanding-normal-postings-in-your-accounting-system-and-prevention-methods-o": {
       "title": "Understanding 'NORMAL' Postings in Your Accounting System and Prevention Methods | Omniboost Help Center",
-      "description": "Explains why 'NORMAL' payment postings appear in accounting systems when using Lightspeed K-Series integration and how to prevent them.",
+      "description": "Explains why 'NORMAL' payment postings appear in accounting systems when using Lightspeed K-Series integrations and how to prevent them.",
       "keywords": [
         "NORMAL postings",
         "Lightspeed K-Series",
@@ -1085,17 +1088,17 @@
         "payment code",
         "zero dollar receipt",
         "cancel ticket",
-        "integration mapping"
+        "accounting system"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/understanding-normal-postings-in-your-accounting-system-and-prevention-methods-o.md",
       "source_url": "http://help.omniboost.io/en/articles/12458608-understanding-normal-postings-in-your-accounting-system-and-prevention-methods",
       "source_type": "website_multi",
       "source_parent_id": "omniboost-help-center/accounting-information",
-      "content_hash": "60a26734c84c8c1e3fded85c21acb30bf559b62e36484fb43a8b3be44f0d9111"
+      "content_hash": "04bc140647ac8a55bb39f136439ebf5ca0e347954e68f713d82824b1965d32f2"
     },
     "omniboost-help-center/accounting-information/how-to-retrieve-the-grant-token-from-visma-e-conomics-omniboost-help-center": {
       "title": "How to retrieve the 'Grant Token' from Visma e-Conomics | Omniboost Help Center",
-      "description": "Step-by-step guide to retrieve a Grant Token from Visma e-Conomic to enable Omniboost integration setup.",
+      "description": "Step-by-step guide to retrieve a Grant Token from Visma e-Conomic to enable Omniboost integration access.",
       "keywords": [
         "Grant Token",
         "Visma e-Conomic",
@@ -1106,19 +1109,17 @@
         "e-conomic credentials",
         "Omniboost App",
         "onboarding",
-        "access token",
-        "Visma agreement",
-        "connection setup"
+        "appPublicToken"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/how-to-retrieve-the-grant-token-from-visma-e-conomics-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/12899164-how-to-retrieve-the-grant-token-from-visma-e-conomics",
       "source_type": "website_multi",
       "source_parent_id": "omniboost-help-center/accounting-information",
-      "content_hash": "a7c3155e9d14c268ff0071cbbc2054ffc85216decd12acdb476bfa653cfbe84e"
+      "content_hash": "e19c860761a4cf0aef52353dbffa63d01f894315ec8b2bc1bd84b2c06170649c"
     },
     "omniboost-help-center/accounting-information/how-to-ensure-the-correct-exact-online-administrations-are-listed-in-base-omnibo": {
       "title": "How to ensure the correct Exact Online administration(s) are listed in Base? | Omniboost Help Center",
-      "description": "Guide for ensuring correct Exact Online administrations appear in Base by managing OAuth app permissions via the Security Center.",
+      "description": "Step-by-step guide to configure Exact Online administration access permissions for the Base/Omniboost OAuth integration.",
       "keywords": [
         "Exact Online",
         "Base",
@@ -1130,14 +1131,113 @@
         "Manage Administrations",
         "integration",
         "onboarding",
-        "Netherlands",
-        "Belgium"
+        "credentials",
+        "Netherlands Belgium Germany"
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/how-to-ensure-the-correct-exact-online-administrations-are-listed-in-base-omnibo.md",
       "source_url": "http://help.omniboost.io/en/articles/12674272-how-to-ensure-the-correct-exact-online-administration-s-are-listed-in-base",
       "source_type": "website_multi",
       "source_parent_id": "omniboost-help-center/accounting-information",
-      "content_hash": "8d668103ad2c74fc476407548520befb26992a34e12703853517f21dabf0985b"
+      "content_hash": "a46b95c2523bdeeb6b88df893f15e9e17462489b1f6c12e3ee4157cfb2d3c24d"
+    },
+    "mews-features/mews-to-datev": {
+      "title": "Mews to Datev",
+      "description": "Feature compatibility table for the Mews PMS to Datev accounting integration via Omniboost, covering revenues, payments, VAT, A/R, and flow types.",
+      "keywords": ["Mews", "Datev", "accounting integration", "Omniboost", "consumed flow", "closed flow", "revenue transfer", "VAT", "accounts receivable", "credit card fee split"],
+      "path": "knowledge/website/mews-features/mews-to-datev.md",
+      "source_url": "https://omniboost.io/system-features/mews",
+      "source_type": "website_split",
+      "source_parent_id": "mews-features"
+    },
+    "mews-features/mews-to-exact-online": {
+      "title": "Mews to Exact Online",
+      "description": "Feature compatibility table for the Mews PMS to Exact Online accounting integration via Omniboost, including consumed and closed flow support.",
+      "keywords": ["Mews", "Exact Online", "accounting integration", "Omniboost", "consumed flow", "closed flow", "bills", "revenue transfer", "VAT", "suspense account"],
+      "path": "knowledge/website/mews-features/mews-to-exact-online.md",
+      "source_url": "https://omniboost.io/system-features/mews",
+      "source_type": "website_split",
+      "source_parent_id": "mews-features"
+    },
+    "mews-features/mews-to-netsuite": {
+      "title": "Mews to NetSuite",
+      "description": "Feature compatibility table for the Mews PMS to NetSuite accounting integration via Omniboost, consumed flow only.",
+      "keywords": ["Mews", "NetSuite", "accounting integration", "Omniboost", "consumed flow", "revenue transfer", "statistics", "suspense account"],
+      "path": "knowledge/website/mews-features/mews-to-netsuite.md",
+      "source_url": "https://omniboost.io/system-features/mews",
+      "source_type": "website_split",
+      "source_parent_id": "mews-features"
+    },
+    "mews-features/mews-to-quickbooks": {
+      "title": "Mews to Quickbooks",
+      "description": "Feature compatibility table for the Mews PMS to QuickBooks accounting integration via Omniboost, covering consumed and closed flow types.",
+      "keywords": ["Mews", "QuickBooks", "accounting integration", "Omniboost", "consumed flow", "closed flow", "bills", "revenue transfer", "VAT", "suspense account"],
+      "path": "knowledge/website/mews-features/mews-to-quickbooks.md",
+      "source_url": "https://omniboost.io/system-features/mews",
+      "source_type": "website_split",
+      "source_parent_id": "mews-features"
+    },
+    "mews-features/mews-to-xero": {
+      "title": "Mews to Xero",
+      "description": "Feature compatibility table for the Mews PMS to Xero accounting integration via Omniboost, covering consumed and closed flow types.",
+      "keywords": ["Mews", "Xero", "accounting integration", "Omniboost", "consumed flow", "closed flow", "bills", "revenue transfer", "VAT", "suspense account"],
+      "path": "knowledge/website/mews-features/mews-to-xero.md",
+      "source_url": "https://omniboost.io/system-features/mews",
+      "source_type": "website_split",
+      "source_parent_id": "mews-features"
+    },
+    "mews-features/mews-to-twinfield": {
+      "title": "Mews to Twinfield",
+      "description": "Feature compatibility table for the Mews PMS to Twinfield accounting integration via Omniboost, consumed and closed journey flow.",
+      "keywords": ["Mews", "Twinfield", "accounting integration", "Omniboost", "consumed flow", "closed flow", "revenue transfer", "VAT", "credit card fee split"],
+      "path": "knowledge/website/mews-features/mews-to-twinfield.md",
+      "source_url": "https://omniboost.io/system-features/mews",
+      "source_type": "website_split",
+      "source_parent_id": "mews-features"
+    },
+    "mews-features/mews-to-exact-globe": {
+      "title": "Mews to Exact Globe",
+      "description": "Feature compatibility table for the Mews PMS to Exact Globe accounting integration via Omniboost, consumed flow only.",
+      "keywords": ["Mews", "Exact Globe", "accounting integration", "Omniboost", "consumed flow", "revenue transfer", "VAT", "credit card fee split"],
+      "path": "knowledge/website/mews-features/mews-to-exact-globe.md",
+      "source_url": "https://omniboost.io/system-features/mews",
+      "source_type": "website_split",
+      "source_parent_id": "mews-features"
+    },
+    "mews-features/mews-to-fortnox": {
+      "title": "Mews to Fortnox",
+      "description": "Feature compatibility table for the Mews PMS to Fortnox accounting integration via Omniboost, consumed flow only.",
+      "keywords": ["Mews", "Fortnox", "accounting integration", "Omniboost", "consumed flow", "revenue transfer", "VAT", "skipping entries"],
+      "path": "knowledge/website/mews-features/mews-to-fortnox.md",
+      "source_url": "https://omniboost.io/system-features/mews",
+      "source_type": "website_split",
+      "source_parent_id": "mews-features"
+    },
+    "mews-features/mews-to-visma-net": {
+      "title": "Mews to Visma .Net",
+      "description": "Feature compatibility table for the Mews PMS to Visma .Net accounting integration via Omniboost, consumed flow only.",
+      "keywords": ["Mews", "Visma", "Visma Net", "accounting integration", "Omniboost", "consumed flow", "revenue transfer", "statistics", "suspense account"],
+      "path": "knowledge/website/mews-features/mews-to-visma-net.md",
+      "source_url": "https://omniboost.io/system-features/mews",
+      "source_type": "website_split",
+      "source_parent_id": "mews-features"
+    },
+    "mews-features/mews-to-hotel-investor-apps": {
+      "title": "Mews to Hotel Investor Apps",
+      "description": "Feature compatibility table for the Mews PMS to Hotel Investor Apps integration via Omniboost, consumed flow only.",
+      "keywords": ["Mews", "Hotel Investor Apps", "accounting integration", "Omniboost", "consumed flow", "revenue transfer", "statistics", "credit card fee split"],
+      "path": "knowledge/website/mews-features/mews-to-hotel-investor-apps.md",
+      "source_url": "https://omniboost.io/system-features/mews",
+      "source_type": "website_split",
+      "source_parent_id": "mews-features"
+    },
+    "mews-features/mews-to-m3": {
+      "title": "Mews to M3",
+      "description": "Feature compatibility table for the Mews PMS to M3 accounting integration via Omniboost, consumed flow only.",
+      "keywords": ["Mews", "M3", "accounting integration", "Omniboost", "consumed flow", "revenue transfer", "statistics", "credit card fee split"],
+      "path": "knowledge/website/mews-features/mews-to-m3.md",
+      "source_url": "https://omniboost.io/system-features/mews",
+      "source_type": "website_split",
+      "source_parent_id": "mews-features"
     }
   }
 }

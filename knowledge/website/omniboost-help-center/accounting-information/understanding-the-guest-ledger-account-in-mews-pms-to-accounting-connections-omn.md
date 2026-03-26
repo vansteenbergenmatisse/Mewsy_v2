@@ -2,7 +2,7 @@
 
 Understand the Guest Ledger account in your MEWS PMS to Accounting platform connection.
 
-The article below describes the Guest Ledger account - a piece of accounting information that Omniboost regularly requests from clients who are using a Consumed Accounting Flow.
+**The article below describes the Guest Ledger account - a piece of accounting information that Omniboost regularly requests from clients who are using a Consumed Accounting Flow.**
 
 # P1: Understanding the Guest Ledger Account
 
@@ -15,7 +15,7 @@ Please find a simplified example of a Journal entry - including a Guest Ledger a
 **Journal entry - Simplified Example**
 
 | Line | Date | Ledger Account | Description | Debit (D) | Credit (C) |
-|------|------|----------------|-------------|-----------|------------|
+| --- | --- | --- | --- | --- | --- |
 | 1 | 15-04-2024 | 840320 | Accommodation | | 4000 |
 | 2 | 15-04-2024 | 830210 | Breakfast | | 750 |
 | 3 | 15-04-2024 | 810010 | Cleaning Fee | | 125 |
@@ -64,7 +64,7 @@ Via the MEWS Accounting Report, you can easily determine the Guest Ledger accoun
 We can visualize the above as follows:
 
 | Debit | Credit |
-|-------|--------|
+| --- | --- |
 | Payments | Revenues |
 | Negative Deposits | VAT / Tax |
 | | Positive Deposits |
@@ -109,7 +109,7 @@ The Guest Ledger amount as calculated by the Omniboost accounting integration wi
 A simplified visualization of the Journal Entry would look like follows:
 
 | Debit | Credit |
-|-------|--------|
+| --- | --- |
 | 3280.32 | 3567.94 |
 | 804.42 | 516.80 |
 | Total: 4084.74 | Total: 4084.74 |
@@ -129,7 +129,7 @@ The Guest Ledger amount as calculated by the Omniboost accounting integration wi
 A simplified visualization of the Journal Entry would look like follows:
 
 | Debit | Credit |
-|-------|--------|
+| --- | --- |
 | 13068.25 | 4847.70 |
 | | 559.33 |
 | | 7661.22 |
@@ -164,7 +164,7 @@ We are also able to find the amount of 804.42 in the MEWS Accounting Ledger Repo
 Before running the Accounting Ledger Report, it is important to set the Report's parameters correctly:
 
 | Parameter | Set to | Additional Comment |
-|-----------|--------|--------------------|
+| --- | --- | --- |
 | **Mode** | Detailed | |
 | **Type** | General | |
 | **Time** | 12:00AM | Please note that in case your integration runs at a different time than 12:00AM < > 12:00AM, the Accounting Ledger Report should also be ran according to this different time. |

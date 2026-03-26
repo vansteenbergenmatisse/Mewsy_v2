@@ -58,3 +58,29 @@ Every failure is a chance to make the system stronger:
 - Markdown files in `knowledge/` are named after their topic, `pricing.md`, `getting-started.md`, not `doc1.md` or `faq-v2.md`
 - No version numbers, timestamps, or suffixes in filenames, if a file changes, its content changes, not its name
 - One clear purpose per file — if a name needs "and" in it, split it into two files
+
+## Knowledge organisation rules — MUST follow every time
+
+When adding pages to the knowledge base (manually or via scraper), always apply these rules without exception:
+
+**One topic = one file, always split**
+- Never put multiple distinct topics, integrations, or sections into a single `.md` file
+- If a page covers N integrations/features/topics, create N files — one per topic
+- Example: a Mews features page covering Datev, Xero, NetSuite → `mews-features/mews-to-datev.md`, `mews-features/mews-to-xero.md`, etc. NOT one combined `mews-features.md`
+
+**Always use a folder**
+- Scraped or manually added files always live inside a named folder under `knowledge/website/<group>/`
+- Never drop a `.md` file directly into `knowledge/website/` at the top level
+- The folder groups related files together (e.g. `mews-features/`, `omniboost-help-center/`)
+
+**Every file must be in knowledge-manifest.json**
+- After writing any `.md` file, immediately add or update its entry in `knowledge/knowledge-manifest.json`
+- Required fields: `title`, `description` (one sentence, ≤30 words), `keywords` (8–12 terms), `path`
+- Scraper-managed files also need: `source_url`, `source_type`, `source_parent_id`
+- Never leave a `.md` file without a manifest entry — the router cannot find it otherwise
+
+**Scraper types to use**
+- `static` — one URL, renders to one file (use for truly standalone pages)
+- `static-split` — one URL, splits by `##` headings into multiple files (use for pages with multiple distinct sections like feature comparison tabs)
+- `multi` — index page that links to many article pages, each scraped separately
+- `confluence` — Confluence REST API, folder-based

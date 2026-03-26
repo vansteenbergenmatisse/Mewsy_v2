@@ -4,7 +4,11 @@ import Anthropic from '@anthropic-ai/sdk';
 import config from '../config.js';
 import { logger } from '../utils/logger.js';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let _client;
+function getClient() {
+  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _client;
+}
 
 /**
  * Expands embedded markdown links so the full URL is always visible in plain text.
@@ -40,7 +44,7 @@ function readCleanupPrompt() {
 export async function cleanContent(rawContent) {
   const systemPrompt = readCleanupPrompt();
   try {
-    const response = await client.messages.create({
+    const response = await getClient().messages.create({
       model: config.cleanupModel,
       max_tokens: 8192,
       system: systemPrompt,
@@ -65,7 +69,7 @@ export async function cleanContent(rawContent) {
  */
 export async function generateMetadata(cleanedContent) {
   try {
-    const response = await client.messages.create({
+    const response = await getClient().messages.create({
       model: config.cleanupModel,
       max_tokens: 256,
       messages: [{

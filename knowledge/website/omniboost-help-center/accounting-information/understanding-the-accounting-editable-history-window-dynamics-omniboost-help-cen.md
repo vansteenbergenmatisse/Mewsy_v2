@@ -13,7 +13,7 @@ If your integration has ledger entries; AEHW is not applicable!
 
 ---
 
-#### **1. Finding the Accounting Editable History Window**
+## 1. Finding the Accounting Editable History Window
 
 _Menu > Settings > Property > Finance > Accounting Configuration_
 
@@ -21,7 +21,7 @@ The definition of the Accounting Editable History Window is as follows:
 
 _''The period of time that you can modify accounting items after consumption. After this time, items cannot be modified.''_
 
-#### **2. Understanding the basic concepts: (Accounting) Items and Services**
+## 2. Understanding the basic concepts: (Accounting) Items and Services
 
 In the definition above, we see reference to 'items'. In order to better understand the concept of 'items', we also need to understand the concept of 'Services' in MEWS.
 
@@ -39,7 +39,7 @@ Now, let us move back to the concept of 'items'.
 
 An item is any product or service belonging to a Bookable Service or Additional Service. In the next part of this article, we refer to 'Accounting items' rather than just 'items' because the Omniboost accounting connection mostly pushes Accounting entries from the PMS to your Accounting platform.
 
-#### **3. Understanding Services, Accounting Items within Services, and the AEHW offset time**
+## 3. Understanding Services, Accounting Items within Services, and the AEHW offset time
 
 With 'offset time' we are referring to the time at which the Accounting Editable History Window becomes applicable to an Accounting item. In other words, at what time does the Accounting Editable History Window gets 'activated' on an Accounting Item?
 
@@ -72,7 +72,7 @@ In other words:
 - The Accounting Editable History Window ***offset time*** is different between Bookable Services and Additional Services.
 - The Accounting Editable History Window ***length*** is similar between Bookable Services and Additional Services.
 
-#### **4. Timeline Visualization**
+## 4. Timeline Visualization
 
 We can best visualize the above concepts and logic in an image. Please find below.
 
@@ -84,7 +84,7 @@ In this example, we have chosen the following input:
 
 As was already stated above, Accounting items belonging to an Additional Service can be modified to a later point in time than Accounting Items which belong to a Bookable Service.
 
-#### **5. How does the above logic affect the Omniboost accounting connection?**
+## 5. How does the above logic affect the Omniboost accounting connection?
 
 Let us again look at the example of the timeline image above. The Arrival Time is set to 15:00PM in MEWS. In this case, accounting items in the PMS can be adjusted until:
 
@@ -98,7 +98,7 @@ Now imagine (still taking into account to the above practical example) that the 
 
 As you can imagine, Omniboost does not want discrepancies to exist between the accounting entries in your PMS environment and the accounting entries that have been sent over to your Accounting platform. This is why we add a delay into our Accounting connections, which ensures that there is always a match between your MEWS accounting entries and the accounting entries sent over to your Accounting platform.
 
-#### **6. Understanding the delay scheduled in Omniboost Accounting connections**
+## 6. Understanding the delay scheduled in Omniboost Accounting connections
 
 Generally, the delay with which an Omniboost Accounting connection sends over entries from MEWS to your Accounting platform is determined by adding one (1) day to the AEHW that is set in your MEWS environment.
 
