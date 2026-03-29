@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { MewsyLogo } from './MewsyLogo';
 import {
   formatBotText,
   initAccordions,
@@ -14,38 +13,30 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'bot' | 'welcome' | 'thinking' | 'option-buttons';
   text: string;
-  msgId?: string;         // groups bot bubbles from the same response
-  isNewGroup?: boolean;   // first bubble in a new bot group → show avatar
-  options?: string[];     // option button labels
+  msgId?: string;
+  isNewGroup?: boolean;
+  options?: string[];
   questionText?: string | null;
-  skipBody?: boolean;     // option-buttons message that had no body
-  isWelcome?: boolean;    // flag so welcome bubbles never show the avatar on subsequent bubbles
+  skipBody?: boolean;
+  disabled?: boolean;
 }
 
 // ── Bot avatar ────────────────────────────────────────────────────────────────
 
 function BotAvatar() {
-  return (
-    <div className="bot-avatar">
-      <MewsyLogo stylePrefix="ba" />
-    </div>
-  );
+  return <div className="bot-avatar">M</div>;
 }
 
 // ── Thinking bubble ───────────────────────────────────────────────────────────
 
-interface ThinkingBubbleProps {
-  thinkingText: string;
-}
-
-function ThinkingBubble({ thinkingText }: ThinkingBubbleProps) {
+function ThinkingBubble({ thinkingText }: { thinkingText: string }) {
   return (
-    <div id="thinking-bubble" className="thinking-container">
+    <div className="thinking-container">
       <div className="thinking-bubble">
         <div className="typing-dots">
-          <div className="typing-dot"></div>
-          <div className="typing-dot"></div>
-          <div className="typing-dot"></div>
+          <div className="typing-dot" />
+          <div className="typing-dot" />
+          <div className="typing-dot" />
         </div>
         <span className="thinking-text">{thinkingText}</span>
       </div>
@@ -53,7 +44,7 @@ function ThinkingBubble({ thinkingText }: ThinkingBubbleProps) {
   );
 }
 
-// ── User message ─────────────────────────────────────────────────────────────
+// ── User message ──────────────────────────────────────────────────────────────
 
 function UserMessage({ text }: { text: string }) {
   return (
@@ -65,8 +56,6 @@ function UserMessage({ text }: { text: string }) {
 }
 
 // ── Bot text bubble ───────────────────────────────────────────────────────────
-// Renders HTML from formatBotText, then runs initAccordions + applyProgressiveReveal
-// in a post-render effect.
 
 interface BotTextBubbleProps {
   text: string;
@@ -74,7 +63,6 @@ interface BotTextBubbleProps {
   isNewGroup: boolean;
   onAutoScroll: () => void;
   onDetectedButtons: (options: string[], questionText: string | null) => void;
-  allMsgIds: string[]; // used to find sibling bubbles for checkListForButtons
 }
 
 function BotTextBubble({
@@ -83,7 +71,6 @@ function BotTextBubble({
   isNewGroup,
   onAutoScroll,
   onDetectedButtons,
-  allMsgIds,
 }: BotTextBubbleProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const msgRef = useRef<HTMLDivElement>(null);
@@ -99,27 +86,25 @@ function BotTextBubble({
     initAccordions(msgDiv);
     applyProgressiveReveal(msgDiv, onAutoScroll);
 
-    // Collect sibling bot bubbles (same msgId) from the DOM for checkListForButtons
     const allSiblings = Array.from(
       document.querySelectorAll<HTMLElement>(`.bot-msg[data-msg-id="${msgId}"]`)
     );
     const result = checkListForButtons(msgDiv, allSiblings);
     if (result) {
-      // Remove the empty container if the bubble is now empty after list removal
       if (!msgDiv.textContent?.trim()) {
         containerRef.current?.remove();
       }
       onDetectedButtons(result.options, result.questionText);
     }
     onAutoScroll();
-  }, []); // run once after initial mount
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="bot-msg-container" ref={containerRef}>
       {isNewGroup ? (
         <BotAvatar />
       ) : (
-        <div style={{ width: '28px', flexShrink: 0 }} />
+        <div style={{ width: '32px', flexShrink: 0 }} />
       )}
       <div className="bot-messages-group">
         <div
@@ -133,24 +118,18 @@ function BotTextBubble({
   );
 }
 
-// ── Welcome text bubble ───────────────────────────────────────────────────────
-// Simple text bubble for welcome messages (no HTML formatting, no accordion).
+// ── Welcome bubble ────────────────────────────────────────────────────────────
 
-interface WelcomeBubbleProps {
-  text: string;
-  isFirst: boolean;
-}
-
-function WelcomeBubble({ text, isFirst }: WelcomeBubbleProps) {
+function WelcomeBubble({ text, isFirst }: { text: string; isFirst: boolean }) {
   return (
     <div className="bot-msg-container">
       {isFirst ? (
         <BotAvatar />
       ) : (
-        <div style={{ width: '28px', flexShrink: 0 }} />
+        <div style={{ width: '32px', flexShrink: 0 }} />
       )}
       <div className="bot-messages-group">
-        <div className="bot-msg welcome-bubble">{text}</div>
+        <div className="bot-msg bot-question-bubble">{text}</div>
       </div>
     </div>
   );
@@ -188,7 +167,6 @@ function OptionButtons({
 
   return (
     <>
-      {/* If there was no body text, render the question as a separate bubble first */}
       {skipBody && questionText && (
         <div className="bot-msg-container">
           <BotAvatar />
@@ -238,7 +216,6 @@ function OptionButtons({
             </button>
           );
         })}
-        {/* Auto-add "Something else" button if none of the options already covers it */}
         {!alreadyHasSomethingElse && (
           <button
             className="bot-option-btn bot-option-something-else"
@@ -260,7 +237,6 @@ function OptionButtons({
 }
 
 // ── ChatBody ──────────────────────────────────────────────────────────────────
-// Scrollable message list + thinking bubble + scroll-to-latest pill.
 
 interface ChatBodyProps {
   messages: ChatMessage[];
@@ -292,8 +268,6 @@ export function ChatBody({
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, []);
 
-  // Show/hide the floating "Latest" pill based on scroll position.
-  // Appears when the user is more than 80px above the bottom; hides when at bottom.
   const handleScroll = () => {
     const el = bodyRef.current;
     if (!el) return;
@@ -301,35 +275,24 @@ export function ChatBody({
     setShowScrollBtn(distFromBottom > 80);
   };
 
-  // Auto-scroll when new messages are added or thinking state changes
   useEffect(() => {
     autoScroll();
   }, [messages.length, isThinking]);
 
   const focusInput = () => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
+    inputRef.current?.focus();
   };
 
-  // Collect all msgIds currently rendered, for sibling lookup in checkListForButtons
-  const allMsgIds = messages
-    .filter(m => m.msgId)
-    .map(m => m.msgId as string);
-
-  // Group welcome messages by their order so we can mark the first one for avatar
-  // (welcome messages are added with role='welcome' and a shared group key)
   const welcomeGroupSeen = new Set<string>();
 
   return (
-    <div id="chat-widget-body" ref={bodyRef} onScroll={handleScroll}>
-      {messages.map((msg, idx) => {
+    <div id="messages-area" ref={bodyRef} onScroll={handleScroll}>
+      {messages.map(msg => {
         if (msg.role === 'user') {
           return <UserMessage key={msg.id} text={msg.text} />;
         }
 
         if (msg.role === 'welcome') {
-          // Welcome messages share a groupId stored in msgId
           const groupId = msg.msgId ?? msg.id;
           const isFirst = !welcomeGroupSeen.has(groupId);
           welcomeGroupSeen.add(groupId);
@@ -347,7 +310,7 @@ export function ChatBody({
               onDetectedButtons={(options, questionText) => {
                 onAddOptionButtons(options, questionText, msg.msgId ?? msg.id);
               }}
-              allMsgIds={allMsgIds}
+
             />
           );
         }
@@ -361,7 +324,7 @@ export function ChatBody({
               msgId={msg.msgId ?? msg.id}
               skipBody={msg.skipBody ?? false}
               selectedLanguage={selectedLanguage}
-              disabled={isRequestInProgress}
+              disabled={msg.disabled ?? isRequestInProgress}
               onSelect={onSendOptionMessage}
               onFocusInput={focusInput}
             />
@@ -371,20 +334,18 @@ export function ChatBody({
         return null;
       })}
 
-      {/* Thinking indicator — shown while waiting for server response */}
       {isThinking && <ThinkingBubble thinkingText={thinkingText} />}
 
-      {/* Floating "Latest" pill — appears when user has scrolled up */}
+      {/* Scroll-to-latest pill */}
       <button
-        id="scroll-to-bottom-header"
         className="scroll-to-latest-btn"
-        style={{ display: showScrollBtn ? 'inline-flex' : 'none' }}
+        style={{ display: showScrollBtn ? 'flex' : 'none' }}
         onClick={autoScroll}
       >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="6 9 12 15 18 9"/>
         </svg>
-        <span id="scroll-latest-label">{uiStr('scrollLatest', selectedLanguage)}</span>
+        <span>{uiStr('scrollLatest', selectedLanguage)}</span>
       </button>
     </div>
   );

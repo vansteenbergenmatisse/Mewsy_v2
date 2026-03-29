@@ -81,7 +81,7 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
   // Language injection: first message with a language system note should be answered in that language
   try {
     const langSessionId = `test-lang-${Date.now()}`;
-    const messageWithNote = '[System note: the user has selected their language to German. For the remainder of this conversation, always respond in German.]\n\nWas macht OmniBoost?';
+    const messageWithNote = '[System note: the user has selected their language to German. For the remainder of this conversation, always respond in German.]\n\nWas macht Omniboost?';
     const reply2 = await handleMessage(langSessionId, messageWithNote) as string;
     const lower2 = reply2.toLowerCase();
     // A German response will likely contain common German words

@@ -1,6 +1,6 @@
 # Mewsy v2
 
-Mewsy is a support chatbot for OmniBoost — a company that connects hotel software (Mews) with accounting tools (Xero, Exact Online, etc.). Hotel staff ask Mewsy questions about the integration. It answers only from curated knowledge files. If the answer isn't there, it says so.
+Mewsy is a support chatbot for Omniboost — a company that connects hotel software (Mews) with accounting tools (Xero, Exact Online, etc.). Hotel staff ask Mewsy questions about the integration. It answers only from curated knowledge files. If the answer isn't there, it says so.
 
 ---
 

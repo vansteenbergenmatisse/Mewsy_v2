@@ -18,7 +18,7 @@ interface HelpItem {
 }
 
 const HELP_ITEMS: HelpItem[] = [
-  { topic: 'integration',    icon: '🔗', title: 'Mews x OmniBoost Integration', subtitle: 'Overview of how the integration works' },
+  { topic: 'integration',    icon: '🔗', title: 'Mews x Omniboost Integration', subtitle: 'Overview of how the integration works' },
   { topic: 'onboarding',     icon: '🚀', title: 'Onboarding & Initial Setup',    subtitle: 'Get connected step by step' },
   { topic: 'mapping',        icon: '🗂️', title: 'Mapping Configuration',         subtitle: 'Set up your accounting mappings' },
   { topic: 'revenue-push',   icon: '📊', title: 'Full Revenue Push',             subtitle: 'Understanding revenue posting' },

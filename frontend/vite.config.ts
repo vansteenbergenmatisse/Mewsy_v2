@@ -9,7 +9,7 @@ export default defineConfig({
   server: {
     // Proxy /webhook/ requests to the backend during development
     proxy: {
-      '/webhook': 'http://localhost:3005',
+      '/webhook': 'http://localhost:4010',
     },
   },
   build: {

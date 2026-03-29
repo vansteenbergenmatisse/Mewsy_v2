@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { ChatBubble } from './components/ChatBubble';
 import { ChatWidget } from './components/ChatWidget';
 import { ChatMessage } from './components/ChatBody';
@@ -9,7 +9,6 @@ import {
 } from './utils/chat-utils';
 import {
   LANGUAGES,
-  welcomeText,
   getThinkingMessages,
   uiStr,
 } from './config/chat-config';
@@ -17,7 +16,12 @@ import { BACKEND_URL, getSessionId } from './utils/session';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type WidgetMode = 'hidden' | 'quarter' | 'full';
+export type WidgetMode = 'hidden' | 'fullscreen' | 'side-panel';
+
+export interface AttachedFile {
+  id: string;
+  name: string;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -37,13 +41,14 @@ function makeMsgId(): string {
 
 export default function App() {
   // ── Widget mode ────────────────────────────────────────────────────────────
-  // 'hidden' | 'quarter' | 'full'
-  const [widgetMode, setWidgetModeState] = useState<WidgetMode>('hidden');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [widgetMode, setWidgetMode] = useState<WidgetMode>('fullscreen');
+
+  // ── Hero state — true until first user message ──────────────────────────
+  const [heroActive, setHeroActive] = useState(true);
+  const [heroExiting, setHeroExiting] = useState(false);
 
   // ── Messages ───────────────────────────────────────────────────────────────
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const hasShownWelcome = useRef(false);
 
   // ── Request / thinking state ───────────────────────────────────────────────
   const [isRequestInProgress, setIsRequestInProgress] = useState(false);
@@ -59,113 +64,23 @@ export default function App() {
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(
     () => sessionStorage.getItem('mewsy_lang') || null
   );
-  // true on the very first message (before any language was set or confirmed)
   const isFirstMessageRef = useRef(!sessionStorage.getItem('mewsy_lang'));
-  // true after a mid-conversation language switch
   const langChangedRef = useRef(false);
 
   // ── Input ──────────────────────────────────────────────────────────────────
   const [inputValue, setInputValue] = useState('');
-  const [inputPlaceholder, setInputPlaceholder] = useState('Ask Mewsy...');
-  const inputRefForFocus = useRef<HTMLTextAreaElement>(null);
+  const [inputPlaceholder, setInputPlaceholder] = useState('Ask Mewsy…');
+
+  // ── Attached files ─────────────────────────────────────────────────────────
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
 
   // ── Unread badge ───────────────────────────────────────────────────────────
   const [unreadCount, setUnreadCount] = useState(0);
-  const originalTitle = useRef(document.title);
-
-  // Update document title whenever unread count changes
-  useEffect(() => {
-    if (unreadCount > 0) {
-      document.title = `(${unreadCount}) New message from Mewsy`;
-    } else {
-      document.title = originalTitle.current;
-    }
-  }, [unreadCount]);
 
   // ── Help panels ────────────────────────────────────────────────────────────
   const [showHelp, setShowHelp] = useState(false);
   const [showHelpDetail, setShowHelpDetail] = useState(false);
   const [helpDetailTopic, setHelpDetailTopic] = useState<string | null>(null);
-
-  // ── Widget mode management ─────────────────────────────────────────────────
-
-  const setWidgetMode = useCallback((mode: WidgetMode) => {
-    setWidgetModeState(mode);
-
-    // Close sidebar when leaving full mode
-    if (mode !== 'full') {
-      setSidebarOpen(false);
-    }
-
-    if (mode !== 'hidden' && !hasShownWelcome.current) {
-      showWelcomeMessages(selectedLanguage ?? 'en');
-    }
-  }, [selectedLanguage]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Resize listener: if quarter mode on mobile, switch to full
-  useEffect(() => {
-    const handleResize = () => {
-      if (widgetMode === 'quarter' && isMobile()) {
-        setWidgetMode('full');
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [widgetMode, setWidgetMode]);
-
-  // ── Welcome messages ───────────────────────────────────────────────────────
-
-  function showWelcomeMessages(lang: string) {
-    if (hasShownWelcome.current) return;
-    hasShownWelcome.current = true;
-
-    const effectiveLang = lang || 'en';
-    if (!sessionStorage.getItem('mewsy_lang')) {
-      sessionStorage.setItem('mewsy_lang', effectiveLang);
-      setSelectedLanguage(effectiveLang);
-    }
-
-    showWelcomeInLanguage(effectiveLang);
-  }
-
-  function showWelcomeInLanguage(lang: string) {
-    const base = lang.split('-')[0]; // de-ch → de
-    const messages = welcomeText[lang] || welcomeText[base] || welcomeText['en'];
-    const groupId = 'welcome_' + makeId();
-
-    const currentDelay = 300;
-    const typingDuration = 500;
-    const messageDelay = 750;
-
-    messages.forEach((messageText, idx) => {
-      // Show typing dots, then replace with the actual text bubble
-      setTimeout(() => {
-        const typingId = makeId();
-        // Typing indicator bubble
-        setMessages(prev => [
-          ...prev,
-          {
-            id: typingId,
-            role: 'welcome',
-            text: '__typing__',
-            msgId: groupId,
-            isNewGroup: idx === 0,
-          } as ChatMessage,
-        ]);
-
-        setTimeout(() => {
-          // Replace typing bubble with real text
-          setMessages(prev =>
-            prev.map(m =>
-              m.id === typingId
-                ? { ...m, text: messageText }
-                : m
-            )
-          );
-        }, typingDuration);
-      }, currentDelay + idx * messageDelay);
-    });
-  }
 
   // ── Thinking indicator ─────────────────────────────────────────────────────
 
@@ -197,7 +112,7 @@ export default function App() {
       showTimeoutWarning();
       setIsRequestInProgress(false);
     }, THINKING_TIMEOUT);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const removeThinking = useCallback(() => {
     setIsThinking(false);
@@ -252,7 +167,6 @@ export default function App() {
     messagesToShow.forEach((msg, idx) => {
       setTimeout(() => {
         setMessages(prev => {
-          // Determine if this is the first bubble in a new group for the avatar
           const existingGroupBubbles = prev.filter(
             m => m.msgId === messageId && m.role === 'bot'
           );
@@ -275,13 +189,10 @@ export default function App() {
       }, idx * delay);
     });
 
-    // After all body bubbles, add option buttons if detected
     setTimeout(() => {
       if (detectedOptions && detectedOptions.length > 0) {
         addOptionButtons(detectedOptions, detectedQuestion, messageId, skipBodyMessages);
       }
-      // Note: post-render list-to-buttons detection happens inside BotTextBubble
-      // via onDetectedButtons callback → onAddOptionButtons
     }, messagesToShow.length * delay);
   }
 
@@ -303,11 +214,9 @@ export default function App() {
         skipBody,
       } as ChatMessage,
     ]);
-    // Change placeholder to indicate the user can also type their own answer
     setInputPlaceholder(uiStr('typeOwn', selectedLanguage));
   }
 
-  // Called from BotTextBubble after post-render list detection
   const handleAddOptionButtons = useCallback((
     options: string[],
     questionText: string | null,
@@ -350,39 +259,60 @@ export default function App() {
       });
   }, [selectedLanguage, removeThinking]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Send message ───────────────────────────────────────────────────────────
+  // ── Core send logic ────────────────────────────────────────────────────────
 
-  const handleSend = useCallback(() => {
+  const handleSendMessage = useCallback((msg: string) => {
     if (isRequestInProgress) return;
-    const msg = inputValue.trim();
-    if (!msg) return;
+    const trimmed = msg.trim();
+    if (!trimmed) return;
 
-    // Disable all previously rendered option buttons
+    // Dismiss hero — animate out first if in fullscreen hero
+    if (widgetMode === 'fullscreen' && heroActive) {
+      setHeroExiting(true);
+      setTimeout(() => {
+        setHeroActive(false);
+        setHeroExiting(false);
+      }, 320);
+    } else {
+      setHeroActive(false);
+    }
+
+    // Disable previous option buttons
     setMessages(prev =>
-      prev.map(m =>
-        m.role === 'option-buttons' ? { ...m, disabled: true } : m
-      )
+      prev.map(m => m.role === 'option-buttons' ? { ...m, disabled: true } : m)
     );
 
-    addUserMessage(msg);
+    addUserMessage(trimmed);
     setInputValue('');
+    setAttachedFiles([]);
     setInputPlaceholder(uiStr('typeMsg', selectedLanguage));
     setIsRequestInProgress(true);
     showThinking(selectedLanguage);
-    sendToServer(msg);
-  }, [isRequestInProgress, inputValue, selectedLanguage, showThinking, sendToServer]);
+    sendToServer(trimmed);
+  }, [isRequestInProgress, selectedLanguage, showThinking, sendToServer]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Option button click → send as if typed ─────────────────────────────────
+  const handleSend = useCallback(() => {
+    handleSendMessage(inputValue);
+  }, [inputValue, handleSendMessage]);
+
+  // ── Quick action buttons (hero) ────────────────────────────────────────────
+
+  const handleQuickAction = useCallback((label: string) => {
+    handleSendMessage(label);
+  }, [handleSendMessage]);
+
+  // ── Option button click ────────────────────────────────────────────────────
 
   const handleSendOptionMessage = useCallback((label: string, question: string | null) => {
     const contextMessage = question ? `${question} → ${label}` : label;
+    setHeroActive(false);
     addUserMessage(label);
     setInputValue('');
     setInputPlaceholder(uiStr('typeMsg', selectedLanguage));
     setIsRequestInProgress(true);
     showThinking(selectedLanguage);
     sendToServer(contextMessage);
-  }, [selectedLanguage, showThinking, sendToServer]);
+  }, [selectedLanguage, showThinking, sendToServer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Language change ────────────────────────────────────────────────────────
 
@@ -395,31 +325,64 @@ export default function App() {
     }
     if (!prev) {
       isFirstMessageRef.current = true;
-      if (hasShownWelcome.current) {
-        showWelcomeInLanguage(code);
-      }
     }
-  }, [selectedLanguage]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedLanguage]);
+
+  // ── File management ────────────────────────────────────────────────────────
+
+  const handleAttachFile = useCallback((file: File) => {
+    setAttachedFiles(prev => [...prev, { id: makeId(), name: file.name }]);
+  }, []);
+
+  const handleRemoveFile = useCallback((id: string) => {
+    setAttachedFiles(prev => prev.filter(f => f.id !== id));
+  }, []);
+
+  // ── New chat ───────────────────────────────────────────────────────────────
+
+  const handleNewChat = useCallback(() => {
+    setMessages([]);
+    setHeroActive(true);
+    setInputValue('');
+    setInputPlaceholder('Ask Mewsy…');
+    setAttachedFiles([]);
+    setIsRequestInProgress(false);
+    removeThinking();
+  }, [removeThinking]);
+
+  // ── Sidebar collapsed state (fullscreen only) ──────────────────────────────
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const handleToggleSidebar = useCallback(() => {
+    setSidebarCollapsed(c => !c);
+  }, []);
+
+  // ── Layout toggle ──────────────────────────────────────────────────────────
+
+  const handleToggleLayout = useCallback(() => {
+    setWidgetMode(m => m === 'fullscreen' ? 'side-panel' : 'fullscreen');
+  }, []);
 
   // ── Bubble click ───────────────────────────────────────────────────────────
 
   const handleBubbleClick = () => {
     setUnreadCount(0);
-    setWidgetMode(isMobile() ? 'full' : 'quarter');
+    setWidgetMode('side-panel');
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <>
-      {/* Floating bubble shown when widget is hidden */}
       {widgetMode === 'hidden' && (
         <ChatBubble unreadCount={unreadCount} onClick={handleBubbleClick} />
       )}
 
-      {/* Main widget panel */}
       <ChatWidget
         widgetMode={widgetMode}
+        sidebarCollapsed={sidebarCollapsed}
+        heroActive={heroActive}
+        heroExiting={heroExiting}
         messages={messages}
         isThinking={isThinking}
         thinkingText={thinkingText}
@@ -427,14 +390,15 @@ export default function App() {
         isRequestInProgress={isRequestInProgress}
         inputValue={inputValue}
         inputPlaceholder={inputPlaceholder}
+        attachedFiles={attachedFiles}
         showHelp={showHelp}
         showHelpDetail={showHelpDetail}
         helpDetailTopic={helpDetailTopic}
-        sidebarOpen={sidebarOpen}
         onClose={() => setWidgetMode('hidden')}
-        onExpand={() => setWidgetMode('full')}
-        onCompress={() => setWidgetMode('quarter')}
-        onToggleSidebar={() => setSidebarOpen(o => !o)}
+
+        onToggleSidebar={handleToggleSidebar}
+        onToggleLayout={handleToggleLayout}
+        onNewChat={handleNewChat}
         onOpenHelp={() => setShowHelp(true)}
         onCloseHelp={() => setShowHelp(false)}
         onSelectHelpTopic={(topic) => {
@@ -449,8 +413,11 @@ export default function App() {
         onLanguageChange={handleLanguageChange}
         onInputChange={setInputValue}
         onSend={handleSend}
+        onQuickAction={handleQuickAction}
         onSendOptionMessage={handleSendOptionMessage}
         onAddOptionButtons={handleAddOptionButtons}
+        onAttachFile={handleAttachFile}
+        onRemoveFile={handleRemoveFile}
       />
     </>
   );

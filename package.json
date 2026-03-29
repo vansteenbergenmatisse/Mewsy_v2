@@ -1,13 +1,13 @@
 {
   "name": "mewsy-v2",
   "version": "2.0.0",
-  "description": "Mewsy support chatbot — Mews x OmniBoost integration (v2)",
+  "description": "Mewsy support chatbot — Mews x Omniboost integration (v2)",
   "type": "module",
   "main": "backend/server.ts",
   "scripts": {
     "start": "tsx backend/server.ts",
     "predev": "tsx tests/run-all.ts",
-    "dev": "tsx watch backend/server.ts",
+    "dev": "concurrently \"tsx watch backend/server.ts\" \"npm --prefix frontend run dev\"",
     "build:frontend": "npm --prefix frontend install && npm --prefix frontend run build",
     "build": "npm run build:frontend && tsc --noEmit",
     "test": "tsx tests/run-all.ts",
@@ -31,6 +31,7 @@
     "@types/node": "^22.10.2",
     "@types/node-cron": "^3.0.11",
     "@types/turndown": "^5.0.6",
+    "concurrently": "^9.2.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
