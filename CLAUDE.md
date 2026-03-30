@@ -21,11 +21,11 @@ You are building **Mewsy**, a cache-augmented generation (CAG) chatbot that answ
 **Layer 3: Scraper (The Updater)**
 
 - A cron job that runs separately from the pipeline on a 24h schedule
-- Fetches external pages and rewrites the relevant files in `docs/`
+- Fetches external pages and rewrites the relevant files in `knowledge/`
 - Keeps the knowledge base current without manual intervention
 - Fails safely — if a scrape returns bad data, the existing file is preserved
 
-**Why this matters:** Mewsy's quality is entirely determined by what's in `docs/`. The pipeline is just plumbing. If the docs are clean, current, and well-structured, Mewsy answers well. If they're not, no amount of prompt engineering fixes it. Keep the docs as the priority.
+**Why this matters:** Mewsy's quality is entirely determined by what's in `knowledge/`. The pipeline is just plumbing. If the docs are clean, current, and well-structured, Mewsy answers well. If they're not, no amount of prompt engineering fixes it. Keep the docs as the priority.
 
 ## File Structure
 
@@ -34,7 +34,7 @@ mewsy/
 ├── knowledge/           # Markdown knowledge base — one file per topic, source of truth for all answers
 ├── backend/        # Node.js pipeline — router, loader, and answer logic
 ├── scraper/        # Cron job that fetches external pages and updates docs/
-├── frontend/       # Vanilla JS/HTML/CSS chat interface
+├── frontend/       # React + TypeScript chat interface (Vite, .tsx components)
 ├── CLAUDE.md       # This file
 └── .env
 ```

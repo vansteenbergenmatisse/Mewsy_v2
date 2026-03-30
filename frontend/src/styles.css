@@ -53,7 +53,7 @@ body {
 #mewsy-app.side-panel #chat-window {
   pointer-events: auto;
   flex: none;
-  width: 40vw;
+  width: 35vw;
   min-width: 380px;
   margin-left: auto;
   border-left: 1px solid var(--mewsy-border);
@@ -83,6 +83,7 @@ body {
 #sidebar:not(.expanded) .sidebar-avatar {
   justify-content: center;
   padding: 8px 0;
+  gap: 0;
 }
 
 .sidebar-divider {
@@ -957,7 +958,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 10px 8px;
+  padding: 12px 0 8px;
   width: 100%;
   box-sizing: border-box;
   flex-shrink: 0;
@@ -965,6 +966,7 @@ body {
 }
 #sidebar.expanded .sidebar-header {
   justify-content: space-between;
+  padding: 12px 10px 8px;
 }
 .sidebar-brand-name {
   font-size: 22px;
