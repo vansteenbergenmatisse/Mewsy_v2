@@ -10,7 +10,11 @@ import { slugify } from '../utils/slugify.ts';
 import { logger } from '../utils/logger.ts';
 
 const FIRECRAWL_BASE = 'https://api.firecrawl.dev';
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let _client: Anthropic | undefined;
+function getClient(): Anthropic {
+  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _client;
+}
 
 // Shape of a fetch_sources.json multi page entry
 interface FetchPage {
@@ -64,7 +68,7 @@ const MAX_ARTICLES = 100; // hard cap to prevent scraping thousands of links
 async function filterArticleLinks(links: string[]): Promise<string[]> {
   if (!links || links.length === 0) return [];
   try {
-    const response = await client.messages.create({
+    const response = await getClient().messages.create({
       model: config.cleanupModel,
       max_tokens: 2048,
       messages: [{

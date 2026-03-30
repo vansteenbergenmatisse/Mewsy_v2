@@ -19,8 +19,6 @@ Please visit one of the following pages:
 
 Once you are on the selected page, log in with your Yuki credentials and proceed with the next steps.
 
-**Note**: For a visual guide, please refer to the image below for further information.
-
 ---
 
 ## Navigate through Yuki
@@ -29,19 +27,11 @@ Once logged in, follow these steps to retrieve the Yuki API Key & Administration
 
 To begin, click the Hamburger icon in the top left.
 
-**Note**: For a visual guide, refer to the image below for further information.
-
 Once you've clicked the 'Hamburger' icon, select 'Mijn domein' in the top left.
-
-**Note**: For a visual guide, refer to the image below for further information.
 
 Once you've navigated to 'Mijn domein', go to 'Webservices'. You have two options on this page: either click 'Webservices' in the 'Integraties' column or select 'Integraties' from the sidebar settings. A dropdown will appear, allowing you to click on 'Webservices'.
 
-**Note**: For a visual guide, refer to the image below for further information.
-
 Once you're on this page, you'll see the 'Webservice API-Sleutels'. Here, you'll find the API Key and Administration ID required for our integration to send data to Yuki.
-
-**Note**: For a visual guide, refer to the image below for further information.
 
 ---
 

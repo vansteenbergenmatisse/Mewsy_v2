@@ -17,11 +17,11 @@ The first step is to log in with your Exact Online user account that you used in
 Please visit one of the following pages:
 
 - **Netherlands:**
-  - https://start.exactonline.nl/ (https://start.exactonline.nl/)
+  - https://start.exactonline.nl/
 - **Belgium:**
-  - https://start.exactonline.be/ (https://start.exactonline.be/)
+  - https://start.exactonline.be/
 - **Germany:**
-  - https://start.exactonline.de/ (https://start.exactonline.de/)
+  - https://start.exactonline.de/
 
 Once you are on the selected page, log in with your Exact Online credentials and proceed with the next steps.
 
@@ -49,4 +49,4 @@ After confirming the correct administration(s) are in the right column, click 'S
 
 Now that you've granted our application access to the desired administration(s), please return to your ongoing onboarding in Base. Reconnect to Exact Online and log in with your user credentials. You will then see the administration(s) you have authorized in the dropdown menu.
 
-If you encounter any issues, please contact your designated Omniboost Agent or reach out to [support@omniboost.io](mailto:support@omniboost.io).
+If you encounter any issues, please contact your designated Omniboost Agent or reach out to support@omniboost.io.

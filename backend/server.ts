@@ -96,7 +96,7 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
 
 // ── GET /health ────────────────────────────────────────────────────────────────
 // Simple ping endpoint. Used to check if the server is running.
-// Try it: curl http://localhost:3005/health
+// Try it: curl http://localhost:4010/health
 app.get('/health', (c) => c.json({ status: 'ok' }));
 
 // Serve everything in the frontend/dist/ folder as static files.

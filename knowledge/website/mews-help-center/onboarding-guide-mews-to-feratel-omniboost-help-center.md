@@ -8,7 +8,7 @@
 
 **PART 3**: Guest Information transferred from MEWS to Feratel
 
-# PART 1: General setup process of the integration
+## PART 1: General setup process of the integration
 
 The start-to-end process of the MEWS to Feratel integration goes as follows:
 
@@ -28,7 +28,7 @@ Once the required information is available, the Feratel integration can be setup
 
 Once the MEWS to Feratel connection has been built, your Omniboost contact person can activate the integration as soon as you want. This means that the integration will fully automatically send over the guest details from MEWS into Feratel.
 
-# PART 2: Necessary information
+## PART 2: Necessary information
 
 In order to correctly transfer the guest details from MEWS to Feratel, several pieces of information are required. Please find those items below and provide them to your Omniboost contact person.
 
@@ -41,7 +41,7 @@ In order to correctly transfer the guest details from MEWS to Feratel, several p
 
 Please note that Omniboost will handle the provided Feratel information with confidentiality.
 
-# PART 3: Guest Information transferred from MEWS to Feratel
+## PART 3: Guest Information transferred from MEWS to Feratel
 
 Please find more information on the guest data transfer from MEWS to Feratel below:
 

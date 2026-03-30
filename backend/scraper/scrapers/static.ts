@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { writeFileSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, basename } from 'path';
 import config from '../config.ts';
 import { cleanContent, generateMetadata } from '../pipeline/cleanup.ts';
 import { upsertEntry } from '../pipeline/manifest.ts';
@@ -15,6 +15,7 @@ interface FetchPage {
   label: string;
   url: string;
   type: string;
+  waitFor?: number;
 }
 
 // Shape returned by scrapeStatic
@@ -42,14 +43,21 @@ interface FirecrawlResponse {
  */
 export async function scrapeStatic(page: FetchPage, forceSync: boolean, existingHash: string | undefined): Promise<ScrapeResult> {
   const { id, label, url } = page;
-  const outPath = join(process.cwd(), config.knowledgeDir, 'website', `${id}.md`);
-  const relPath = `${config.knowledgeDir}/website/${id}.md`;
+  // IDs without a slash (e.g. "mews-features") get their own folder: website/mews-features/mews-features.md
+  // IDs with a slash (e.g. "mews-features/datev") use the prefix as the folder: website/mews-features/datev.md
+  const idDir = id.includes('/') ? dirname(id) : id;
+  const idBase = basename(id);
+  const outDir = join(process.cwd(), config.knowledgeDir, 'website', idDir);
+  const outPath = join(outDir, `${idBase}.md`);
+  const relPath = `${config.knowledgeDir}/website/${idDir}/${idBase}.md`;
 
   let rawMarkdown: string;
   try {
+    const body: Record<string, unknown> = { url, formats: ['markdown'], onlyMainContent: true };
+    if (page.waitFor) body.waitFor = page.waitFor;
     const res = await axios.post<FirecrawlResponse>(
       `${FIRECRAWL_BASE}/v1/scrape`,
-      { url, formats: ['markdown'] },
+      body,
       {
         headers: {
           Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`,
@@ -76,7 +84,7 @@ export async function scrapeStatic(page: FetchPage, forceSync: boolean, existing
 
   const { description, keywords } = await generateMetadata(content);
 
-  mkdirSync(dirname(outPath), { recursive: true });
+  mkdirSync(outDir, { recursive: true });
   writeFileSync(outPath, content);
   logger.info(`Scraped: ${relPath}`);
 

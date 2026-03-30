@@ -4,7 +4,11 @@ import Anthropic from '@anthropic-ai/sdk';
 import config from '../config.ts';
 import { logger } from '../utils/logger.ts';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let _client: Anthropic | undefined;
+function getClient(): Anthropic {
+  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _client;
+}
 
 /**
  * Expands embedded markdown links so the full URL is always visible in plain text.
@@ -20,6 +24,14 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
  */
 function expandLinks(markdown: string): string {
   return markdown.replace(/(?<!!)\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$1 ($2)');
+}
+
+/**
+ * Replaces em-dashes (—) with a plain hyphen-space ( - ) so they never appear
+ * in chat responses or stored documents.
+ */
+function removeEmDashes(markdown: string): string {
+  return markdown.replace(/\s*—\s*/g, ' - ');
 }
 
 /**
@@ -46,7 +58,7 @@ interface CleanContentResult {
 export async function cleanContent(rawContent: string): Promise<CleanContentResult> {
   const systemPrompt = readCleanupPrompt();
   try {
-    const response = await client.messages.create({
+    const response = await getClient().messages.create({
       model: config.cleanupModel,
       max_tokens: 8192,
       system: systemPrompt,
@@ -78,7 +90,7 @@ interface MetadataResult {
  */
 export async function generateMetadata(cleanedContent: string): Promise<MetadataResult> {
   try {
-    const response = await client.messages.create({
+    const response = await getClient().messages.create({
       model: config.cleanupModel,
       max_tokens: 256,
       messages: [{

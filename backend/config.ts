@@ -10,7 +10,7 @@
  *   ANTHROPIC_API_KEY — your Anthropic API key, used by claude.ts
  *
  * Optional variables:
- *   PORT — which port the server listens on (default: 3000)
+ *   PORT — which port the server listens on (default: 4010)
  */
 
 // Only load .env file in local development — in production (Railway) all
@@ -22,8 +22,8 @@ if (process.env.NODE_ENV !== 'production') {
 
 export const ANTHROPIC_API_KEY: string | undefined = process.env.ANTHROPIC_API_KEY;
 
-// Railway injects PORT at runtime — fall back to 3005 for local dev
-export const PORT: number = parseInt(process.env.PORT || '3005', 10);
+// Railway injects PORT at runtime — fall back to 4010 for local dev
+export const PORT: number = parseInt(process.env.PORT || '4010', 10);
 
 // Warn at startup if the API key is missing — the server will start but
 // every chat request will fail without it

@@ -1,6 +1,6 @@
 # How to retrieve the 'Grant Token' from Visma e-Conomics
 
-This article outlines the steps to provide Omniboost with a Visma e-Economic agreement grant token. This token enables access to an e-conomic administration and facilitates the integration setup.
+This article outlines the steps to provide Omniboost with a Visma e-Conomic agreement grant token. This token enables access to an e-conomic administration and facilitates the integration setup.
 
 ---
 

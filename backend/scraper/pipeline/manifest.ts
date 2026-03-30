@@ -51,8 +51,8 @@ function validateEntry(slug: string, entry: Partial<ManifestEntry>): void {
       throw new Error(`Manifest entry "${slug}" is missing required field: "${field}"`);
     }
   }
-  if (!Array.isArray(entry.keywords) || entry.keywords.length < 2) {
-    throw new Error(`Manifest entry "${slug}": keywords must be an array with at least 2 items`);
+  if (!Array.isArray(entry.keywords)) {
+    throw new Error(`Manifest entry "${slug}": keywords must be an array`);
   }
 }
 

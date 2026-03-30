@@ -133,7 +133,7 @@ The below summarizes the required accounting information described above.
 
 # PART 5: Reconciliation of accounting data sent to 24 Seven Office
 
-**Reconciling Journal entries**
+## Reconciling Journal entries
 
 **In case the integration runs on a Closed accounting flow or Consumed accounting flow based on journal entries,** MEWS accounting data can be reconciled with the journal entries in 24 Seven Office as sent over by the Omniboost accounting integration **by looking at the MEWS _Accounting Report_.**
 

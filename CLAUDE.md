@@ -21,11 +21,11 @@ You are building **Mewsy**, a cache-augmented generation (CAG) chatbot that answ
 **Layer 3: Scraper (The Updater)**
 
 - A cron job that runs separately from the pipeline on a 24h schedule
-- Fetches external pages and rewrites the relevant files in `knowledge/`
+- Fetches external pages and rewrites the relevant files in `docs/`
 - Keeps the knowledge base current without manual intervention
 - Fails safely — if a scrape returns bad data, the existing file is preserved
 
-**Why this matters:** Mewsy's quality is entirely determined by what's in `knowledge/`. The pipeline is just plumbing. If the docs are clean, current, and well-structured, Mewsy answers well. If they're not, no amount of prompt engineering fixes it. Keep the docs as the priority.
+**Why this matters:** Mewsy's quality is entirely determined by what's in `docs/`. The pipeline is just plumbing. If the docs are clean, current, and well-structured, Mewsy answers well. If they're not, no amount of prompt engineering fixes it. Keep the docs as the priority.
 
 ## File Structure
 
@@ -34,7 +34,7 @@ mewsy/
 ├── knowledge/           # Markdown knowledge base — one file per topic, source of truth for all answers
 ├── backend/        # Node.js pipeline — router, loader, and answer logic
 ├── scraper/        # Cron job that fetches external pages and updates docs/
-├── frontend/       # React + TypeScript chat interface (Vite, .tsx components)
+├── frontend/       # Vanilla JS/HTML/CSS chat interface
 ├── CLAUDE.md       # This file
 └── .env
 ```
@@ -58,3 +58,29 @@ Every failure is a chance to make the system stronger:
 - Markdown files in `knowledge/` are named after their topic, `pricing.md`, `getting-started.md`, not `doc1.md` or `faq-v2.md`
 - No version numbers, timestamps, or suffixes in filenames, if a file changes, its content changes, not its name
 - One clear purpose per file — if a name needs "and" in it, split it into two files
+
+## Knowledge organisation rules — MUST follow every time
+
+When adding pages to the knowledge base (manually or via scraper), always apply these rules without exception:
+
+**One topic = one file, always split**
+- Never put multiple distinct topics, integrations, or sections into a single `.md` file
+- If a page covers N integrations/features/topics, create N files — one per topic
+- Example: a Mews features page covering Datev, Xero, NetSuite → `mews-features/mews-to-datev.md`, `mews-features/mews-to-xero.md`, etc. NOT one combined `mews-features.md`
+
+**Always use a folder**
+- Scraped or manually added files always live inside a named folder under `knowledge/website/<group>/`
+- Never drop a `.md` file directly into `knowledge/website/` at the top level
+- The folder groups related files together (e.g. `mews-features/`, `omniboost-help-center/`)
+
+**Every file must be in knowledge-manifest.json**
+- After writing any `.md` file, immediately add or update its entry in `knowledge/knowledge-manifest.json`
+- Required fields: `title`, `description` (one sentence, ≤30 words), `keywords` (8–12 terms), `path`
+- Scraper-managed files also need: `source_url`, `source_type`, `source_parent_id`
+- Never leave a `.md` file without a manifest entry — the router cannot find it otherwise
+
+**Scraper types to use**
+- `static` — one URL, renders to one file (use for truly standalone pages)
+- `static-split` — one URL, splits by `##` headings into multiple files (use for pages with multiple distinct sections like feature comparison tabs)
+- `multi` — index page that links to many article pages, each scraped separately
+- `confluence` — Confluence REST API, folder-based

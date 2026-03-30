@@ -10,7 +10,7 @@ Omniboost transforms this information into the format required by the accounting
 
 2. #### Financial Export
 
-Export-type integrations also retrieve relevant financial information in the same way but , instead of automatically posting it into the accounting software, they convert it into a CSV or TXT file. The format of the file is determined by the import definitions of the accounting system the client uses.
+Export-type integrations also retrieve relevant financial information in the same way but, instead of automatically posting it into the accounting software, they convert it into a CSV or TXT file. The format of the file is determined by the import definitions of the accounting system the client uses.
 
 All financial exports created and offered by Omniboost have a standard format that is compliant with accounting standards as well as legal environments of the region it is available in. Any customer-specific deviations from the standardised file are considered additional feature request, are subject to review and may incur additional development charges.
 

@@ -167,14 +167,14 @@ Please find below an explanation of (some of) the columns in the debtor export f
 
 | **Column Name** | **Content of the column** |
 | --- | --- |
-| Konto | This is the debtor number. Please note that the debtor number is made up of the debtor number prefix, the company number in MEWS\*, and the debtor number length. Please see the examples earlier in this article. |
+| Konto | This is the debtor number. Please note that the debtor number is made up of the debtor number prefix, the company number in MEWS*, and the debtor number length. Please see the examples earlier in this article. |
 | Name (Adressatentyp Unternehmen) | The name of the debtor (which is usually the name of the company) |
 | Straße | The street of the debtor address |
 | Postleitzahl | The postal code of the debtor address |
 | Ort | The city of the debtor address |
 | Land | The country where the debtor comes from |
 
-\*The company number in MEWS can be found as follows: MEWS Menu > Profiles > Companies.
+*The company number in MEWS can be found as follows: MEWS Menu > Profiles > Companies.
 
 # PART 6: Other features and configurable items of the accounting integration
 

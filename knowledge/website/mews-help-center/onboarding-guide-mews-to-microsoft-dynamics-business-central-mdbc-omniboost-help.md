@@ -105,7 +105,7 @@ Please see this article (https://help.omniboost.io/en/articles/6609704-fallback-
 The below summarizes the required accounting information described above.
 
 | |
-|---|
+| --- |
 | **Accounting flow: Closed or Consumed?** |
 | **Guest ledger account** |
 | **Microsoft Dynamics Business Central Oauth link** |
@@ -129,7 +129,7 @@ In case the integration uses a Consumed accounting flow, you should run the Acco
 
 # PART 6: Other features and configurable items of the accounting integration
 
-Please find below an overview of configurable items and features that the MEWS to Microsoft Dynamics Business Central integration can support. In case you would like to use any of these features, please reach out to you Omniboost contact or [support@omniboost.io](mailto:support@omniboost.io) in general.
+Please find below an overview of configurable items and features that the MEWS to Microsoft Dynamics Business Central integration can support. In case you would like to use any of these features, please reach out to you Omniboost contact or support@omniboost.io in general.
 
 ## Configurable variables
 

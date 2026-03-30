@@ -5,7 +5,6 @@ This folder contains connections to external services — tools outside of Mewsy
 ## Folders
 
 ### salesforce/
-
 When a user is frustrated and can't get their answer after several tries, Mewsy offers to create a support ticket on their behalf. That ticket gets sent to Salesforce — Omniboost's customer support system — where a real human can follow up.
 
 This is currently a stub (the skeleton is there but the actual API connection isn't wired up yet). See `salesforce/README.md` for details on what needs to be implemented.

@@ -48,11 +48,11 @@ Once your accounting department has verified the test export file(s) and the fil
 
 # PART 2: Determining the preferred accounting flow: Closed flow or Consumed flow
 
-Before Omniboost can build the MEWS to BMD accounting integration, you need to specify your preferred accounting flow. Please see PART 2 of this article named 'Supported Accounting Flows' and let us know which accounting flow you prefer.
+Before Omniboost can build the MEWS to BMD accounting integration, you need to specify your preferred accounting flow. Please see PART 2 of this article (https://help.omniboost.io/en/articles/6585772-accounting-setup-in-mews-pms-and-omniboost-accounting-flows) named 'Supported Accounting Flows' and let us know which accounting flow you prefer.
 
 # PART 3: Finish your MEWS (accounting) setup
 
-Before Omniboost can test the MEWS to BMD accounting integration, you need to specify finish your MEWS (accounting) setup. Please see PART 1 of this article named 'MEWS Accounting setup'.
+Before Omniboost can test the MEWS to BMD accounting integration, you need to specify finish your MEWS (accounting) setup. Please see PART 1 of this article (https://help.omniboost.io/en/articles/6585772-accounting-setup-in-mews-pms-and-omniboost-accounting-flows) named 'MEWS Accounting setup'.
 
 # PART 4: Necessary (Accounting) information
 
@@ -62,17 +62,17 @@ In order to correctly transfer the accounting data from MEWS to BMD, several pie
 
 Please see PART 2 of this article.
 
-**4.2 Please provide us a Guest Ledger account code. Please see this article which explains the guest ledger account.**
+**4.2 Please provide us a Guest Ledger account code. Please see this article (https://help.omniboost.io/en/articles/6593186-understanding-the-guest-ledger-account) which explains the guest ledger account.**
 
 Please note that the Guest ledger account should **not** be created in MEWS. Instead, please provide us the guest ledger account code so that we can enter it into the accounting integration.
 
 **4.3 Please provide us a Fallback ledger account for revenues.**
 
-Please see this article for a detailed explanation regarding the fallback ledgers.
+Please see this article (https://help.omniboost.io/en/articles/6609704-fallback-ledger-accounts-for-revenues-and-payments) for a detailed explanation regarding the fallback ledgers.
 
 **4.4 Please provide us a Fallback ledger account for payments.**
 
-Please see this article for a detailed explanation regarding the fallback ledgers.
+Please see this article (https://help.omniboost.io/en/articles/6609704-fallback-ledger-accounts-for-revenues-and-payments) for a detailed explanation regarding the fallback ledgers.
 
 **4.5 Do you prefer daily, weekly, or monthly export files?**
 
@@ -83,7 +83,7 @@ Please note that you can provide as many email address(es) as you want.
 The below summarizes the required accounting information described above.
 
 | |
-| --- |
+|---|
 | **Accounting flow: Closed or Consumed?** |
 | **Guest ledger account** |
 | **Fallback ledger account for Revenues** |
@@ -113,7 +113,7 @@ In case the integration uses a Consumed accounting flow, you should run the Acco
 
 # PART 6: Other features and configurable items of the accounting integration
 
-Please find below an overview of configurable items and features that the MEWS to BMD integration can support. In case you would like to use any of these features, please reach out to you Omniboost contact or support@omniboost.io in general.
+Please find below an overview of configurable items and features that the MEWS to BMD integration can support. In case you would like to use any of these features, please reach out to you Omniboost contact or [support@omniboost.io](mailto:support@omniboost.io) in general.
 
 ## Configurable variables
 

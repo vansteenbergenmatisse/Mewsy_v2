@@ -23,6 +23,12 @@
         "label": "Omniboost Help Center — Accounting Information",
         "type": "multi",
         "url": "https://help.omniboost.io/en/collections/1960805-omniboost-accounting-information"
+      },
+      {
+        "id": "mews-features",
+        "label": "Mews Features — All Accounting Integrations",
+        "type": "static-split",
+        "url": "https://omniboost.io/system-features/mews"
       }
     ]
   }

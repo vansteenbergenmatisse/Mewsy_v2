@@ -72,7 +72,7 @@ Omniboost offers 3 tiers for the Mews accounting integration: **Bronze**, **Silv
 
 **Best for:** Properties that need more granular data visibility, the ability to skip or split certain entries, and want direct Omniboost support throughout onboarding and beyond.
 
-**Pricing:** Contact Omniboost for a quote.
+**Pricing:** €1,600 / £1,600 / $1,950 annually per property.
 
 **Support model:** Direct Omniboost support via email and phone. Omniboost assists with test journal validation during onboarding.
 
@@ -115,7 +115,7 @@ Omniboost offers 3 tiers for the Mews accounting integration: **Bronze**, **Silv
 
 **Best for:** Complex hotel operations, multi-property setups, or properties that require advanced mapping, statistical reporting, full customization, and the highest level of ongoing Omniboost support.
 
-**Pricing:** Contact Omniboost for a quote.
+**Pricing:** €2,150 / £2,150 / $2,350 annually per property.
 
 **Support model:** Omniboost priority support. Omniboost assists with test journal validation during onboarding. Fastest guaranteed response SLA across all tiers.
 
