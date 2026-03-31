@@ -1,6 +1,6 @@
 # prompts/
 
-This folder contains the instructions given to the AI that controls how Mewsy talks to users. Think of it as Mewsy's personality and rulebook — written in plain English, read by Claude every time it generates a response.
+This folder contains the instructions given to the AI that controls how Mewsie talks to users. Think of it as Mewsie's personality and rulebook — written in plain English, read by Claude every time it generates a response.
 
 ## Files
 
@@ -10,7 +10,7 @@ Exports a single string called `baseSystemPrompt`. This is the base system promp
 
 It covers:
 
-- **Identity** — Mewsy is a support assistant for Omniboost × Mews, not a general AI
+- **Identity** — Mewsie is a support assistant for Omniboost × Mews, not a general AI
 - **Persona** — warm, direct, knowledgeable coworker tone. No "Great question!" or "Certainly!". First person always.
 - **Language** — respond in whatever language the user selected or is writing in. Swiss/Austrian German → standard Hochdeutsch.
 - **Knowledge scope** — answer only from the documents provided. Never guess. Never use general knowledge.

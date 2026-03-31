@@ -1,6 +1,6 @@
-# Mewsy v2
+# Mewsie v2
 
-Mewsy is a support chatbot for Omniboost — a company that connects hotel software (Mews) with accounting tools (Xero, Exact Online, etc.). Hotel staff ask Mewsy questions about the integration. It answers only from curated knowledge files. If the answer isn't there, it says so.
+Mewsie is a support chatbot for Omniboost — a company that connects hotel software (Mews) with accounting tools (Xero, Exact Online, etc.). Hotel staff ask Mewsie questions about the integration. It answers only from curated knowledge files. If the answer isn't there, it says so.
 
 ---
 
@@ -17,13 +17,13 @@ Every message runs through exactly three steps in sequence:
 - The router selects up to 5 documents from the knowledge manifest
 - Each selection returns a confidence score (0–1)
 - If confidence ≥ 0.80 → normal answer mode
-- If confidence < 0.80 → CLARIFY_MODE (Mewsy asks a targeted clarifying question)
-- If no documents match → BASIC_MODE (Mewsy acknowledges it can't help and asks for context)
+- If confidence < 0.80 → CLARIFY_MODE (Mewsie asks a targeted clarifying question)
+- If no documents match → BASIC_MODE (Mewsie acknowledges it can't help and asks for context)
 - The router passes the last 5 message pairs as history so it can understand follow-up questions
 
 ### 3. Skip routing for short follow-ups and greetings
 - Greetings and acknowledgements ("hi", "thanks", "ok", "bye", etc.) skip the routing step entirely
-- The last loaded documents are reused so Mewsy stays on topic without an extra API call
+- The last loaded documents are reused so Mewsie stays on topic without an extra API call
 
 ### 4. Session management (in-memory)
 - Each browser tab gets a unique session ID
@@ -40,11 +40,11 @@ Every message runs through exactly three steps in sequence:
 
 ### 6. Frustration detection
 - The pipeline tracks how many times in a row the user has asked without getting a satisfying answer
-- After 3 consecutive frustrated messages, Mewsy shifts tone and offers to escalate to human support
+- After 3 consecutive frustrated messages, Mewsie shifts tone and offers to escalate to human support
 
 ### 7. Clarification limiting
 - CLARIFY_MODE is capped at 3 rounds per topic (MAX_CLARIFY_ROUNDS)
-- After 3 clarify rounds without resolution, Mewsy exits clarification and gives its best answer
+- After 3 clarify rounds without resolution, Mewsie exits clarification and gives its best answer
 
 ### 8. Prompt caching
 - The base system prompt is cached server-side by Anthropic for 5 minutes
@@ -94,7 +94,7 @@ Every message runs through exactly three steps in sequence:
 - Makes long answers easier to read
 
 ### 17. Option buttons
-- When Mewsy's reply contains a list of short choices, the frontend converts it to clickable buttons
+- When Mewsie's reply contains a list of short choices, the frontend converts it to clickable buttons
 - Clicking a button sends that option as the next message
 - Buttons are disabled after the user responds
 - Maximum 7 buttons per response (BUTTON_MAX)
@@ -116,7 +116,7 @@ Every message runs through exactly three steps in sequence:
 - Selected language is persisted in sessionStorage and restored on page reload
 
 ### 21. Unread badge
-- When the widget is hidden and Mewsy sends a message, an unread counter appears on the bubble
+- When the widget is hidden and Mewsie sends a message, an unread counter appears on the bubble
 - The browser tab title also updates with the unread count
 - Both reset when the widget is opened
 
@@ -133,13 +133,13 @@ Every message runs through exactly three steps in sequence:
 ## Folder structure
 
 ```
-Mewsy_v2/
+Mewsie_v2/
 ├── backend/            Server — Hono + Node.js + TypeScript
 │   ├── pipeline/       Router, loader, answer, session management
 │   ├── scraper/        Knowledge scraper (Firecrawl + Confluence)
 │   ├── errors/         Error handler and alerting stubs
 │   ├── fetch/          Manifest loader
-│   ├── config/         Tunable constants (mewsy.config.ts)
+│   ├── config/         Tunable constants (Mewsie.config.ts)
 │   └── server.ts       HTTP server entry point
 ├── frontend/           Chat widget — React + Vite + TypeScript
 │   └── src/

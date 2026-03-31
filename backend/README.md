@@ -1,6 +1,6 @@
 # backend/
 
-This is the brain of Mewsy. It's a Node.js server that receives messages from the chat widget, figures out which documents to read, asks Claude for an answer, and sends it back.
+This is the brain of Mewsie. It's a Node.js server that receives messages from the chat widget, figures out which documents to read, asks Claude for an answer, and sends it back.
 
 ## Files in this folder
 

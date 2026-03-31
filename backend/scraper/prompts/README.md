@@ -10,4 +10,4 @@ The instructions given to Claude when it cleans up scraped content. It tells Cla
 
 **To change cleanup behaviour:** just edit this file. Changes take effect on the very next sync run — no restart needed.
 
-**Golden rule baked into the prompt:** Claude must never paraphrase, reword, or summarise the actual article content. It can only strip UI noise and apply markdown formatting. If Mewsy gives users wrong information because the AI rewrote the steps, that's a bug.
+**Golden rule baked into the prompt:** Claude must never paraphrase, reword, or summarise the actual article content. It can only strip UI noise and apply markdown formatting. If Mewsie gives users wrong information because the AI rewrote the steps, that's a bug.

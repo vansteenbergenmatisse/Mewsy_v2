@@ -1,7 +1,7 @@
 /**
  * server.ts
  *
- * The entry point for Mewsy. This file starts the HTTP server and wires
+ * The entry point for Mewsie. This file starts the HTTP server and wires
  * everything together. It has two jobs:
  *   1. Serve the frontend (the chat widget) as a static website
  *   2. Accept incoming chat messages via POST /webhook/chat and return answers
@@ -47,7 +47,7 @@ const ROUTE_TIMEOUT_MS = 30_000;
 
 // ── POST /webhook/chat ─────────────────────────────────────────────────────────
 // The only endpoint the frontend calls. Receives a chat message and returns
-// Mewsy's reply. Both chatInput (the message text) and sessionId (which
+// Mewsie's reply. Both chatInput (the message text) and sessionId (which
 // conversation this belongs to) are required.
 app.post('/webhook/chat', chatRateLimit, async (c) => {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;

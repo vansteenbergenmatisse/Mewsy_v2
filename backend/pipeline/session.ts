@@ -19,7 +19,7 @@ import {
   SESSION_MAX_PAIRS,
   SESSION_TTL_MINUTES,
   LANGUAGE_PERSISTS_ON_TIMEOUT,
-} from '../config/mewsy.config.ts';
+} from '../config/Mewsie.config.ts';
 
 // How long a session can be inactive before it is deleted (in milliseconds)
 const INACTIVITY_TTL_MS = SESSION_TTL_MINUTES * 60 * 1000;

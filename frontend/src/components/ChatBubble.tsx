@@ -16,8 +16,8 @@ export function ChatBubble({ unreadCount, onClick }: ChatBubbleProps) {
           {unreadCount}
         </span>
       )}
-      <button id="mewsy-bubble" aria-label="Open Mewsy" onClick={onClick}>
-        Problem? Ask Mewsy
+      <button id="Mewsie-bubble" aria-label="Open Mewsie" onClick={onClick}>
+        Problem? Ask Mewsie
       </button>
     </>
   );

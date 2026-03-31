@@ -37,19 +37,19 @@ export function uiStr(key: string, lang: string | null): string {
 
 export const welcomeText: Record<string, string[]> = {
   en: [
-    "Hi! I'm Mewsy, the Mews x Omniboost support assistant.",
+    "Hi! I'm Mewsie, the Mews x Omniboost support assistant.",
     "Whether you're onboarding, configuring your mapping, or troubleshooting an issue — I'm here to help. What do you need?"
   ],
   de: [
-    "Hallo! Ich bin Mewsy, der Support-Assistent für Mews x Omniboost.",
+    "Hallo! Ich bin Mewsie, der Support-Assistent für Mews x Omniboost.",
     "Egal ob Onboarding, Mapping-Konfiguration oder Fehlerbehebung — ich bin für dich da. Was brauchst du?"
   ],
   fr: [
-    "Bonjour ! Je suis Mewsy, l'assistant support pour Mews x Omniboost.",
+    "Bonjour ! Je suis Mewsie, l'assistant support pour Mews x Omniboost.",
     "Que vous soyez en cours d'intégration, de configuration ou de dépannage, je suis là pour vous aider. De quoi avez-vous besoin ?"
   ],
   nl: [
-    "Hoi! Ik ben Mewsy, de support-assistent voor Mews x Omniboost.",
+    "Hoi! Ik ben Mewsie, de support-assistent voor Mews x Omniboost.",
     "Of je nu onboarding doet, je mapping instelt of een probleem oplost — ik ben hier om te helpen. Wat heb je nodig?"
   ],
 };
@@ -57,10 +57,10 @@ export const welcomeText: Record<string, string[]> = {
 // ── Thinking messages ──────────────────────────────────────────────────────────
 
 export const thinkingMessagesMap: Record<string, string[]> = {
-  en:    ["Mewsy is thinking...", "Checking the documentation...", "Almost there...", "Just a moment longer..."],
-  de:    ["Mewsy denkt nach...", "Dokumentation wird geprüft...", "Fast fertig...", "Noch einen Moment..."],
-  fr:    ["Mewsy réfléchit...", "Consultation de la documentation...", "Presque terminé...", "Encore un instant..."],
-  nl:    ["Mewsy denkt na...", "Documentatie raadplegen...", "Bijna klaar...", "Nog even geduld..."],
+  en:    ["Mewsie is thinking...", "Checking the documentation...", "Almost there...", "Just a moment longer..."],
+  de:    ["Mewsie denkt nach...", "Dokumentation wird geprüft...", "Fast fertig...", "Noch einen Moment..."],
+  fr:    ["Mewsie réfléchit...", "Consultation de la documentation...", "Presque terminé...", "Encore un instant..."],
+  nl:    ["Mewsie denkt na...", "Documentatie raadplegen...", "Bijna klaar...", "Nog even geduld..."],
 };
 
 export function getThinkingMessages(lang: string | null): string[] {
@@ -150,6 +150,6 @@ export const helpTopicContent: Record<string, HelpTopic> = {
       { heading: "Email", content: "pms@omniboost.be — for integration and technical questions." },
       { heading: "Business hours", content: "Monday – Friday: 9:00 AM – 6:00 PM CET. Urgent issues are handled with priority." }
     ],
-    cta: { title: "Chat with Mewsy", text: "For quick answers, just ask Mewsy directly — it has access to the full Omniboost documentation.", button: "Ask Mewsy" }
+    cta: { title: "Chat with Mewsie", text: "For quick answers, just ask Mewsie directly — it has access to the full Omniboost documentation.", button: "Ask Mewsie" }
   }
 };

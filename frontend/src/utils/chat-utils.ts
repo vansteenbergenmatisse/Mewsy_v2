@@ -13,7 +13,7 @@ export function formatBotText(text: string): string {
   html = html.replace(/\[callout\]([\s\S]*?)\[\/callout\]/gi, (_, content: string) => {
     callouts.push(content.trim());
     // Surround with \n\n so the placeholder ends up in its own <p> after processing
-    return `\n\nMEWSYCALLOUT${callouts.length - 1}MEWSYCALLOUT\n\n`;
+    return `\n\nMEWSIECALLOUT${callouts.length - 1}MEWSIECALLOUT\n\n`;
   });
 
   // Normalise inline numbered lists: "1. Step 2. Step" → separate lines
@@ -64,9 +64,9 @@ export function formatBotText(text: string): string {
       .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank">$1</a>');
     const calloutHtml = `<div class="callout-box"><span class="callout-icon">i</span><span>${c}</span></div>`;
     // Replace <p>PLACEHOLDER</p> to avoid div-inside-p invalid HTML
-    html = html.replace(`<p>MEWSYCALLOUT${idx}MEWSYCALLOUT</p>`, calloutHtml);
+    html = html.replace(`<p>MEWSIECALLOUT${idx}MEWSIECALLOUT</p>`, calloutHtml);
     // Fallback: plain placeholder (in case it wasn't wrapped in <p>)
-    html = html.replace(`MEWSYCALLOUT${idx}MEWSYCALLOUT`, calloutHtml);
+    html = html.replace(`MEWSIECALLOUT${idx}MEWSIECALLOUT`, calloutHtml);
   });
 
   return `<div class="bot-text">${html}</div>`;
@@ -247,7 +247,7 @@ export function checkListForButtons(
   const instructionPhrase = /\b(at the bottom|at the top|in the settings|in the menu|on the screen|from the list|from the dropdown|in the field|in the box|on the page|by clicking|by selecting)\b/i;
   if (options.some(o => instructionPhrase.test(o))) return null;
 
-  // The message must contain a sentence ending in ? (Mewsy asked a clarifying question)
+  // The message must contain a sentence ending in ? (Mewsie asked a clarifying question)
   let questionText: string | null = null;
   const clone = msgDiv.cloneNode(true) as HTMLElement;
   clone.querySelectorAll("ul,ol").forEach(l => l.remove());

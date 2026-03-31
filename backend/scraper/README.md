@@ -1,6 +1,6 @@
 # backend/scraper/
 
-This folder automatically keeps Mewsy's knowledge documents up to date. Instead of manually copying and pasting content from websites and Confluence, this scraper fetches it automatically on a schedule, cleans it up using AI, and saves it as markdown files that Mewsy can read.
+This folder automatically keeps Mewsie's knowledge documents up to date. Instead of manually copying and pasting content from websites and Confluence, this scraper fetches it automatically on a schedule, cleans it up using AI, and saves it as markdown files that Mewsie can read.
 
 Think of it as a robot librarian that goes out, grabs the latest information, and files it in the right place — every hour or every day, depending on the source.
 

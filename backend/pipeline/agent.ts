@@ -36,7 +36,7 @@ import {
   ROUTER_CONFIDENCE_THRESHOLD,
   ROUTER_HISTORY_ENABLED,
   ROUTER_HISTORY_PAIRS,
-} from '../config/mewsy.config.ts';
+} from '../config/Mewsie.config.ts';
 
 // __dirname is not available in ES modules by default — this reconstructs it
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -147,7 +147,7 @@ function shouldSkipRouting(userMessage: string, sessionContext: SessionContext, 
   // Pure greeting or ack — these never need document routing
   if (SKIP_ROUTING_GREETINGS.has(trimmed)) return true;
 
-  // Only skip if: Mewsy just asked a clarifying question AND the user gave a
+  // Only skip if: Mewsie just asked a clarifying question AND the user gave a
   // very short reply (≤ 4 words, e.g. "Consumed", "step 2", "Xero") AND we have
   // docs from the previous turn to reuse. This is the one valid skip case.
   const prevQ = sessionContext.previousQuestion;
@@ -161,7 +161,7 @@ function shouldSkipRouting(userMessage: string, sessionContext: SessionContext, 
 
 // ── Context extraction helpers ─────────────────────────────────────────────────
 
-// Extracts the sentence containing ? from the response (the question Mewsy asked).
+// Extracts the sentence containing ? from the response (the question Mewsie asked).
 // Returns null if no question is found.
 function extractPreviousQuestion(response: string): string | null {
   if (!response || !response.includes('?')) return null;
@@ -350,7 +350,7 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
   const replyEndsWithQuestion = reply.trim().slice(-200).includes('?');
 
   if (replyEndsWithQuestion) {
-    // Mewsy asked something — increment counter
+    // Mewsie asked something — increment counter
     updateContext(sessionId, { clarifyRoundCounter: (context.clarifyRoundCounter || 0) + 1 });
   } else if (replyWordCount > 100 && !replyEndsWithQuestion) {
     // Full answer given — reset counter

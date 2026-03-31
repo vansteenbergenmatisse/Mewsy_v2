@@ -1,4 +1,4 @@
-// Mewsy central configuration — all tunable constants live here.
+// Mewsie central configuration — all tunable constants live here.
 // Import this file instead of hardcoding values in pipeline files.
 
 export const ROUTER_MAX_DOCS = 5;

@@ -27,7 +27,7 @@
  * How caching works here:
  *   The system prompt is split into separate content blocks:
  *
- *   Block 1 — Base prompt (Mewsy's rules and personality from prompts/system.ts)
+ *   Block 1 — Base prompt (Mewsie's rules and personality from prompts/system.ts)
  *     This text is identical on every single call. Marked with cache_control
  *     so Anthropic stores it server-side for 5 minutes.
  *
@@ -45,7 +45,7 @@ import { baseSystemPrompt } from '../../prompts/system.ts';
 import { getHistory, addToHistory } from './session.ts';
 import {
   ROUTER_MAX_DOCS,
-} from '../config/mewsy.config.ts';
+} from '../config/Mewsie.config.ts';
 
 // The beta header is required by Anthropic to enable prompt caching.
 const clientWithCaching = new Anthropic({

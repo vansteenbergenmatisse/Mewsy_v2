@@ -15,7 +15,7 @@ function getClient(): Anthropic {
  *
  * [some text](https://example.com)  →  some text (https://example.com)
  *
- * This matters because Mewsy passes these docs as plain text to Claude, so a link
+ * This matters because Mewsie passes these docs as plain text to Claude, so a link
  * embedded in a word would be invisible to the user. Writing the URL out explicitly
  * means users can always see and visit the referenced page.
  *
@@ -65,7 +65,7 @@ export async function cleanContent(rawContent: string): Promise<CleanContentResu
       messages: [{ role: 'user', content: rawContent }],
     });
     const text = response.content[0].type === 'text' ? response.content[0].text : '';
-    return { content: expandLinks(text), failed: false };
+    return { content: removeEmDashes(expandLinks(text)), failed: false };
   } catch (err) {
     logger.warn(`Cleanup agent failed: ${(err as Error).message} — saving raw content`);
     return {

@@ -26,7 +26,7 @@ interface Reporter {
 // These tests don't need an API key — just checks the constants are sane.
 
 async function checkConfigSanity({ pass, fail, results }: Reporter): Promise<void> {
-  const config = await import(`${ROOT}/backend/config/mewsy.config.ts`);
+  const config = await import(`${ROOT}/backend/config/Mewsie.config.ts`);
 
   const checks: [string, boolean, string][] = [
     ['ROUTER_MAX_DOCS is between 1 and 10',         config.ROUTER_MAX_DOCS >= 1 && config.ROUTER_MAX_DOCS <= 10,                 `Got ${config.ROUTER_MAX_DOCS}`],

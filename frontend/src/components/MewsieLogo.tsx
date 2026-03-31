@@ -1,17 +1,17 @@
 import React from 'react';
 
-// ── Shared Mewsy logo SVG ─────────────────────────────────────────────────────
+// ── Shared Mewsie logo SVG ─────────────────────────────────────────────────────
 // Used in: BotAvatar, ChatHeader, Sidebar
 // Accepts a className prop so callers can size/style it independently.
 
-interface MewsyLogoProps {
+interface MewsieLogoProps {
   className?: string;
   width?: number;
   height?: number;
   stylePrefix?: string; // unique prefix for the inline <style> class names to avoid collisions
 }
 
-export function MewsyLogo({ className, width = 28, height = 28, stylePrefix = 'ml' }: MewsyLogoProps) {
+export function MewsieLogo({ className, width = 28, height = 28, stylePrefix = 'ml' }: MewsieLogoProps) {
   const s0 = `${stylePrefix}st0`;
   const s1 = `${stylePrefix}st1`;
   const s2 = `${stylePrefix}st2`;

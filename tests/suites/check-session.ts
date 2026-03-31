@@ -32,7 +32,7 @@ export async function checkSession({ pass, fail, skip: _skip, results }: Reporte
     cleanSessions,
   } = await import(`${ROOT}/backend/pipeline/session.ts`);
 
-  const { SESSION_MAX_PAIRS } = await import(`${ROOT}/backend/config/mewsy.config.ts`);
+  const { SESSION_MAX_PAIRS } = await import(`${ROOT}/backend/config/Mewsie.config.ts`);
 
   // ── Session creation ──────────────────────────────────────────────────────
   const id = `test-session-${Date.now()}`;

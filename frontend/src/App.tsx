@@ -62,14 +62,14 @@ export default function App() {
 
   // ── Language ───────────────────────────────────────────────────────────────
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(
-    () => sessionStorage.getItem('mewsy_lang') || null
+    () => sessionStorage.getItem('Mewsie_lang') || null
   );
-  const isFirstMessageRef = useRef(!sessionStorage.getItem('mewsy_lang'));
+  const isFirstMessageRef = useRef(!sessionStorage.getItem('Mewsie_lang'));
   const langChangedRef = useRef(false);
 
   // ── Input ──────────────────────────────────────────────────────────────────
   const [inputValue, setInputValue] = useState('');
-  const [inputPlaceholder, setInputPlaceholder] = useState('Ask Mewsy…');
+  const [inputPlaceholder, setInputPlaceholder] = useState('Ask Mewsie…');
 
   // ── Attached files ─────────────────────────────────────────────────────────
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
@@ -319,7 +319,7 @@ export default function App() {
   const handleLanguageChange = useCallback((code: string) => {
     const prev = selectedLanguage;
     setSelectedLanguage(code);
-    sessionStorage.setItem('mewsy_lang', code);
+    sessionStorage.setItem('Mewsie_lang', code);
     if (prev && prev !== code) {
       langChangedRef.current = true;
     }
@@ -344,7 +344,7 @@ export default function App() {
     setMessages([]);
     setHeroActive(true);
     setInputValue('');
-    setInputPlaceholder('Ask Mewsy…');
+    setInputPlaceholder('Ask Mewsie…');
     setAttachedFiles([]);
     setIsRequestInProgress(false);
     removeThinking();

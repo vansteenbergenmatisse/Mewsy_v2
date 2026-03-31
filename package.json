@@ -1,7 +1,7 @@
 {
-  "name": "mewsy-v2",
+  "name": "Mewsie-v2",
   "version": "2.0.0",
-  "description": "Mewsy support chatbot — Mews x Omniboost integration (v2)",
+  "description": "Mewsie support chatbot — Mews x Omniboost integration (v2)",
   "type": "module",
   "main": "backend/server.ts",
   "scripts": {

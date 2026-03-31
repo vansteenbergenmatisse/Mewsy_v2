@@ -2,7 +2,7 @@
 /**
  * tests/run-all.ts
  *
- * Pre-launch test suite for Mewsy v2.
+ * Pre-launch test suite for Mewsie v2.
  * Runs automatically before `npm run dev` via the predev hook.
  * Also runnable manually: tsx tests/run-all.ts
  *
@@ -59,7 +59,7 @@ async function runSuite(name: string, fn: (r: Reporter) => Promise<void>): Promi
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 (async () => {
-  console.log(`\n${BOLD}Mewsy v2 — Pre-launch tests${RESET}`);
+  console.log(`\n${BOLD}Mewsie v2 — Pre-launch tests${RESET}`);
   console.log('─'.repeat(40));
 
   const allResults: TestResult[] = [];
@@ -94,7 +94,7 @@ async function runSuite(name: string, fn: (r: Reporter) => Promise<void>): Promi
     console.log(`\n${RED}${BOLD}Pre-launch tests failed — fix the issues above before starting the server.${RESET}\n`);
     process.exit(1);
   } else {
-    console.log(`\n${GREEN}${BOLD}All tests passed — starting Mewsy.${RESET}\n`);
+    console.log(`\n${GREEN}${BOLD}All tests passed — starting Mewsie.${RESET}\n`);
     process.exit(0);
   }
 })();

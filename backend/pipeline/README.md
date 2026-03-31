@@ -48,6 +48,6 @@ Remembers the conversation history and user context for each browser tab. Stores
   - Which accounting flow setup they're on (Consumed, Closed, or Hybrid)
   - How many times they've been frustrated
   - Which documents were loaded last turn (for skip-routing)
-  - Whether Mewsy just asked a question (so the next short reply knows it's a follow-up)
+  - Whether Mewsie just asked a question (so the next short reply knows it's a follow-up)
 
 Sessions expire after 30 minutes of inactivity. Maximum 20 message pairs per session.

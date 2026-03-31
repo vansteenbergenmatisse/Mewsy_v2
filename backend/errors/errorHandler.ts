@@ -24,7 +24,7 @@ export async function handlePipelineError(error: unknown, context: ErrorContext 
     stack: error instanceof Error ? (error.stack ?? null) : null,
   };
 
-  console.error('[MEWSY ERROR]', JSON.stringify(logEntry, null, 2));
+  console.error('[MEWSIE ERROR]', JSON.stringify(logEntry, null, 2));
 
   // Alert stubs — connect when credentials are available
   try {
@@ -32,7 +32,7 @@ export async function handlePipelineError(error: unknown, context: ErrorContext 
       await sendSlackAlert(logEntry);
     }
   } catch (alertErr) {
-    console.error('[MEWSY] Slack alert failed:', (alertErr as Error).message);
+    console.error('[MEWSIE] Slack alert failed:', (alertErr as Error).message);
   }
 
   try {
@@ -40,7 +40,7 @@ export async function handlePipelineError(error: unknown, context: ErrorContext 
       await sendEmailAlert(logEntry);
     }
   } catch (alertErr) {
-    console.error('[MEWSY] Email alert failed:', (alertErr as Error).message);
+    console.error('[MEWSIE] Email alert failed:', (alertErr as Error).message);
   }
 
   return USER_FACING_MESSAGE;

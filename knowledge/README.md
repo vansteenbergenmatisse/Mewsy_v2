@@ -1,16 +1,16 @@
 # knowledge/
 
-This folder is the brain of Mewsy. Everything Mewsy knows comes from the markdown files stored here. If something isn't in these files, Mewsy won't answer it — and that's intentional.
+This folder is the brain of Mewsie. Everything Mewsie knows comes from the markdown files stored here. If something isn't in these files, Mewsie won't answer it — and that's intentional.
 
 ## The golden rule
 
-**Quality of answers = quality of documents.** The AI pipeline is just plumbing. If the documents are clear, current, and well-structured, Mewsy answers well. If the documents are messy or outdated, no amount of AI tuning fixes it.
+**Quality of answers = quality of documents.** The AI pipeline is just plumbing. If the documents are clear, current, and well-structured, Mewsie answers well. If the documents are messy or outdated, no amount of AI tuning fixes it.
 
 ## Files and folders
 
 ```
 knowledge/
-├── knowledge-manifest.json    The index of every document Mewsy knows about
+├── knowledge-manifest.json    The index of every document Mewsie knows about
 ├── fetch_sources.json         What the scraper should fetch and how often
 ├── sync.log                   A log of every scraper run (created automatically)
 ├── mews.md                    ← Manually maintained — do not delete or rename

@@ -1,14 +1,14 @@
-# Mewsy — Claude Code Instructions
+# Mewsie — Claude Code Instructions
 
-You are building **Mewsy**, a cache-augmented generation (CAG) chatbot that answers FAQ questions from curated markdown documents. Read this file fully before doing anything. Follow it every session.
+You are building **Mewsie**, a cache-augmented generation (CAG) chatbot that answers FAQ questions from curated markdown documents. Read this file fully before doing anything. Follow it every session.
 
-## The Mewsy Architecture
+## The Mewsie Architecture
 
 **Layer 1: Docs (The Knowledge)**
 
 - Markdown files stored in `knowledge/`
-- Each file covers one topic and contains everything Mewsy is allowed to answer about that topic
-- Written in plain language — if it's not in the doc, Mewsy won't answer it
+- Each file covers one topic and contains everything Mewsie is allowed to answer about that topic
+- Written in plain language — if it's not in the doc, Mewsie won't answer it
 
 **Layer 2: Pipeline (The Logic)**
 
@@ -25,12 +25,12 @@ You are building **Mewsy**, a cache-augmented generation (CAG) chatbot that answ
 - Keeps the knowledge base current without manual intervention
 - Fails safely — if a scrape returns bad data, the existing file is preserved
 
-**Why this matters:** Mewsy's quality is entirely determined by what's in `docs/`. The pipeline is just plumbing. If the docs are clean, current, and well-structured, Mewsy answers well. If they're not, no amount of prompt engineering fixes it. Keep the docs as the priority.
+**Why this matters:** Mewsie's quality is entirely determined by what's in `docs/`. The pipeline is just plumbing. If the docs are clean, current, and well-structured, Mewsie answers well. If they're not, no amount of prompt engineering fixes it. Keep the docs as the priority.
 
 ## File Structure
 
 ```
-mewsy/
+Mewsie/
 ├── knowledge/           # Markdown knowledge base — one file per topic, source of truth for all answers
 ├── backend/        # Node.js pipeline — router, loader, and answer logic
 ├── scraper/        # Cron job that fetches external pages and updates docs/

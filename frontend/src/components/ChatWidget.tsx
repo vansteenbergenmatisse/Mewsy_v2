@@ -291,7 +291,7 @@ export function ChatWidget({
   if (widgetMode === 'hidden') return null;
 
   return (
-    <div id="mewsy-app" className={widgetMode}>
+    <div id="Mewsie-app" className={widgetMode}>
 
       {/* ── Sidebar — only in fullscreen; expanded/collapsed via class ── */}
       {widgetMode === 'fullscreen' && !sidebarCollapsed && (
@@ -301,9 +301,9 @@ export function ChatWidget({
       {widgetMode === 'fullscreen' && (
         <div id="sidebar" className={sidebarCollapsed ? '' : 'expanded'}>
 
-          {/* Header: "Mewsy" big + toggle at right when expanded; just toggle centered when collapsed */}
+          {/* Header: "Mewsie" big + toggle at right when expanded; just toggle centered when collapsed */}
           <div className="sidebar-header">
-            <span className="sidebar-brand-name">Mewsy</span>
+            <span className="sidebar-brand-name">Mewsie</span>
             <button className="sidebar-toggle-btn" onClick={onToggleSidebar} title="Collapse sidebar">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -437,7 +437,7 @@ export function ChatWidget({
         />
 
         {/* Warning toasts */}
-        <div id="timeout-warning">Mewsy is taking longer than expected. Please try again.</div>
+        <div id="timeout-warning">Mewsie is taking longer than expected. Please try again.</div>
         <div id="empty-warning">Please enter a message first.</div>
 
         {/* Bottom input — hidden in fullscreen hero (input is embedded in hero) */}
