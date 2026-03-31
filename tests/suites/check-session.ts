@@ -120,6 +120,17 @@ export async function checkSession({ pass, fail, skip: _skip, results }: Reporte
     results.push({ ok: false });
   }
 
+  // Non-destructive patch: updating one field does not wipe other fields
+  updateContext(ctxId, { language: 'fr' });
+  const ctx3 = getContext(ctxId);
+  if (ctx3.frustrationCounter === 3 && ctx3.language === 'fr') {
+    pass('context patch is non-destructive (other fields survive)');
+    results.push({ ok: true });
+  } else {
+    fail('context patch is non-destructive', `frustrationCounter=${ctx3.frustrationCounter}, language="${ctx3.language}"`);
+    results.push({ ok: false });
+  }
+
   // ── TTL expiry (cleanSessions) ─────────────────────────────────────────────
   // Strategy: create a session, add a message so it has history, manually
   // backdate lastActive by holding the object reference, then clean.

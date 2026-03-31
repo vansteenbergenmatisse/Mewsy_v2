@@ -1,7 +1,7 @@
 /**
- * Suite 6: Server health
+ * Suite 7: Server health
  * Starts the server briefly, hits /health, and shuts it down.
- * Also checks that the server rejects bad inputs.
+ * Also checks input validation, CORS headers, valid POST → 200, and wrong HTTP method.
  */
 
 import { spawn }        from 'child_process';
@@ -33,7 +33,7 @@ interface TestResult {
 interface Reporter {
   pass: (label: string) => void;
   fail: (label: string, err: string) => void;
-  skip?: (label: string, reason: string) => void;
+  skip: (label: string, reason: string) => void;
   results: TestResult[];
 }
 
@@ -45,7 +45,7 @@ async function fetchJson(url: string, options: RequestInit = {}): Promise<{ stat
   return { status: res.status, body };
 }
 
-export async function checkServer({ pass, fail, results }: Reporter): Promise<void> {
+export async function checkServer({ pass, fail, skip, results }: Reporter): Promise<void> {
   const PORT = await getFreePort();
   const BASE = `http://localhost:${PORT}`;
 
@@ -53,6 +53,7 @@ export async function checkServer({ pass, fail, results }: Reporter): Promise<vo
   const tsxBin = join(ROOT, 'node_modules', '.bin', 'tsx');
 
   // Start the server as a child process
+  const startupErrors: string[] = [];
   const server = spawn(tsxBin, ['backend/server.ts'], {
     cwd: ROOT,
     env: { ...process.env, PORT: String(PORT) },
@@ -63,7 +64,6 @@ export async function checkServer({ pass, fail, results }: Reporter): Promise<vo
   server.on('error', (err: Error) => startupErrors.push(err.message));
 
   let started = false;
-  const startupErrors: string[] = [];
   server.stdout.on('data', (d: Buffer) => {
     if (d.toString().includes('listening on')) started = true;
   });
@@ -150,6 +150,62 @@ export async function checkServer({ pass, fail, results }: Reporter): Promise<vo
       results.push({ ok: true });
     } else {
       fail('GET / serves the frontend', `Got status ${frontend.status}`);
+      results.push({ ok: false });
+    }
+
+    // ── CORS: localhost origin is allowed ──────────────────────────────────
+    const corsAllowed = await fetch(`${BASE}/health`, {
+      headers: { Origin: 'http://localhost:5173' },
+    });
+    const corsHeader = corsAllowed.headers.get('access-control-allow-origin');
+    if (corsHeader === 'http://localhost:5173' || corsHeader === '*') {
+      pass('CORS: localhost:5173 origin is allowed');
+      results.push({ ok: true });
+    } else {
+      fail('CORS: localhost:5173 origin is allowed', `access-control-allow-origin: "${corsHeader}"`);
+      results.push({ ok: false });
+    }
+
+    // ── CORS: unknown origin is rejected ──────────────────────────────────
+    const corsRejected = await fetch(`${BASE}/health`, {
+      headers: { Origin: 'https://evil.example.com' },
+    });
+    const corsHeader2 = corsRejected.headers.get('access-control-allow-origin');
+    if (!corsHeader2 || corsHeader2 === 'null') {
+      pass('CORS: evil.example.com origin is rejected (no allow-origin header)');
+      results.push({ ok: true });
+    } else {
+      fail('CORS: evil.example.com rejected', `Unexpectedly got allow-origin: "${corsHeader2}"`);
+      results.push({ ok: false });
+    }
+
+    // ── Valid POST /webhook/chat → 200 { output: string } ─────────────────
+    if (process.env.ANTHROPIC_API_KEY) {
+      const validPost = await fetchJson(`${BASE}/webhook/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatInput: 'hello', sessionId: `srv-test-${Date.now()}` }),
+      });
+      if (validPost.status === 200 && typeof (validPost.body as { output?: unknown })?.output === 'string') {
+        pass('POST /webhook/chat with valid input returns 200 { output: string }');
+        results.push({ ok: true });
+      } else {
+        fail('POST /webhook/chat valid input', `Got status ${validPost.status}, body: ${JSON.stringify(validPost.body)}`);
+        results.push({ ok: false });
+      }
+    } else {
+      skip('POST /webhook/chat valid input → 200', 'ANTHROPIC_API_KEY not set');
+      results.push({ ok: 'skip' });
+    }
+
+    // ── Wrong HTTP method → 404 ────────────────────────────────────────────
+    // Hono returns 404 for GET on a POST-only route
+    const wrongMethod = await fetchJson(`${BASE}/webhook/chat`);
+    if (wrongMethod.status === 404 || wrongMethod.status === 405) {
+      pass(`GET /webhook/chat returns ${wrongMethod.status} (method not registered)`);
+      results.push({ ok: true });
+    } else {
+      fail('GET /webhook/chat returns 404 or 405', `Got status ${wrongMethod.status}`);
       results.push({ ok: false });
     }
 

@@ -1,7 +1,8 @@
 /**
- * Suite 8: Pipeline behaviour
- * Tests BASIC_MODE, language injection, config sanity, and CORS headers.
- * Some cases require a live ANTHROPIC_API_KEY (marked below).
+ * Suite 5: Pipeline behaviour
+ * Tests config sanity, handlePipelineError, loadAllDocuments, BASIC_MODE, and language injection.
+ * Config sanity and error handler run without an API key.
+ * BASIC_MODE, language injection, and multi-turn require a live ANTHROPIC_API_KEY.
  */
 
 import { join } from 'path';
@@ -22,26 +23,65 @@ interface Reporter {
   results: TestResult[];
 }
 
-// ── Config sanity ─────────────────────────────────────────────────────────────
-// These tests don't need an API key — just checks the constants are sane.
+// ── Error handler (no API key needed) ────────────────────────────────────────
+
+async function checkErrorHandler({ pass, fail, results }: Reporter): Promise<void> {
+  const { handlePipelineError } = await import(`${ROOT}/backend/errors/errorHandler.ts`);
+
+  try {
+    const result = await handlePipelineError(new Error('test error'), {
+      sessionId: 'test-session',
+      userMessage: 'test message',
+      errorType: 'UNHANDLED',
+    }) as string;
+    const expected = "Something went wrong on my end — please try again in a moment.";
+    if (result === expected) {
+      pass('handlePipelineError returns the standard user-facing message');
+      results.push({ ok: true });
+    } else {
+      fail('handlePipelineError user-facing message', `Got: "${result}"`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('handlePipelineError test', (err as Error).message);
+    results.push({ ok: false });
+  }
+}
+
+// ── Loader (no API key needed) ────────────────────────────────────────────────
+
+async function checkLoader({ pass, fail, results }: Reporter): Promise<void> {
+  const { loadAllDocuments } = await import(`${ROOT}/backend/fetch/loader.ts`);
+
+  try {
+    await loadAllDocuments();
+    pass('loadAllDocuments() runs without throwing (manifest is accessible)');
+    results.push({ ok: true });
+  } catch (err) {
+    fail('loadAllDocuments()', (err as Error).message);
+    results.push({ ok: false });
+  }
+}
+
+// ── Config sanity (no API key needed) ────────────────────────────────────────
 
 async function checkConfigSanity({ pass, fail, results }: Reporter): Promise<void> {
   const config = await import(`${ROOT}/backend/config/Mewsie.config.ts`);
 
   const checks: [string, boolean, string][] = [
-    ['ROUTER_MAX_DOCS is between 1 and 10',         config.ROUTER_MAX_DOCS >= 1 && config.ROUTER_MAX_DOCS <= 10,                 `Got ${config.ROUTER_MAX_DOCS}`],
-    ['ROUTER_CONFIDENCE_THRESHOLD is between 0 and 1', config.ROUTER_CONFIDENCE_THRESHOLD > 0 && config.ROUTER_CONFIDENCE_THRESHOLD < 1, `Got ${config.ROUTER_CONFIDENCE_THRESHOLD}`],
+    ['ROUTER_MAX_DOCS is between 1 and 10',             config.ROUTER_MAX_DOCS >= 1 && config.ROUTER_MAX_DOCS <= 10,                 `Got ${config.ROUTER_MAX_DOCS}`],
+    ['ROUTER_CONFIDENCE_THRESHOLD is between 0 and 1',  config.ROUTER_CONFIDENCE_THRESHOLD > 0 && config.ROUTER_CONFIDENCE_THRESHOLD < 1, `Got ${config.ROUTER_CONFIDENCE_THRESHOLD}`],
     ['ROUTER_SINGLE_DOC_CONFIDENCE is between 0 and 1', config.ROUTER_SINGLE_DOC_CONFIDENCE > 0 && config.ROUTER_SINGLE_DOC_CONFIDENCE <= 1, `Got ${config.ROUTER_SINGLE_DOC_CONFIDENCE}`],
-    ['SESSION_MAX_PAIRS is between 5 and 100',      config.SESSION_MAX_PAIRS >= 5 && config.SESSION_MAX_PAIRS <= 100,             `Got ${config.SESSION_MAX_PAIRS}`],
-    ['SESSION_TTL_MINUTES is between 5 and 1440',   config.SESSION_TTL_MINUTES >= 5 && config.SESSION_TTL_MINUTES <= 1440,       `Got ${config.SESSION_TTL_MINUTES}`],
-    ['FRUSTRATION_THRESHOLD is between 1 and 10',   config.FRUSTRATION_THRESHOLD >= 1 && config.FRUSTRATION_THRESHOLD <= 10,     `Got ${config.FRUSTRATION_THRESHOLD}`],
-    ['MAX_CLARIFY_ROUNDS is between 1 and 10',      config.MAX_CLARIFY_ROUNDS >= 1 && config.MAX_CLARIFY_ROUNDS <= 10,           `Got ${config.MAX_CLARIFY_ROUNDS}`],
-    ['BUTTON_MAX is between 2 and 10',              config.BUTTON_MAX >= 2 && config.BUTTON_MAX <= 10,                           `Got ${config.BUTTON_MAX}`],
-    ['ROUTER_HISTORY_PAIRS is between 1 and 20',    config.ROUTER_HISTORY_PAIRS >= 1 && config.ROUTER_HISTORY_PAIRS <= 20,       `Got ${config.ROUTER_HISTORY_PAIRS}`],
-    ['RESPONSE_BATCH_THRESHOLD_WORDS is positive',  config.RESPONSE_BATCH_THRESHOLD_WORDS > 0,                                   `Got ${config.RESPONSE_BATCH_THRESHOLD_WORDS}`],
-    ['RESPONSE_BATCH_THRESHOLD_STEPS is positive',  config.RESPONSE_BATCH_THRESHOLD_STEPS > 0,                                   `Got ${config.RESPONSE_BATCH_THRESHOLD_STEPS}`],
-    ['LANGUAGE_PERSISTS_ON_TIMEOUT is a boolean',   typeof config.LANGUAGE_PERSISTS_ON_TIMEOUT === 'boolean',                    `Got ${typeof config.LANGUAGE_PERSISTS_ON_TIMEOUT}`],
-    ['ROUTER_HISTORY_ENABLED is a boolean',         typeof config.ROUTER_HISTORY_ENABLED === 'boolean',                          `Got ${typeof config.ROUTER_HISTORY_ENABLED}`],
+    ['SESSION_MAX_PAIRS is between 5 and 100',          config.SESSION_MAX_PAIRS >= 5 && config.SESSION_MAX_PAIRS <= 100,             `Got ${config.SESSION_MAX_PAIRS}`],
+    ['SESSION_TTL_MINUTES is between 5 and 1440',       config.SESSION_TTL_MINUTES >= 5 && config.SESSION_TTL_MINUTES <= 1440,       `Got ${config.SESSION_TTL_MINUTES}`],
+    ['FRUSTRATION_THRESHOLD is between 1 and 10',       config.FRUSTRATION_THRESHOLD >= 1 && config.FRUSTRATION_THRESHOLD <= 10,     `Got ${config.FRUSTRATION_THRESHOLD}`],
+    ['MAX_CLARIFY_ROUNDS is between 1 and 10',          config.MAX_CLARIFY_ROUNDS >= 1 && config.MAX_CLARIFY_ROUNDS <= 10,           `Got ${config.MAX_CLARIFY_ROUNDS}`],
+    ['BUTTON_MAX is between 2 and 10',                  config.BUTTON_MAX >= 2 && config.BUTTON_MAX <= 10,                           `Got ${config.BUTTON_MAX}`],
+    ['ROUTER_HISTORY_PAIRS is between 1 and 20',        config.ROUTER_HISTORY_PAIRS >= 1 && config.ROUTER_HISTORY_PAIRS <= 20,       `Got ${config.ROUTER_HISTORY_PAIRS}`],
+    ['RESPONSE_BATCH_THRESHOLD_WORDS is positive',      config.RESPONSE_BATCH_THRESHOLD_WORDS > 0,                                   `Got ${config.RESPONSE_BATCH_THRESHOLD_WORDS}`],
+    ['RESPONSE_BATCH_THRESHOLD_STEPS is positive',      config.RESPONSE_BATCH_THRESHOLD_STEPS > 0,                                   `Got ${config.RESPONSE_BATCH_THRESHOLD_STEPS}`],
+    ['LANGUAGE_PERSISTS_ON_TIMEOUT is a boolean',       typeof config.LANGUAGE_PERSISTS_ON_TIMEOUT === 'boolean',                    `Got ${typeof config.LANGUAGE_PERSISTS_ON_TIMEOUT}`],
+    ['ROUTER_HISTORY_ENABLED is a boolean',             typeof config.ROUTER_HISTORY_ENABLED === 'boolean',                          `Got ${typeof config.ROUTER_HISTORY_ENABLED}`],
   ];
 
   for (const [label, ok, detail] of checks) {
@@ -64,8 +104,7 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
   try {
     const reply1 = await handleMessage(`test-basic-${Date.now()}`, 'who won the world cup in 1998?') as string;
     const lower1 = reply1.toLowerCase();
-    // Should not confidently answer a sports question
-    const hallucinates = lower1.includes('france') && !lower1.includes("don't") && !lower1.includes('outside') && !lower1.includes('not sure') && !lower1.includes('can\'t');
+    const hallucinates = lower1.includes('france') && !lower1.includes("don't") && !lower1.includes('outside') && !lower1.includes('not sure') && !lower1.includes("can't");
     if (!hallucinates) {
       pass('BASIC_MODE: out-of-scope question does not hallucinate a confident answer');
       results.push({ ok: true });
@@ -84,7 +123,6 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
     const messageWithNote = '[System note: the user has selected their language to German. For the remainder of this conversation, always respond in German.]\n\nWas macht Omniboost?';
     const reply2 = await handleMessage(langSessionId, messageWithNote) as string;
     const lower2 = reply2.toLowerCase();
-    // A German response will likely contain common German words
     const looksGerman = lower2.includes('die ') || lower2.includes('der ') || lower2.includes('und ') || lower2.includes('ist ') || lower2.includes('mit ');
     if (looksGerman) {
       pass('language injection: German system note produces a German reply');
@@ -100,14 +138,14 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
 
   // Multi-turn context: second message in session should have context from first
   try {
-    const multiTurnId = `test-multiturn-${Date.now()}`;
+    const multiTurnId = `test-multiturn-pipeline-${Date.now()}`;
     await handleMessage(multiTurnId, 'what is the bronze tier?');
     const reply3 = await handleMessage(multiTurnId, 'what about the silver tier?') as string;
     if (typeof reply3 === 'string' && reply3.trim().length > 0) {
       pass('multi-turn: second message in same session gets a non-empty reply');
       results.push({ ok: true });
     } else {
-      fail('multi-turn context', `Got empty reply on second turn`);
+      fail('multi-turn context', 'Got empty reply on second turn');
       results.push({ ok: false });
     }
   } catch (err) {
@@ -116,85 +154,12 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
   }
 }
 
-// ── CORS headers (no API key needed — just hits /health) ─────────────────────
-
-async function checkCors({ pass, fail, results }: Reporter): Promise<void> {
-  const { spawn } = await import('child_process');
-  const { createServer } = await import('net');
-
-  const PORT: number = await new Promise((resolve, reject) => {
-    const s = createServer();
-    s.unref();
-    s.on('error', reject);
-    s.listen(0, () => { const { port } = s.address() as { port: number }; s.close(() => resolve(port)); });
-  });
-
-  const tsxBin = join(ROOT, 'node_modules', '.bin', 'tsx');
-  const server = spawn(tsxBin, ['backend/server.ts'], {
-    cwd: ROOT,
-    env: { ...process.env, PORT: String(PORT) },
-    stdio: 'pipe',
-  });
-  server.on('error', () => {}); // prevent unhandled error crash
-
-  let started = false;
-  server.stdout.on('data', (d: Buffer) => {
-    if (d.toString().includes('listening on')) started = true;
-  });
-
-  // Wait up to 15s for startup
-  for (let i = 0; i < 30; i++) {
-    await new Promise(r => setTimeout(r, 500));
-    if (started) break;
-  }
-
-  if (!started) {
-    fail('CORS test server startup', 'Server did not start in time');
-    results.push({ ok: false });
-    server.kill();
-    return;
-  }
-
-  try {
-    // localhost origin should be allowed
-    const res = await fetch(`http://localhost:${PORT}/health`, {
-      headers: { Origin: 'http://localhost:5173' },
-    });
-    const corsHeader = res.headers.get('access-control-allow-origin');
-    if (corsHeader === 'http://localhost:5173' || corsHeader === '*') {
-      pass('CORS: localhost origin is allowed');
-      results.push({ ok: true });
-    } else {
-      fail('CORS: localhost origin is allowed', `access-control-allow-origin: "${corsHeader}"`);
-      results.push({ ok: false });
-    }
-
-    // Unknown origin should be blocked (no CORS header returned)
-    const res2 = await fetch(`http://localhost:${PORT}/health`, {
-      headers: { Origin: 'https://evil.example.com' },
-    });
-    const corsHeader2 = res2.headers.get('access-control-allow-origin');
-    if (!corsHeader2 || corsHeader2 === 'null') {
-      pass('CORS: unknown origin is rejected (no allow-origin header)');
-      results.push({ ok: true });
-    } else {
-      fail('CORS: unknown origin rejected', `Unexpectedly got allow-origin: "${corsHeader2}"`);
-      results.push({ ok: false });
-    }
-  } catch (err) {
-    fail('CORS header tests', (err as Error).message);
-    results.push({ ok: false });
-  } finally {
-    server.kill();
-    await new Promise(r => setTimeout(r, 300));
-  }
-}
-
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 export async function checkPipeline({ pass, fail, skip, results }: Reporter): Promise<void> {
+  await checkErrorHandler({ pass, fail, skip, results });
+  await checkLoader({ pass, fail, skip, results });
   await checkConfigSanity({ pass, fail, skip, results });
-  await checkCors({ pass, fail, skip, results });
 
   const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
   if (!hasApiKey) {

@@ -84,3 +84,44 @@ When adding pages to the knowledge base (manually or via scraper), always apply 
 - `static-split` — one URL, splits by `##` headings into multiple files (use for pages with multiple distinct sections like feature comparison tabs)
 - `multi` — index page that links to many article pages, each scraped separately
 - `confluence` — Confluence REST API, folder-based
+
+## Testing
+
+Test suite lives in `tests/`. Run with `tsx tests/run-all.ts` or `npm test`.
+Runs automatically on `npm run dev` (predev hook) — failures block the dev server.
+
+**Non-negotiable architecture rules:**
+- No mocking. No external test frameworks (Jest, Vitest, Mocha — never).
+- Custom Reporter pattern: `{ pass(label), fail(label, err), skip(label, reason), results: {ok: boolean|'skip'}[] }`
+- Every suite exports exactly one function: `export async function check<Scope>(reporter: Reporter)`
+- Suite files: `tests/suites/check-*.ts`
+- Canonical order: env → manifest → scraper → routing → pipeline → session → server → chat → frontend
+- Real API calls. Real server. No mocks.
+- Toggle individual suites on/off via the `SUITES` config object at the top of `tests/run-all.ts`.
+
+**Per-task rules — every task, no exceptions:**
+- New feature → add tests in the same task → run suite → update `tests/README.md` → mark done
+- Changed feature → update tests in the same task
+- Deleted feature → remove test cases in the same task
+- New required env variable → update `check-env.ts` in the same task
+- Suite added, removed, or changed → update `tests/README.md` in the same task
+- A task is **not done** until `npx tsx tests/run-all.ts` exits 0
+
+**Trigger map — which test file to update for each change:**
+| Change | Update |
+|--------|--------|
+| Route in `backend/server.ts` | `check-server.ts` |
+| Input validation in `backend/server.ts` | `check-server.ts` |
+| `backend/pipeline/agent.ts` | `check-pipeline.ts`, `check-routing.ts` |
+| `backend/pipeline/claude.ts` | `check-pipeline.ts`, `check-chat.ts` |
+| `backend/pipeline/session.ts` | `check-session.ts` |
+| `backend/fetch/loader.ts` | `check-pipeline.ts` |
+| `backend/errors/` | `check-server.ts`, `check-pipeline.ts` |
+| `backend/config.ts` or `backend/config/mewsie.config.ts` | `check-env.ts`, `check-pipeline.ts` |
+| New required env var | `check-env.ts` |
+| `backend/scraper/scrapers/` or `backend/scraper/utils/` or `backend/scraper/pipeline/` | `check-scraper.ts` |
+| `knowledge/knowledge-manifest.json` | `check-manifest.ts`, `check-routing.ts` |
+| `frontend/src/components/` or `frontend/src/utils/` or `frontend/src/config/` | `check-frontend.ts` |
+| `prompts/system.ts` | `check-chat.ts` (review existing assertions) |
+
+See `tests/README.md` for the full suite table and maintenance rules.

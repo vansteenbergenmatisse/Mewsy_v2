@@ -3,7 +3,7 @@
  * Validates knowledge-manifest.json structure and that all referenced files exist.
  */
 
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -28,6 +28,9 @@ interface ManifestPage {
   title?: string;
   description?: string;
   path?: string;
+  keywords?: unknown;
+  source_url?: string;
+  source_type?: string;
 }
 
 interface Manifest {
@@ -108,7 +111,73 @@ export async function checkManifest({ pass, fail, skip, results }: Reporter): Pr
     results.push({ ok: true });
   }
 
-  // 6. fetch_sources.json exists and is valid JSON
+  // 6. keywords field validation
+  // These are the source_type values set by the scrapers (not the fetch_sources.json type field)
+  const VALID_SOURCE_TYPES = ['website_single', 'website_multi', 'website_split', 'confluence'];
+  let keywordsOk = true;
+  let sourceTypeOk = true;
+
+  for (const [key, page] of entries) {
+    // keywords must be an array with 1–20 items
+    if (!Array.isArray(page.keywords) || (page.keywords as unknown[]).length < 1 || (page.keywords as unknown[]).length > 20) {
+      fail(`entry "${key}" has valid keywords array (1–20 items)`, `Got: ${JSON.stringify(page.keywords)}`);
+      results.push({ ok: false });
+      keywordsOk = false;
+    }
+    // scraped entries must have a valid source_type
+    if (page.source_url && (!page.source_type || !VALID_SOURCE_TYPES.includes(page.source_type))) {
+      fail(`entry "${key}" has valid source_type`, `Got: "${page.source_type}"`);
+      results.push({ ok: false });
+      sourceTypeOk = false;
+    }
+  }
+
+  if (keywordsOk) {
+    pass('all entries have a valid keywords array (1–20 items)');
+    results.push({ ok: true });
+  }
+  if (sourceTypeOk) {
+    pass('all scraped entries have a valid source_type');
+    results.push({ ok: true });
+  }
+
+  // 7. Orphan file detection — .md files on disk that have no manifest entry
+  function walkMd(dir: string): string[] {
+    const results: string[] = [];
+    let entries: string[];
+    try { entries = readdirSync(dir); } catch { return results; }
+    for (const name of entries) {
+      const full = join(dir, name);
+      try {
+        if (statSync(full).isDirectory()) {
+          results.push(...walkMd(full));
+        } else if (name.endsWith('.md') && name !== 'README.md') {
+          results.push(full);
+        }
+      } catch { /* skip unreadable entries */ }
+    }
+    return results;
+  }
+
+  const manifestPaths = new Set(
+    entries.map(([, page]) => page.path ? join(ROOT, page.path) : '').filter(Boolean)
+  );
+  const knowledgeDir = join(ROOT, 'knowledge');
+  const allMdFiles = walkMd(knowledgeDir);
+  let orphanFound = false;
+  for (const mdFile of allMdFiles) {
+    if (!manifestPaths.has(mdFile)) {
+      fail(`orphan .md file has no manifest entry`, mdFile.replace(ROOT + '/', ''));
+      results.push({ ok: false });
+      orphanFound = true;
+    }
+  }
+  if (!orphanFound) {
+    pass('no orphaned .md files found under knowledge/');
+    results.push({ ok: true });
+  }
+
+  // 8. fetch_sources.json exists and is valid JSON
   const fetchSourcesPath = join(ROOT, 'knowledge', 'fetch_sources.json');
   if (!existsSync(fetchSourcesPath)) {
     skip('fetch_sources.json exists', 'file not found — scraper will not run');

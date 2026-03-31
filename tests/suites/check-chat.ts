@@ -110,4 +110,37 @@ export async function checkChat({ pass, fail, skip: _skip, results }: Reporter):
       results.push({ ok: false });
     }
   }
+
+  // ── Multi-turn: context carries across messages ────────────────────────────
+  try {
+    const multiSid = `test-multiturn-chat-${Date.now()}`;
+    await handleMessage(multiSid, 'tell me about the bronze tier');
+    const reply2 = await handleMessage(multiSid, 'what about the silver tier?') as string;
+    if (reply2.toLowerCase().includes('silver')) {
+      pass('multi-turn: follow-up "what about silver?" returns silver-related content');
+      results.push({ ok: true });
+    } else {
+      fail('multi-turn silver follow-up', `Reply did not contain "silver": "${reply2.slice(0, 200)}"`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('multi-turn silver follow-up', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // ── Em-dash absence: responses must never contain — ───────────────────────
+  try {
+    const emDashSid = `test-emdash-${Date.now()}`;
+    const emDashReply = await handleMessage(emDashSid, 'what are the integration tiers?') as string;
+    if (!emDashReply.includes('—')) {
+      pass('response does not contain em-dash character (—)');
+      results.push({ ok: true });
+    } else {
+      fail('em-dash absent from response', `Found — in: "${emDashReply.slice(0, 200)}"`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('em-dash absence test', (err as Error).message);
+    results.push({ ok: false });
+  }
 }

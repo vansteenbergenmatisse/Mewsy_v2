@@ -22,7 +22,7 @@ function getClient(): Anthropic {
  * Image links (![...]) are left untouched — they're already stripped by cleanup.
  * Relative URLs (no http) are left untouched — they're unusable outside the source site.
  */
-function expandLinks(markdown: string): string {
+export function expandLinks(markdown: string): string {
   return markdown.replace(/(?<!!)\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$1 ($2)');
 }
 
@@ -30,7 +30,7 @@ function expandLinks(markdown: string): string {
  * Replaces em-dashes (—) with a plain hyphen-space ( - ) so they never appear
  * in chat responses or stored documents.
  */
-function removeEmDashes(markdown: string): string {
+export function removeEmDashes(markdown: string): string {
   return markdown.replace(/\s*—\s*/g, ' - ');
 }
 

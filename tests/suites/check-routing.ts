@@ -116,9 +116,36 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
         );
         results.push({ ok: false });
       }
+
+      // Confidence must always be in [0, 1]
+      if (confidence >= 0 && confidence <= 1) {
+        pass(`"${tc.description}" confidence ${confidence.toFixed(2)} is in [0, 1]`);
+        results.push({ ok: true });
+      } else {
+        fail(`"${tc.description}" confidence in range [0, 1]`, `Got ${confidence}`);
+        results.push({ ok: false });
+      }
     } catch (err) {
       fail(`"${tc.description}"`, (err as Error).message);
       results.push({ ok: false });
     }
+  }
+
+  // Negative test: out-of-scope query should select 0 docs or return low confidence
+  try {
+    const { indices, confidence } = await selectRelevantFiles(pages, 'what is the capital of France?', []) as { indices: number[]; confidence: number };
+    if (indices.length === 0 || confidence < 0.5) {
+      pass(`out-of-scope query returns 0 docs or low confidence (got ${indices.length} docs, conf: ${confidence.toFixed(2)})`);
+      results.push({ ok: true });
+    } else {
+      fail(
+        'out-of-scope query returns 0 docs or low confidence',
+        `Got ${indices.length} doc(s) with confidence ${confidence.toFixed(2)}`
+      );
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('out-of-scope negative routing test', (err as Error).message);
+    results.push({ ok: false });
   }
 }
