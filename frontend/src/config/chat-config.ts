@@ -17,13 +17,63 @@ export const LANGUAGES: Language[] = [
 ];
 
 // ── Translated UI strings ──────────────────────────────────────────────────────
+// ┌─────────────────────────────────────────────────────────────────────────────┐
+// │  SINGLE SOURCE OF TRUTH FOR ALL UI LABELS                                  │
+// │  To add a language: add its code to LANGUAGES above, then add a column     │
+// │  here for every key. To rename a label: edit the relevant row.             │
+// └─────────────────────────────────────────────────────────────────────────────┘
 
 export const UI_STRINGS: Record<string, Record<string, string>> = {
-  somethingElse: { en: 'Something else', de: 'Etwas anderes', 'de-ch': 'Etwas anderes', 'de-at': 'Etwas anderes', fr: 'Autre chose', nl: 'Iets anders' },
-  typeOwn:       { en: 'Or type your own answer...', de: 'Oder eigene Antwort eingeben...', 'de-ch': 'Oder eigene Antwort eingeben...', 'de-at': 'Oder eigene Antwort eingeben...', fr: 'Ou tapez votre propre réponse...', nl: 'Of typ uw eigen antwoord...' },
-  typeMsg:       { en: 'Type your message...', de: 'Nachricht eingeben...', 'de-ch': 'Nachricht eingeben...', 'de-at': 'Nachricht eingeben...', fr: 'Tapez votre message...', nl: 'Typ uw bericht...' },
-  scrollLatest:  { en: 'Latest', de: 'Neueste', 'de-ch': 'Neueste', 'de-at': 'Neueste', fr: 'Dernier', nl: 'Nieuwste' },
+  // ── Chat bubbles / input ──────────────────────────────────────────────────
+  somethingElse:  { en: 'Something else',                  de: 'Etwas anderes',                        'de-ch': 'Etwas anderes',                        'de-at': 'Etwas anderes',                        fr: 'Autre chose',                            nl: 'Iets anders'                          },
+  typeOwn:        { en: 'Or type your own answer...',      de: 'Oder eigene Antwort eingeben...',       'de-ch': 'Oder eigene Antwort eingeben...',       'de-at': 'Oder eigene Antwort eingeben...',       fr: 'Ou tapez votre propre réponse...',       nl: 'Of typ uw eigen antwoord...'          },
+  typeMsg:        { en: 'Type your message...',            de: 'Nachricht eingeben...',                 'de-ch': 'Nachricht eingeben...',                 'de-at': 'Nachricht eingeben...',                 fr: 'Tapez votre message...',                 nl: 'Typ uw bericht...'                    },
+  scrollLatest:   { en: 'Latest',                         de: 'Neueste',                               'de-ch': 'Neueste',                               'de-at': 'Neueste',                               fr: 'Dernier',                                nl: 'Nieuwste'                             },
+
+  // ── Sidebar nav ───────────────────────────────────────────────────────────
+  newChat:        { en: 'New chat',                        de: 'Neuer Chat',                            'de-ch': 'Neuer Chat',                            'de-at': 'Neuer Chat',                            fr: 'Nouvelle conversation',                  nl: 'Nieuw gesprek'                        },
+  search:         { en: 'Search',                          de: 'Suchen',                                'de-ch': 'Suchen',                                'de-at': 'Suchen',                                fr: 'Rechercher',                             nl: 'Zoeken'                               },
+  helpResources:  { en: 'Help & Resources',                de: 'Hilfe & Ressourcen',                    'de-ch': 'Hilfe & Ressourcen',                    'de-at': 'Hilfe & Ressourcen',                    fr: 'Aide & Ressources',                      nl: 'Hulp & Bronnen'                       },
+  chats:          { en: 'Chats',                           de: 'Chats',                                 'de-ch': 'Chats',                                 'de-at': 'Chats',                                 fr: 'Conversations',                          nl: 'Gesprekken'                           },
+  settings:       { en: 'Settings',                        de: 'Einstellungen',                         'de-ch': 'Einstellungen',                         'de-at': 'Einstellungen',                         fr: 'Paramètres',                             nl: 'Instellingen'                         },
+
+  // ── Top bar ───────────────────────────────────────────────────────────────
+  openSidebar:    { en: 'Open sidebar',                    de: 'Seitenleiste öffnen',                   'de-ch': 'Seitenleiste öffnen',                   'de-at': 'Seitenleiste öffnen',                   fr: 'Ouvrir le panneau',                      nl: 'Zijbalk openen'                       },
+  expandFullscreen:{ en: 'Expand to fullscreen',           de: 'Vollbild',                              'de-ch': 'Vollbild',                              'de-at': 'Vollbild',                              fr: 'Plein écran',                            nl: 'Volledig scherm'                      },
+  shrinkToPanel:  { en: 'Shrink to side panel',            de: 'Seitenansicht',                         'de-ch': 'Seitenansicht',                         'de-at': 'Seitenansicht',                         fr: 'Réduire en panneau',                     nl: 'Zijpaneel'                            },
+
+  // ── Hero section ──────────────────────────────────────────────────────────
+  heroHeadlinePre:  { en: 'How can I ',                    de: 'Wie kann ich Ihnen heute ',             'de-ch': 'Wie kann ich Ihnen heute ',             'de-at': 'Wie kann ich Ihnen heute ',             fr: 'Comment puis-je vous ',                  nl: 'Hoe kan ik u vandaag '                },
+  heroHighlight:    { en: 'help',                          de: 'helfen',                                'de-ch': 'helfen',                                'de-at': 'helfen',                                fr: 'aider',                                  nl: 'helpen'                               },
+  heroHeadlinePost: { en: ' you today?',                   de: '?',                                     'de-ch': '?',                                     'de-at': '?',                                     fr: '\u00a0aujourd\u2019hui\u00a0?',           nl: '?'                                    },
+
+  // ── Quick action buttons ──────────────────────────────────────────────────
+  qaOnboarding:   { en: 'Onboarding help',                 de: 'Onboarding-Hilfe',                      'de-ch': 'Onboarding-Hilfe',                      'de-at': 'Onboarding-Hilfe',                      fr: "Aide à l\u2019intégration",              nl: 'Onboarding hulp'                      },
+  qaSearchDocs:   { en: 'Search the docs',                 de: 'Dokumentation durchsuchen',             'de-ch': 'Dokumentation durchsuchen',             'de-at': 'Dokumentation durchsuchen',             fr: 'Rechercher dans la doc',                 nl: 'Documentatie doorzoeken'              },
+  qaConfigureMapping:{ en: 'Configure mapping',            de: 'Mapping konfigurieren',                 'de-ch': 'Mapping konfigurieren',                 'de-at': 'Mapping konfigurieren',                 fr: 'Configurer le mapping',                  nl: 'Mapping instellen'                    },
+  qaTroubleshoot: { en: 'Troubleshoot issue',              de: 'Problem beheben',                       'de-ch': 'Problem beheben',                       'de-at': 'Problem beheben',                       fr: 'Résoudre un problème',                   nl: 'Probleem oplossen'                    },
+  qaBilling:      { en: 'Billing & plans',                 de: 'Abrechnung & Pläne',                    'de-ch': 'Abrechnung & Pläne',                    'de-at': 'Abrechnung & Pläne',                    fr: 'Facturation & abonnements',              nl: 'Facturering & plannen'                },
+
+  // ── Help panel ────────────────────────────────────────────────────────────
+  helpSearchPlaceholder: { en: 'Search for help',          de: 'Nach Hilfe suchen',                     'de-ch': 'Nach Hilfe suchen',                     'de-at': 'Nach Hilfe suchen',                     fr: "Rechercher de l\u2019aide",              nl: 'Zoek naar hulp'                       },
+
+  // ── Input placeholder ─────────────────────────────────────────────────────
+  askMewsie:      { en: 'Ask Mewsie\u2026',               de: 'Mewsie fragen\u2026',                   'de-ch': 'Mewsie fragen\u2026',                   'de-at': 'Mewsie fragen\u2026',                   fr: 'Demandez \u00e0 Mewsie\u2026',           nl: 'Vraag het Mewsie\u2026'               },
+
+  // ── Toast warnings ────────────────────────────────────────────────────────
+  timeoutWarning: { en: 'Mewsie is taking longer than expected. Please try again.', de: 'Mewsie braucht länger als erwartet. Bitte erneut versuchen.', 'de-ch': 'Mewsie braucht länger als erwartet. Bitte erneut versuchen.', 'de-at': 'Mewsie braucht länger als erwartet. Bitte erneut versuchen.', fr: 'Mewsie prend plus de temps que prévu. Veuillez réessayer.', nl: 'Mewsie doet er langer over dan verwacht. Probeer het opnieuw.' },
+  emptyWarning:   { en: 'Please enter a message first.',   de: 'Bitte zuerst eine Nachricht eingeben.', 'de-ch': 'Bitte zuerst eine Nachricht eingeben.', 'de-at': 'Bitte zuerst eine Nachricht eingeben.', fr: 'Veuillez saisir un message.',            nl: 'Voer eerst een bericht in.'           },
 };
+
+// ── Quick action keys (ordered) ────────────────────────────────────────────────
+// Maps to UI_STRINGS keys above. Add/remove entries here to change the buttons.
+export const QUICK_ACTION_KEYS = [
+  'qaOnboarding',
+  'qaSearchDocs',
+  'qaConfigureMapping',
+  'qaTroubleshoot',
+  'qaBilling',
+] as const;
 
 // Returns the UI string for the given key and language code
 export function uiStr(key: string, lang: string | null): string {
@@ -78,78 +128,5 @@ export const BUTTON_MAX = 7;
 // Items starting with these words must never become buttons.
 export const BUTTON_IMPERATIVE_VERBS = /^(select|enter|go|click|open|navigate|complete|accept|connect|verify|choose|pick|set|configure|enable|add|create|map|copy|paste|tap|press|type|fill|save|check|disable|toggle|submit|upload|download|log in|sign in|make sure|ensure|hit|repeat|scroll|drag|drop|remove|delete|update|edit|move|find|look|visit|return|close|confirm|wait|allow|grant|install|restart|refresh|reload)\b/i;
 
-// ── Help topic content ─────────────────────────────────────────────────────────
-
-interface HelpSection {
-  heading: string;
-  content?: string;
-  list?: string[];
-}
-
-interface HelpCta {
-  title: string;
-  text: string;
-  button: string;
-}
-
-export interface HelpTopic {
-  title: string;
-  sections: HelpSection[];
-  cta?: HelpCta;
-}
-
-export const helpTopicContent: Record<string, HelpTopic> = {
-  integration: {
-    title: "Mews x Omniboost Integration",
-    sections: [
-      { heading: "Overview", content: "The Mews x Omniboost integration connects your Mews PMS to Omniboost's accounting middleware, enabling automated revenue posting, folio exports, and financial reporting." },
-      { heading: "How it works", content: "Omniboost fetches data from Mews via the Mews API, transforms it according to your mapping configuration, and pushes it to your connected accounting system. You control what gets pushed and when." },
-      { heading: "Integration tiers", content: "Omniboost offers different integration tiers depending on the depth of automation required — from basic revenue push to full accounting sync including payments, taxes, and corrections." }
-    ]
-  },
-  onboarding: {
-    title: "Onboarding & Initial Setup",
-    sections: [
-      { heading: "Step 1: Connect Mews", content: "Go to the Omniboost portal and add your Mews property. You will need your Mews Client Token and Access Token from the Mews Commander settings." },
-      { heading: "Step 2: Configure your accounting system", content: "Select your accounting software (e.g. Exact, Xero, QuickBooks) and follow the connection wizard. Omniboost will guide you through authorizing the connection." },
-      { heading: "Step 3: Set up your mapping", content: "Map your Mews service categories, payment types, and outlet codes to the corresponding accounts in your accounting system." },
-      { heading: "Step 4: Run a test push", content: "Use the manual trigger in the Omniboost portal to run a test push for a specific date. Verify the output in your accounting system before enabling automation." }
-    ]
-  },
-  mapping: {
-    title: "Mapping Configuration",
-    sections: [
-      { heading: "What is mapping?", content: "Mapping defines how each revenue category, payment type, and tax code from Mews gets translated into the correct account or dimension in your accounting system." },
-      { heading: "Revenue mapping", content: "Each Mews service (accommodation, F&B, extras) must be mapped to a revenue account. Unmapped items will appear as warnings in the Omniboost portal." },
-      { heading: "Payment mapping", content: "Map each Mews payment type (cash, card, city ledger) to the corresponding clearing or liability account in your accounting system." },
-      { heading: "Tax mapping", content: "Tax codes from Mews must be matched to the correct VAT or tax rates in your accounting system to ensure compliant reporting." }
-    ]
-  },
-  "revenue-push": {
-    title: "Full Revenue Push",
-    sections: [
-      { heading: "What is Full Revenue Push?", content: "Full Revenue Push is Omniboost's automated daily process that exports the previous day's revenue from Mews and posts it to your accounting system as journal entries." },
-      { heading: "Schedule", content: "By default the push runs automatically every morning. You can configure the timing and also trigger it manually from the Omniboost portal for any date range." },
-      { heading: "What gets pushed", content: "Revenue by service category, VAT breakdown, payment totals, and corrections/rebates — all mapped to your chart of accounts." },
-      { heading: "Troubleshooting push failures", content: "If a push fails, check the Omniboost job log for the error detail. Common causes are unmapped categories, expired API tokens, or locked accounting periods." }
-    ]
-  },
-  troubleshooting: {
-    title: "Troubleshooting",
-    sections: [
-      { heading: "Unmapped items", content: "If the portal shows unmapped warnings, go to your mapping configuration and assign the flagged categories or payment types to the correct accounts before re-running the push." },
-      { heading: "API token expired", content: "If Mews returns an authentication error, regenerate your Access Token in Mews Commander and update it in the Omniboost portal under your property settings." },
-      { heading: "Data mismatch", content: "If figures in your accounting system don't match Mews, check the date range, timezone settings, and whether any corrections or rebates were applied after the initial push." },
-      { heading: "Push not running", content: "Verify that automation is enabled for your property in the Omniboost portal and that your subscription is active." }
-    ]
-  },
-  contact: {
-    title: "Contact Support",
-    sections: [
-      { heading: "Mews integration support", content: "For questions about the Mews x Omniboost integration, reach out to the Omniboost support team via the portal or by email." },
-      { heading: "Email", content: "pms@omniboost.be — for integration and technical questions." },
-      { heading: "Business hours", content: "Monday – Friday: 9:00 AM – 6:00 PM CET. Urgent issues are handled with priority." }
-    ],
-    cta: { title: "Chat with Mewsie", text: "For quick answers, just ask Mewsie directly — it has access to the full Omniboost documentation.", button: "Ask Mewsie" }
-  }
-};
+// Help items and topic content have moved to frontend/src/help/
+// Import from '../help' in components that need them.

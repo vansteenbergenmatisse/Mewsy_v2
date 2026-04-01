@@ -102,6 +102,7 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
 
   for (const tc of ROUTING_TESTS) {
     try {
+      await new Promise(r => setTimeout(r, 1200));
       const { indices, confidence } = await selectRelevantFiles(pages, tc.query, []) as { indices: number[]; confidence: number };
       const selectedIds = indices.map(i => pages[i]?.id).filter(Boolean);
       const matched = tc.expectedDocIds.some(id => selectedIds.includes(id));
@@ -133,6 +134,7 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
 
   // Negative test: out-of-scope query should select 0 docs or return low confidence
   try {
+    await new Promise(r => setTimeout(r, 1200));
     const { indices, confidence } = await selectRelevantFiles(pages, 'what is the capital of France?', []) as { indices: number[]; confidence: number };
     if (indices.length === 0 || confidence < 0.5) {
       pass(`out-of-scope query returns 0 docs or low confidence (got ${indices.length} docs, conf: ${confidence.toFixed(2)})`);

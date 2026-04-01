@@ -69,6 +69,7 @@ export async function checkChat({ pass, fail, skip: _skip, results }: Reporter):
 
   for (const tc of CHAT_TESTS) {
     try {
+      await new Promise(r => setTimeout(r, 1500));
       const sessionId = `test-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const reply = await handleMessage(sessionId, tc.message) as string;
       const replyLower = reply.toLowerCase();
@@ -115,6 +116,8 @@ export async function checkChat({ pass, fail, skip: _skip, results }: Reporter):
   try {
     const multiSid = `test-multiturn-chat-${Date.now()}`;
     await handleMessage(multiSid, 'tell me about the bronze tier');
+    // Brief pause between calls to avoid triggering 529 overload on rapid bursts
+    await new Promise(r => setTimeout(r, 2000));
     const reply2 = await handleMessage(multiSid, 'what about the silver tier?') as string;
     if (reply2.toLowerCase().includes('silver')) {
       pass('multi-turn: follow-up "what about silver?" returns silver-related content');

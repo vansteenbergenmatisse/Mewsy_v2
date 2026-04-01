@@ -124,6 +124,8 @@ async function runSuite(name: string, fn: (r: Reporter) => Promise<void>): Promi
   if (SUITES.routing.enabled) {
     if (hasApiKey) {
       allResults.push(...(await runSuite('4. Routing accuracy', checkRouting)));
+      // Cooldown after API-heavy routing suite — prevents 529 overload on next suite
+      if (SUITES.pipeline.enabled) await new Promise(r => setTimeout(r, 4000));
     } else {
       console.log(`\n${YELLOW}Skipping suite 4 (routing) — ANTHROPIC_API_KEY not set${RESET}`);
     }
@@ -140,6 +142,9 @@ async function runSuite(name: string, fn: (r: Reporter) => Promise<void>): Promi
   // 7. server
   if (SUITES.server.enabled)
     allResults.push(...(await runSuite('7. Server health', checkServer)));
+
+  // Cooldown after server suite — gives API time to recover before the chat suite's burst
+  if (SUITES.chat.enabled && hasApiKey) await new Promise(r => setTimeout(r, 3000));
 
   // 8. chat — requires API key
   if (SUITES.chat.enabled) {

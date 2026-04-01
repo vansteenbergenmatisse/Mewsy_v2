@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import {
   formatBotText,
   initAccordions,
   applyProgressiveReveal,
   checkListForButtons,
+  sortButtonOptions,
 } from '../utils/chat-utils';
 import { uiStr } from '../config/chat-config';
 
@@ -19,6 +20,7 @@ export interface ChatMessage {
   questionText?: string | null;
   skipBody?: boolean;
   disabled?: boolean;
+  clarifying?: boolean;
 }
 
 // ── Bot avatar ────────────────────────────────────────────────────────────────
@@ -61,6 +63,7 @@ interface BotTextBubbleProps {
   text: string;
   msgId: string;
   isNewGroup: boolean;
+  clarifying?: boolean;
   onAutoScroll: () => void;
   onDetectedButtons: (options: string[], questionText: string | null) => void;
 }
@@ -69,6 +72,7 @@ function BotTextBubble({
   text,
   msgId,
   isNewGroup,
+  clarifying,
   onAutoScroll,
   onDetectedButtons,
 }: BotTextBubbleProps) {
@@ -76,7 +80,8 @@ function BotTextBubble({
   const msgRef = useRef<HTMLDivElement>(null);
   const didInit = useRef(false);
 
-  const htmlContent = formatBotText(text);
+  // Lazy useState — runs formatBotText exactly once on mount, never on re-renders
+  const [htmlContent] = useState(() => formatBotText(text));
 
   useEffect(() => {
     const msgDiv = msgRef.current;
@@ -91,9 +96,8 @@ function BotTextBubble({
     );
     const result = checkListForButtons(msgDiv, allSiblings);
     if (result) {
-      if (!msgDiv.textContent?.trim()) {
-        containerRef.current?.remove();
-      }
+      // Path B — clarifying question detected post-render: hide the entire text bubble
+      containerRef.current?.remove();
       onDetectedButtons(result.options, result.questionText);
     }
     onAutoScroll();
@@ -162,8 +166,17 @@ function OptionButtons({
 }: OptionButtonsProps) {
   const [selectedIdx, setSelectedIdx] = React.useState<number | null>(null);
 
-  const cappedOptions = options.slice(0, 4);
-  const alreadyHasSomethingElse = cappedOptions.some(o => SOMETHING_ELSE_VARIANTS.test(o));
+  const { main: mainOptions, somethingElse: somethingElseLabel } = sortButtonOptions(options);
+  const somethingElseText = somethingElseLabel ?? uiStr('somethingElse', selectedLanguage);
+
+  const pencilIcon = (
+    <span className="bot-option-pencil">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+    </span>
+  );
 
   return (
     <>
@@ -176,26 +189,7 @@ function OptionButtons({
         </div>
       )}
       <div className="bot-option-buttons" data-msg-id={msgId} data-question={questionText ?? ''}>
-        {cappedOptions.map((label, idx) => {
-          const isSomethingElse = SOMETHING_ELSE_VARIANTS.test(label);
-          if (isSomethingElse) {
-            return (
-              <button
-                key={idx}
-                className="bot-option-btn bot-option-something-else"
-                disabled={disabled || selectedIdx !== null}
-                onClick={onFocusInput}
-              >
-                <span className="bot-option-pencil">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                  </svg>
-                </span>
-                <span className="bot-option-label">{label}</span>
-              </button>
-            );
-          }
+        {mainOptions.map((label, idx) => {
           const isSelected = selectedIdx === idx;
           return (
             <button
@@ -216,21 +210,14 @@ function OptionButtons({
             </button>
           );
         })}
-        {!alreadyHasSomethingElse && (
-          <button
-            className="bot-option-btn bot-option-something-else"
-            disabled={disabled || selectedIdx !== null}
-            onClick={onFocusInput}
-          >
-            <span className="bot-option-pencil">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-            </span>
-            <span className="bot-option-label">{uiStr('somethingElse', selectedLanguage)}</span>
-          </button>
-        )}
+        <button
+          className="bot-option-btn bot-option-something-else"
+          disabled={disabled || selectedIdx !== null}
+          onClick={onFocusInput}
+        >
+          {pencilIcon}
+          <span className="bot-option-label">{somethingElseText}</span>
+        </button>
       </div>
     </>
   );
@@ -306,11 +293,11 @@ export function ChatBody({
               text={msg.text}
               msgId={msg.msgId ?? msg.id}
               isNewGroup={msg.isNewGroup ?? false}
+              clarifying={msg.clarifying}
               onAutoScroll={autoScroll}
               onDetectedButtons={(options, questionText) => {
                 onAddOptionButtons(options, questionText, msg.msgId ?? msg.id);
               }}
-
             />
           );
         }

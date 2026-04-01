@@ -60,8 +60,8 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
     if (!chatInput || typeof chatInput !== 'string') {
       return c.json({ output: 'chatInput is required.' }, 400);
     }
-    if (chatInput.length > 4000) {
-      return c.json({ output: 'Message too long — please keep it under 4000 characters.' }, 400);
+    if (chatInput.length > 1000) {
+      return c.json({ output: 'Message too long — please keep it under 1000 characters.' }, 400);
     }
     if (!sessionId || typeof sessionId !== 'string') {
       return c.json({ output: 'sessionId is required.' }, 400);

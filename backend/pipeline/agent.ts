@@ -34,6 +34,7 @@ import {
 import {
   ROUTER_MAX_DOCS,
   ROUTER_CONFIDENCE_THRESHOLD,
+  ROUTER_SINGLE_DOC_CONFIDENCE,
   ROUTER_HISTORY_ENABLED,
   ROUTER_HISTORY_PAIRS,
 } from '../config/Mewsie.config.ts';
@@ -274,24 +275,31 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
   // Step 3: Load files and build context block.
   //
   // Decision tree:
-  //   - Exactly 1 doc AND confidence >= threshold → answer directly
-  //   - Multiple docs returned → CLARIFY_MODE (router signalled ambiguity between options)
-  //   - 1 doc but confidence < threshold → CLARIFY_MODE (low certainty on the single match)
+  //   - Any docs AND confidence >= ROUTER_SINGLE_DOC_CONFIDENCE (0.95) → load all, answer directly
+  //   - Exactly 1 doc AND confidence >= ROUTER_CONFIDENCE_THRESHOLD (0.80) → load and answer
+  //   - Multiple docs AND confidence < 0.95 → CLARIFY_MODE (ambiguous query)
+  //   - 1 doc but confidence < 0.80 → CLARIFY_MODE (low certainty)
   //   - No docs at all → BASIC_MODE
   //
-  // The multi-doc case is the key one: when someone says "I wanna onboard" and there are
-  // 12 accounting-system guides, the router returns all of them. Rather than picking one
-  // arbitrarily, we ask the user which system they are connecting.
+  // The high-confidence shortcut prevents CLARIFY_MODE when the router is certain
+  // even if it returned multiple closely related docs.
   let knowledgeContent: string = BASIC_MODE;
 
-  if (selectedPages.length === 1 && confidence >= ROUTER_CONFIDENCE_THRESHOLD) {
+  if (selectedPages.length >= 1 && confidence >= ROUTER_SINGLE_DOC_CONFIDENCE) {
+    // High confidence — load all matched docs and answer directly, no clarification needed
+    const contents = await loadKnowledgeFiles(selectedPages);
+    if (contents.length > 0) {
+      knowledgeContent = contents.join('\n\n---\n\n');
+      console.log(`[agent] high confidence (${confidence.toFixed(2)}) — answering directly with ${selectedPages.length} doc(s)`);
+    }
+  } else if (selectedPages.length === 1 && confidence >= ROUTER_CONFIDENCE_THRESHOLD) {
     // Clear single match — load and answer
     const contents = await loadKnowledgeFiles(selectedPages);
     if (contents.length > 0) {
       knowledgeContent = contents.join('\n\n---\n\n');
     }
   } else if (selectedPages.length > 1) {
-    // Multiple candidates — ambiguous query, ask the user to pick one
+    // Multiple candidates with moderate confidence — ambiguous query, ask the user to pick one
     const candidateSummary = selectedPages
       .map(p => `- ${p.label}: ${p.description}`)
       .join('\n');

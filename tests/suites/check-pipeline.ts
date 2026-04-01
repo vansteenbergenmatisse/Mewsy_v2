@@ -102,6 +102,7 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
 
   // BASIC_MODE: completely out-of-scope question should not hallucinate an answer
   try {
+    await new Promise(r => setTimeout(r, 2000));
     const reply1 = await handleMessage(`test-basic-${Date.now()}`, 'who won the world cup in 1998?') as string;
     const lower1 = reply1.toLowerCase();
     const hallucinates = lower1.includes('france') && !lower1.includes("don't") && !lower1.includes('outside') && !lower1.includes('not sure') && !lower1.includes("can't");
@@ -140,6 +141,8 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
   try {
     const multiTurnId = `test-multiturn-pipeline-${Date.now()}`;
     await handleMessage(multiTurnId, 'what is the bronze tier?');
+    // Brief pause between calls to avoid triggering 529 overload on rapid bursts
+    await new Promise(r => setTimeout(r, 2000));
     const reply3 = await handleMessage(multiTurnId, 'what about the silver tier?') as string;
     if (typeof reply3 === 'string' && reply3.trim().length > 0) {
       pass('multi-turn: second message in same session gets a non-empty reply');

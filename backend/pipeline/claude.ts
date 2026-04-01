@@ -48,13 +48,15 @@ import {
 } from '../config/Mewsie.config.ts';
 
 // The beta header is required by Anthropic to enable prompt caching.
+// maxRetries: 4 — handles transient 529 overload errors with exponential backoff.
 const clientWithCaching = new Anthropic({
   apiKey: ANTHROPIC_API_KEY,
   defaultHeaders: { 'anthropic-beta': 'prompt-caching-2024-07-31' },
+  maxRetries: 4,
 });
 
 // Separate client with no caching headers, used by selectRelevantFiles().
-const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY, maxRetries: 4 });
 
 // Matches the sentinel values set in agent.ts.
 const BASIC_MODE = '__BASIC_MODE__';
@@ -109,13 +111,13 @@ export function buildSystemPrompt(
   if (knowledgeContent === BASIC_MODE) {
     blocks.push({
       type: 'text',
-      text: '[No matching documentation was found for this question. Do not guess or make up information. Ask the user one short, targeted clarifying question to better understand what they need. Format your question followed by 2-4 short bullet point options (use - for each). Always include a final option "Other" so the user can type freely.]',
+      text: '[No matching documentation was found for this question. Do not guess or make up information. Ask the user one short, targeted clarifying question to understand what they need. Write exactly 4 bullet options (- option), each covering a distinct likely topic. Always add "- Something else" as the 5th and final bullet. Never fewer than 4, never more than 4 main options.]',
     });
   } else if (typeof knowledgeContent === 'string' && knowledgeContent.startsWith(CLARIFY_MODE_PREFIX)) {
     const candidates = knowledgeContent.slice(CLARIFY_MODE_PREFIX.length).trim();
     blocks.push({
       type: 'text',
-      text: `[The question was ambiguous. These documents might be relevant:\n${candidates}\n\nAsk the user ONE targeted clarifying question (max 3-4 bullet point options + "Other") to determine which topic they need. Base your options directly on the candidate documents above — make them specific and useful, not generic. Do not answer yet.]`,
+      text: `[The question was ambiguous. These documents might be relevant:\n${candidates}\n\nAsk the user ONE targeted clarifying question. Write exactly 4 bullet options (- option). Each option must reflect a specific candidate topic — not a generic placeholder. If there are fewer than 4 candidate documents, generate plausible related topic options to reach exactly 4. Always add "- Something else" as the 5th and final bullet. Never fewer than 4, never more than 4 main options. Do not answer yet.]`,
     });
   } else if (knowledgeContent) {
     blocks.push({
@@ -174,7 +176,11 @@ export async function chat(
     messages,
   });
 
-  const reply = response.content?.[0]?.type === 'text' ? response.content[0].text : '';
+  const replyText = response.content?.[0]?.type === 'text' ? response.content[0].text : '';
+  // Strip em dashes — the system prompt bans them but Claude occasionally produces them anyway.
+  // Replace " — " with ", " and any remaining bare "—" with " - ".
+  const replyClean = replyText.replace(/ — /g, ', ').replace(/—/g, ' - ');
+  const reply = response.stop_reason === 'max_tokens' ? replyClean + '[cutshort]' : replyClean;
 
   // Save this message pair to the session history
   addToHistory(sessionId, 'user', userMessage);

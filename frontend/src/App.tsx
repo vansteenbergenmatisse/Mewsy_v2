@@ -69,7 +69,9 @@ export default function App() {
 
   // ── Input ──────────────────────────────────────────────────────────────────
   const [inputValue, setInputValue] = useState('');
-  const [inputPlaceholder, setInputPlaceholder] = useState('Ask Mewsie…');
+  const [inputPlaceholder, setInputPlaceholder] = useState(
+    () => uiStr('askMewsie', sessionStorage.getItem('Mewsie_lang') || null)
+  );
 
   // ── Attached files ─────────────────────────────────────────────────────────
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
@@ -155,8 +157,8 @@ export default function App() {
     if (detected) {
       detectedOptions = detected.options;
       detectedQuestion = detected.questionText ?? null;
-      bodyText = detected.bodyText ?? '';
-      skipBodyMessages = !detected.bodyText;
+      bodyText = '';
+      skipBodyMessages = true;
     } else {
       bodyText = stripButtonSyntax(text);
     }
@@ -179,6 +181,7 @@ export default function App() {
               text: msg,
               msgId: messageId,
               isNewGroup,
+              clarifying: !!detected,
             } as ChatMessage,
           ];
         });
@@ -222,7 +225,7 @@ export default function App() {
     questionText: string | null,
     msgId: string
   ) => {
-    addOptionButtons(options, questionText, msgId, false);
+    addOptionButtons(options, questionText, msgId, true);
   }, [selectedLanguage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Server communication ───────────────────────────────────────────────────
@@ -326,7 +329,11 @@ export default function App() {
     if (!prev) {
       isFirstMessageRef.current = true;
     }
-  }, [selectedLanguage]);
+    // Keep the input placeholder in sync when language changes before first message
+    if (heroActive) {
+      setInputPlaceholder(uiStr('askMewsie', code));
+    }
+  }, [selectedLanguage, heroActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── File management ────────────────────────────────────────────────────────
 
@@ -344,7 +351,7 @@ export default function App() {
     setMessages([]);
     setHeroActive(true);
     setInputValue('');
-    setInputPlaceholder('Ask Mewsie…');
+    setInputPlaceholder(uiStr('askMewsie', selectedLanguage));
     setAttachedFiles([]);
     setIsRequestInProgress(false);
     removeThinking();

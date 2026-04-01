@@ -133,10 +133,10 @@ export async function checkServer({ pass, fail, skip, results }: Reporter): Prom
     const huge = await fetchJson(`${BASE}/webhook/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chatInput: 'a'.repeat(5000), sessionId: 'test' }),
+      body: JSON.stringify({ chatInput: 'a'.repeat(1500), sessionId: 'test' }),
     });
     if (huge.status === 400) {
-      pass('POST /webhook/chat rejects input > 4000 chars with 400');
+      pass('POST /webhook/chat rejects input > 1000 chars with 400');
       results.push({ ok: true });
     } else {
       fail('POST /webhook/chat rejects oversized input', `Got status ${huge.status}`);

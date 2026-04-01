@@ -29,7 +29,7 @@ npm test
 | 6 | [check-session.ts](suites/check-session.ts) | Session creation, history append and retrieval, history trimming to max pairs, context update, non-destructive patch, TTL expiry via `cleanSessions` | — | — |
 | 7 | [check-server.ts](suites/check-server.ts) | Server starts, `GET /health` → 200, `POST /webhook/chat` 400 validations (missing fields, oversized input), CORS allow/reject, valid POST → 200 `{ output: string }`, wrong method → 404 | partial | yes (local) |
 | 8 | [check-chat.ts](suites/check-chat.ts) | Full `handleMessage()` E2E: tiers, omniboost overview, GL mapping, out-of-scope (no hallucination), hello, multi-turn silver follow-up, em-dash absent from responses | yes | yes |
-| 9 | [check-frontend.ts](suites/check-frontend.ts) | `formatBotText` (bold, italic, links, headings, lists), `splitResponseIntoMessages` (empty, single, two paragraphs, list grouping), `detectOptionButtons` (`[BUTTONS:]` syntax, no-question guard, plain text), `uiStr` (en/de/fallback/unknown key/null), `getThinkingMessages` (en/de/null/de-at subtag), `getSessionId` (create + stable) | — | — |
+| 9 | [check-frontend.ts](suites/check-frontend.ts) | `formatBotText` (bold, italic, links, H2/H3→bold, lists, callout variants warn/tip/dont, code block, table, cut-short notice), `splitResponseIntoMessages` (empty, single, multi-paragraph→1 bubble), `detectOptionButtons` (`[BUTTONS:]` syntax, no-question guard, plain text), `uiStr` (en/de/fallback/unknown key/null), `getThinkingMessages` (en/de/null/de-at subtag), `getSessionId` (create + stable) | — | — |
 
 ---
 

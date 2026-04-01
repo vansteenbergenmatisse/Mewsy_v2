@@ -1,5 +1,5 @@
 import React from 'react';
-import { helpTopicContent } from '../config/chat-config';
+import { helpTopicContent } from '../help';
 
 // ── HelpDetailPanel ────────────────────────────────────────────────────────────
 // Shows the full content for a single help topic.

@@ -1,5 +1,6 @@
 import React from 'react';
 import { LanguageSelector } from './LanguageSelector';
+import { uiStr } from '../config/chat-config';
 
 type WidgetMode = 'hidden' | 'fullscreen' | 'side-panel';
 
@@ -22,30 +23,32 @@ export function ChatHeader({
   onToggleLayout,
   onToggleSidebar,
 }: ChatHeaderProps) {
+  const s = (key: string) => uiStr(key, selectedLanguage);
+
   return (
     <div id="topbar">
 
       {/* Open sidebar — only visible on mobile in fullscreen, bottom-left topbar */}
       {widgetMode === 'fullscreen' && (
-        <button className="topbar-open-sidebar" onClick={onToggleSidebar} title="Open sidebar">
+        <button className="topbar-open-sidebar" onClick={onToggleSidebar} title={s('openSidebar')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2"/>
             <line x1="9" y1="3" x2="9" y2="21"/>
           </svg>
-          Open sidebar
+          {s('openSidebar')}
         </button>
       )}
 
       <div className="topbar-spacer" />
 
       {/* Help & Resources */}
-      <button className="topbar-pill" onClick={onOpenHelp} title="Help & Resources">
+      <button className="topbar-pill" onClick={onOpenHelp} title={s('helpResources')}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10"/>
           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
           <line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
-        Help &amp; Resources
+        {s('helpResources')}
       </button>
 
       <div className="topbar-divider" />
@@ -59,7 +62,7 @@ export function ChatHeader({
       <button
         className="topbar-icon-btn"
         onClick={onToggleLayout}
-        title={widgetMode === 'side-panel' ? 'Expand to fullscreen' : 'Shrink to side panel'}
+        title={widgetMode === 'side-panel' ? s('expandFullscreen') : s('shrinkToPanel')}
       >
         {widgetMode === 'side-panel' ? (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
