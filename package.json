@@ -7,7 +7,7 @@
   "scripts": {
     "start": "tsx backend/server.ts",
     "predev": "tsx tests/run-all.ts",
-    "dev": "concurrently \"tsx watch backend/server.ts\" \"npm --prefix frontend run dev\"",
+    "dev": "npm run build:frontend && concurrently \"tsx watch backend/server.ts\" \"npm --prefix frontend run dev\"",
     "build:frontend": "npm --prefix frontend install && npm --prefix frontend run build",
     "build": "npm run build:frontend && tsc --noEmit",
     "test": "tsx tests/run-all.ts",

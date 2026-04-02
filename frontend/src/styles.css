@@ -44,13 +44,14 @@ body {
   to   { opacity: 1; }
 }
 
-/* Side-panel mode: chat window floats to the right, no sidebar */
+/* Side-panel mode: chat window floats to the right */
 #Mewsie-app.side-panel {
   justify-content: flex-start;
   background: transparent;
   pointer-events: none;
 }
 #Mewsie-app.side-panel #chat-window {
+  position: relative; /* positioning context for the sidebar overlay */
   pointer-events: auto;
   flex: none;
   width: 40vw;
@@ -58,6 +59,35 @@ body {
   margin-left: auto;
   border-left: 1px solid var(--Mewsie-border);
   box-shadow: var(--Mewsie-shadow-lg);
+}
+/*
+ * Side-panel: sidebar is rendered INSIDE chat-window (absolute child).
+ * Hidden: translateX(-100%) slides it left — clipped by chat-window's overflow:hidden.
+ * Shown:  translateX(0) overlays the left portion of the chat window.
+ */
+#Mewsie-app.side-panel #sidebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  z-index: 200;
+  width: clamp(260px, 78vw, 300px) !important;
+  transform: translateX(-100%); /* hidden: slides out left, clipped by overflow:hidden */
+  transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+  box-shadow: var(--Mewsie-shadow-lg);
+  pointer-events: auto;
+}
+#Mewsie-app.side-panel #sidebar.expanded {
+  transform: translateX(0); /* shown: overlays the chat window from the left */
+}
+#Mewsie-app.side-panel #sidebar-backdrop {
+  display: block;
+  position: absolute; /* covers the chat window area */
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 199;
+  animation: widgetFadeIn 0.2s ease both;
+  pointer-events: auto;
 }
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
@@ -282,6 +312,10 @@ body {
 .topbar-icon-btn.danger:hover {
   background: var(--Mewsie-orange-light);
   color: var(--Mewsie-orange);
+}
+/* Fullscreen: widget cannot be dismissed — close button is hidden */
+#Mewsie-app.fullscreen .topbar-icon-btn.danger {
+  display: none;
 }
 .topbar-icon-btn svg {
   width: 16px;
@@ -1090,40 +1124,43 @@ body {
   display: none;
   flex-direction: column;
   transform: translateX(100%);
-  transition: transform .3s ease;
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
 }
 #help-panel.show { display: flex; transform: translateX(0); }
 #help-panel-header {
-  padding: 16px 20px;
+  padding: 18px 20px;
   background: var(--Mewsie-surface);
   border-bottom: 1px solid var(--Mewsie-border);
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-shrink: 0;
 }
 #help-panel-back {
-  background: none; border: none; cursor: pointer; padding: 4px;
+  background: none; border: none; cursor: pointer; padding: 6px;
   color: var(--Mewsie-text-muted); transition: color var(--Mewsie-transition);
   display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
 }
-#help-panel-back:hover { color: var(--Mewsie-blue); }
-#help-panel-back svg { width: 22px; height: 22px; }
-#help-panel-header span { font-size: 18px; font-weight: 600; color: var(--Mewsie-text); }
+#help-panel-back:hover { color: var(--Mewsie-blue); background: var(--Mewsie-blue-light); }
+#help-panel-back svg { width: 20px; height: 20px; }
+#help-panel-header span { font-size: 17px; font-weight: 700; color: var(--Mewsie-text); }
 #help-panel-search {
-  padding: 14px 20px;
+  padding: 12px 16px;
   background: var(--Mewsie-bg);
   border-bottom: 1px solid var(--Mewsie-border);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   position: relative;
+  flex-shrink: 0;
 }
 #help-search-input {
   flex: 1;
   border: 1px solid var(--Mewsie-border);
   background: var(--Mewsie-surface);
   color: var(--Mewsie-text);
-  padding: 10px 14px 10px 40px;
+  padding: 9px 14px 9px 38px;
   border-radius: 20px;
   font-size: 14px;
   outline: none;
@@ -1134,64 +1171,96 @@ body {
 #help-search-input:focus { border-color: var(--Mewsie-blue); box-shadow: 0 0 0 3px rgba(26,101,184,.1); }
 #help-panel-search svg {
   position: absolute;
-  left: 36px;
-  width: 16px; height: 16px;
+  left: 32px;
+  width: 15px; height: 15px;
   color: var(--Mewsie-text-light);
   pointer-events: none;
 }
-#help-panel-content { flex: 1; overflow-y: auto; padding: 8px 0; }
+#help-panel-content { flex: 1; overflow-y: auto; padding: 4px 0 16px; }
 .help-item {
   display: flex; align-items: center; gap: 14px;
-  padding: 16px 20px; cursor: pointer;
+  padding: 13px 20px; cursor: pointer;
   transition: background var(--Mewsie-transition);
   border-bottom: 1px solid var(--Mewsie-border);
 }
 .help-item:hover { background: var(--Mewsie-bg); }
 .help-item:active { background: var(--Mewsie-blue-light); }
 .help-item-icon {
-  font-size: 20px; width: 44px; height: 44px;
+  font-size: 18px; width: 40px; height: 40px;
   display: flex; align-items: center; justify-content: center;
-  background: var(--Mewsie-blue-light); border-radius: 50%; flex-shrink: 0;
+  background: var(--Mewsie-blue-light); border-radius: 10px; flex-shrink: 0;
 }
-.help-item-text { flex: 1; }
-.help-item-title { font-size: 14px; font-weight: 600; color: var(--Mewsie-text); margin-bottom: 3px; }
-.help-item-subtitle { font-size: 13px; color: var(--Mewsie-text-muted); line-height: 1.4; }
-.help-item-arrow { width: 16px; height: 16px; color: var(--Mewsie-text-light); flex-shrink: 0; }
+.help-item-text { flex: 1; min-width: 0; }
+.help-item-title { font-size: 14px; font-weight: 600; color: var(--Mewsie-text); margin-bottom: 2px; }
+.help-item-subtitle { font-size: 12px; color: var(--Mewsie-text-muted); line-height: 1.35; }
+.help-item-arrow { width: 15px; height: 15px; color: var(--Mewsie-text-light); flex-shrink: 0; }
 
 /* ── Help detail panel ───────────────────────────────────────────────────── */
 #help-detail-panel {
   position: absolute; top: 0; left: 0;
   width: 100%; height: 100%;
-  background: var(--Mewsie-surface); z-index: 201;
+  background: var(--Mewsie-bg); z-index: 201;
   display: none; flex-direction: column;
-  transform: translateX(100%); transition: transform .3s ease;
+  transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1);
 }
 #help-detail-panel.show { display: flex; transform: translateX(0); }
 #help-detail-header {
-  padding: 16px 20px; background: var(--Mewsie-surface);
+  padding: 18px 20px; background: var(--Mewsie-surface);
   border-bottom: 1px solid var(--Mewsie-border);
-  display: flex; align-items: center; gap: 14px;
+  display: flex; align-items: center; gap: 14px; flex-shrink: 0;
 }
 #help-detail-back {
-  background: none; border: none; cursor: pointer; padding: 4px;
+  background: none; border: none; cursor: pointer; padding: 6px;
   color: var(--Mewsie-text-muted); transition: color var(--Mewsie-transition);
   display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
 }
-#help-detail-back:hover { color: var(--Mewsie-blue); }
-#help-detail-back svg { width: 22px; height: 22px; }
-#help-detail-title { font-size: 18px; font-weight: 600; color: var(--Mewsie-text); }
-#help-detail-content { flex: 1; overflow-y: auto; padding: 20px; }
-.help-detail-section { margin-bottom: 28px; }
-.help-detail-section h2 { font-size: 16px; font-weight: 600; color: var(--Mewsie-text); margin: 0 0 10px 0; }
-.help-detail-section p { font-size: 14px; line-height: 1.6; color: var(--Mewsie-text-muted); margin: 0 0 10px 0; }
-.help-detail-section ul { list-style: disc; padding-left: 20px; margin: 6px 0; }
-.help-detail-section li { font-size: 14px; line-height: 1.6; color: var(--Mewsie-text-muted); margin: 5px 0; }
+#help-detail-back:hover { color: var(--Mewsie-blue); background: var(--Mewsie-blue-light); }
+#help-detail-back svg { width: 20px; height: 20px; }
+#help-detail-title { font-size: 17px; font-weight: 700; color: var(--Mewsie-text); line-height: 1.3; }
+#help-detail-content { flex: 1; overflow-y: auto; padding: 0 0 32px; }
+
+/* Each section is a card */
+.help-detail-section {
+  background: var(--Mewsie-surface);
+  border-bottom: 1px solid var(--Mewsie-border);
+  padding: 18px 20px;
+}
+.help-detail-section:first-child { border-top: none; }
+.help-detail-section h2 {
+  font-size: 13px; font-weight: 700;
+  color: var(--Mewsie-blue);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  margin: 0 0 8px 0;
+}
+.help-detail-section p {
+  font-size: 14px; line-height: 1.65;
+  color: var(--Mewsie-text); margin: 0;
+}
+.help-detail-section ul {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.help-detail-section li {
+  font-size: 14px; line-height: 1.55;
+  color: var(--Mewsie-text);
+  padding-left: 18px; position: relative;
+}
+.help-detail-section li::before {
+  content: '→';
+  position: absolute; left: 0;
+  color: var(--Mewsie-blue);
+  font-size: 12px; top: 2px;
+}
+
+/* CTA block */
 .help-detail-cta {
-  background: var(--Mewsie-blue-light); border: 1px solid var(--Mewsie-blue);
-  border-radius: var(--Mewsie-radius); padding: 18px; margin-top: 20px;
+  margin: 16px 20px 0;
+  background: var(--Mewsie-blue-light); border: 1px solid rgba(26,101,184,.2);
+  border-radius: var(--Mewsie-radius); padding: 18px;
 }
-.help-detail-cta h3 { font-size: 15px; font-weight: 600; color: var(--Mewsie-text); margin: 0 0 6px 0; }
-.help-detail-cta p { font-size: 14px; line-height: 1.5; color: var(--Mewsie-text-muted); margin: 0 0 14px 0; }
+.help-detail-cta h3 { font-size: 14px; font-weight: 700; color: var(--Mewsie-text); margin: 0 0 6px 0; }
+.help-detail-cta p { font-size: 13px; line-height: 1.5; color: var(--Mewsie-text-muted); margin: 0 0 14px 0; }
 .help-detail-cta button {
   background: var(--Mewsie-blue); color: #ffffff; border: none;
   border-radius: 10px; padding: 10px 20px;
@@ -1357,9 +1426,35 @@ body {
   display: none; /* hidden on desktop */
 }
 
-/* ── Open-sidebar topbar button (mobile only) ────────────────────────────── */
+/* ── Open-sidebar topbar button ──────────────────────────────────────────── */
 .topbar-open-sidebar {
-  display: none; /* hidden on desktop */
+  display: none; /* hidden on desktop in all modes by default; overridden below for side-panel and mobile */
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--Mewsie-text-muted);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: all var(--Mewsie-transition);
+  white-space: nowrap;
+}
+.topbar-open-sidebar:hover {
+  background: var(--Mewsie-blue-light);
+  color: var(--Mewsie-blue);
+}
+.topbar-open-sidebar svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+/* Visible in side-panel mode only — fullscreen uses the persistent sidebar column */
+#Mewsie-app.side-panel .topbar-open-sidebar {
+  display: inline-flex;
 }
 
 /* ── Mobile ──────────────────────────────────────────────────────────────── */
@@ -1370,6 +1465,7 @@ body {
     margin-left: 0;
     border-left: none;
   }
+
 
   /* Sidebar becomes a slide-in overlay — no collapsed 60px strip */
   #Mewsie-app.fullscreen #sidebar {
@@ -1397,30 +1493,9 @@ body {
     animation: widgetFadeIn 0.2s ease both;
   }
 
-  /* Open sidebar button visible in topbar */
+  /* Open sidebar button visible in fullscreen mode on mobile */
   .topbar-open-sidebar {
     display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--Mewsie-text-muted);
-    font-size: 13px;
-    font-family: 'DM Sans', sans-serif;
-    font-weight: 500;
-    padding: 6px 10px;
-    border-radius: 8px;
-    transition: all var(--Mewsie-transition);
-    white-space: nowrap;
   }
-  .topbar-open-sidebar:hover {
-    background: var(--Mewsie-blue-light);
-    color: var(--Mewsie-blue);
-  }
-  .topbar-open-sidebar svg {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-  }
+
 }

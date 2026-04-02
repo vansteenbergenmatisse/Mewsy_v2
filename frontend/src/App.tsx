@@ -364,10 +364,22 @@ export default function App() {
     setSidebarCollapsed(c => !c);
   }, []);
 
+  const handleCloseSidebar = useCallback(() => {
+    setSidebarCollapsed(true);
+  }, []);
+
   // ── Layout toggle ──────────────────────────────────────────────────────────
 
   const handleToggleLayout = useCallback(() => {
-    setWidgetMode(m => m === 'fullscreen' ? 'side-panel' : 'fullscreen');
+    setWidgetMode(m => {
+      if (m === 'fullscreen') {
+        setSidebarCollapsed(true);   // collapse when entering side-panel
+        return 'side-panel';
+      } else {
+        setSidebarCollapsed(false);  // re-expand when returning to fullscreen
+        return 'fullscreen';
+      }
+    });
   }, []);
 
   // ── Bubble click ───────────────────────────────────────────────────────────
@@ -404,6 +416,7 @@ export default function App() {
         onClose={() => setWidgetMode('hidden')}
 
         onToggleSidebar={handleToggleSidebar}
+        onCloseSidebar={handleCloseSidebar}
         onToggleLayout={handleToggleLayout}
         onNewChat={handleNewChat}
         onOpenHelp={() => setShowHelp(true)}
@@ -416,6 +429,11 @@ export default function App() {
         onCloseAllHelp={() => {
           setShowHelp(false);
           setShowHelpDetail(false);
+        }}
+        onAskMewsie={(message: string) => {
+          setShowHelp(false);
+          setShowHelpDetail(false);
+          handleSendMessage(message);
         }}
         onLanguageChange={handleLanguageChange}
         onInputChange={setInputValue}

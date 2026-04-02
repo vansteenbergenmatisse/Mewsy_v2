@@ -10,9 +10,10 @@ interface HelpDetailPanelProps {
   topic: string | null;
   onBack: () => void;
   onCloseAll: () => void;
+  onAskMewsie: (message: string) => void;
 }
 
-export function HelpDetailPanel({ show, topic, onBack, onCloseAll }: HelpDetailPanelProps) {
+export function HelpDetailPanel({ show, topic, onBack, onCloseAll, onAskMewsie }: HelpDetailPanelProps) {
   const content = topic ? helpTopicContent[topic] : null;
 
   return (
@@ -44,7 +45,7 @@ export function HelpDetailPanel({ show, topic, onBack, onCloseAll }: HelpDetailP
               <div className="help-detail-cta">
                 <h3>{content.cta.title}</h3>
                 <p>{content.cta.text}</p>
-                <button onClick={onCloseAll}>{content.cta.button}</button>
+                <button onClick={() => { onAskMewsie(content.cta.message); }}>{content.cta.button}</button>
               </div>
             )}
           </>

@@ -11,6 +11,10 @@ export default defineConfig({
     proxy: {
       '/webhook': 'http://localhost:4010',
     },
+    // Allow importing files from knowledge/ which lives outside the frontend root
+    fs: {
+      allow: ['..'],
+    },
   },
   build: {
     outDir: 'dist',

@@ -28,8 +28,8 @@ export function ChatHeader({
   return (
     <div id="topbar">
 
-      {/* Open sidebar — only visible on mobile in fullscreen, bottom-left topbar */}
-      {widgetMode === 'fullscreen' && (
+      {/* Open sidebar — CSS controls visibility: hidden on desktop fullscreen, visible on desktop side-panel + all mobile */}
+      {(widgetMode === 'fullscreen' || widgetMode === 'side-panel') && (
         <button className="topbar-open-sidebar" onClick={onToggleSidebar} title={s('openSidebar')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2"/>

@@ -28,6 +28,73 @@ function pickIntroLine(text: string): string {
   return INTRO_LINES[hash % INTRO_LINES.length];
 }
 
+// ── Link deduplication ────────────────────────────────────────────────────────
+// If the same href appears more than once, replace the 2nd+ occurrence with
+// the anchor text only (no <a> tag). Runs after all HTML is assembled.
+function deduplicateLinks(html: string): string {
+  const seen = new Set<string>();
+  return html.replace(/<a\s+href="([^"]+)"([^>]*)>([^<]*)<\/a>/g, (_match, href, _attrs, text) => {
+    if (seen.has(href)) return text;
+    seen.add(href);
+    return _match;
+  });
+}
+
+// ── Related-links section enforcement ────────────────────────────────────────
+// A section whose label matches "Related / See also / Additional / etc." should
+// only appear on complex responses (H1 + steps or multiple sections) and always
+// at the very end (just before the closing-line paragraph, or at end of string).
+const RELATED_LABEL_RE = /^(related|see also|additional|further|links|more info)/i;
+
+function enforceRelatedLinksSection(html: string): string {
+  // Find a section-label whose text matches the related-links pattern
+  const labelRe = /<div class="section-label">([^<]*)<\/div>/g;
+  let match: RegExpExecArray | null;
+  let relatedStart = -1;
+  let relatedLabelFull = '';
+
+  while ((match = labelRe.exec(html)) !== null) {
+    if (RELATED_LABEL_RE.test(match[1])) {
+      relatedStart = match.index;
+      relatedLabelFull = match[0];
+      break;
+    }
+  }
+
+  if (relatedStart === -1) return html; // no related-links section found
+
+  // Determine where the section ends (next section-label, response-end, or end)
+  const afterLabel = html.indexOf('<div class="section-label">', relatedStart + relatedLabelFull.length);
+  const responseEnd = html.indexOf('<p class="response-end">', relatedStart);
+  const endCandidates = [
+    afterLabel > -1 ? afterLabel : html.length,
+    responseEnd > -1 ? responseEnd : html.length,
+  ];
+  const relatedEnd = Math.min(...endCandidates);
+  const section = html.slice(relatedStart, relatedEnd);
+
+  // Complex = has H1 AND (has ordered list OR 2+ section-label divs)
+  const sectionLabelCount = (html.match(/<div class="section-label">/g) ?? []).length;
+  const isComplex = html.includes('<h1>') && (html.includes('<ol') || sectionLabelCount >= 2);
+
+  if (!isComplex) {
+    // Simple response — remove the section entirely
+    return html.slice(0, relatedStart) + html.slice(relatedEnd);
+  }
+
+  // Complex — if already at the end (no content after it except response-end), leave it
+  const afterSection = html.slice(relatedEnd).replace(/<p class="response-end">.*$/i, '').trim();
+  if (!afterSection) return html;
+
+  // Not at end — extract and move it
+  html = html.slice(0, relatedStart) + html.slice(relatedEnd);
+  const insertBefore = html.indexOf('<p class="response-end">');
+  if (insertBefore > -1) {
+    return html.slice(0, insertBefore) + section + html.slice(insertBefore);
+  }
+  return html + section;
+}
+
 // ── Text formatting ───────────────────────────────────────────────────────────
 export function formatBotText(text: string): string {
   if (!text) return "";
@@ -112,9 +179,6 @@ export function formatBotText(text: string): string {
   html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
   html = html.replace(/_(.*?)_/g, "<em>$1</em>");
   html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-  html = html.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank">$1</a>');
-  // Bare domains without protocol — prepend https://
-  html = html.replace(/(?<![="\/])(\b(?:[a-z0-9-]+\.)+(?:io|com|org|net|co|be|nl|de|fr|eu)(?:\/[^\s<]*)?)/g, '<a href="https://$1" target="_blank">$1</a>');
   html = html.replace(/^# (.*)$/gm, '<h1>$1</h1>');               // H1 → h1 (only heading tag allowed)
   // H2 and H3 already converted to **bold** above
   html = html.replace(/((?:^\d+[\.)]\s+.*$\n?)+)/gm, (match: string) => {
@@ -131,9 +195,9 @@ export function formatBotText(text: string): string {
     }).join("");
     return `<ol class="step-list">${listItems}</ol>`;
   });
-  html = html.replace(/((?:^\s*[-*•]\s+.*$\n?)+)/gm, (match: string) => {
-    const items = match.trim().split(/\n(?=\s*[-*•]\s+)/);
-    const listItems = items.map((item: string) => `<li>${item.replace(/^\s*[-*•]\s+/, "")}</li>`).join("");
+  html = html.replace(/((?:^[^\S\n]*[-*•]\s+.*$\n?)+)/gm, (match: string) => {
+    const items = match.trim().split(/\n(?=[^\S\n]*[-*•]\s+)/);
+    const listItems = items.map((item: string) => `<li>${item.replace(/^[^\S\n]*[-*•]\s+/, "")}</li>`).join("");
     return `<ul>${listItems}</ul>`;
   });
   html = html.replace(/\n\n+/g, "</p><p>");
@@ -153,8 +217,7 @@ export function formatBotText(text: string): string {
       .replace(/__(.*?)__/g, "<strong>$1</strong>")
       .replace(/\*(.*?)\*/g, "<em>$1</em>")
       .replace(/_(.*?)_/g, "<em>$1</em>")
-      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
-      .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank">$1</a>');
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
     const calloutHtml = `<div class="${cls}"><span class="callout-icon">${icon}</span><span>${c}</span></div>`;
     html = html.replace(`<p>MEWSIECALLOUT${idx}MEWSIECALLOUT</p>`, calloutHtml);
     html = html.replace(`MEWSIECALLOUT${idx}MEWSIECALLOUT`, calloutHtml);
@@ -175,6 +238,12 @@ export function formatBotText(text: string): string {
     html = html.replace(`<p>MEWSIECODEBLOCK${idx}MEWSIECODEBLOCK</p>`, codeHtml);
     html = html.replace(`MEWSIECODEBLOCK${idx}MEWSIECODEBLOCK`, codeHtml);
   });
+
+  // ── Deduplicate links — same href appearing twice renders 2nd+ as plain text
+  html = deduplicateLinks(html);
+
+  // ── Enforce related-links section placement
+  html = enforceRelatedLinksSection(html);
 
   // ── Cut-short notice
   if (cutShort) {

@@ -1419,6 +1419,220 @@
       "source_type": "website_split",
       "source_parent_id": "mews-features",
       "content_hash": "03d050585dc95b8ac307a886c60c3887a13ea1a8e70580e42be73cb204a75b1d"
+    },
+    "help-resources/omniboost": {
+      "title": "Help: What is Omniboost?",
+      "description": "Help panel article explaining what Omniboost is, its five products, scale, and why it matters for hotel operations.",
+      "keywords": [
+        "omniboost",
+        "data unification",
+        "hospitality",
+        "accounting",
+        "PMS",
+        "POS",
+        "insights",
+        "owners portal",
+        "automation",
+        "hotel"
+      ],
+      "path": "knowledge/help-resources/omniboost.md"
+    },
+    "help-resources/mews": {
+      "title": "Help: What is Mews?",
+      "description": "Help panel article explaining Mews PMS, what it tracks for accounting, and how Omniboost connects to it.",
+      "keywords": [
+        "mews",
+        "PMS",
+        "property management",
+        "accounting report",
+        "receivable tracking",
+        "marketplace",
+        "omniboost",
+        "hotel",
+        "integration",
+        "cloud"
+      ],
+      "path": "knowledge/help-resources/mews.md"
+    },
+    "help-resources/integration": {
+      "title": "Help: How the Integration Works",
+      "description": "Help panel article explaining the daily data flow from Mews through Omniboost to your accounting system.",
+      "keywords": [
+        "integration",
+        "API",
+        "data flow",
+        "journal entries",
+        "automation",
+        "mapping",
+        "revenue",
+        "payments",
+        "VAT",
+        "statistics"
+      ],
+      "path": "knowledge/help-resources/integration.md"
+    },
+    "help-resources/onboarding": {
+      "title": "Help: Getting Started",
+      "description": "Help panel article with step-by-step onboarding guide for connecting Mews to an accounting system via Omniboost.",
+      "keywords": [
+        "onboarding",
+        "getting started",
+        "setup",
+        "connection",
+        "Mews token",
+        "GL mapping",
+        "test journals",
+        "go live",
+        "receivable tracking",
+        "chart of accounts"
+      ],
+      "path": "knowledge/help-resources/onboarding.md"
+    },
+    "help-resources/tiers": {
+      "title": "Help: Bronze, Silver & Gold Plans",
+      "description": "Help panel article comparing the three Omniboost integration tiers including pricing, features, and support differences.",
+      "keywords": [
+        "bronze",
+        "silver",
+        "gold",
+        "tier",
+        "pricing",
+        "support",
+        "detailed data",
+        "credit card fee",
+        "statistics",
+        "market segmentation"
+      ],
+      "path": "knowledge/help-resources/tiers.md"
+    },
+    "help-resources/accounting-flows": {
+      "title": "Help: Accounting Flows",
+      "description": "Help panel article explaining Consumed, Closed, and Hybrid accounting flows and when to use each.",
+      "keywords": [
+        "consumed",
+        "closed",
+        "hybrid",
+        "accounting flow",
+        "journal entries",
+        "bills",
+        "invoices",
+        "end of day",
+        "revenue posting",
+        "reconciliation"
+      ],
+      "path": "knowledge/help-resources/accounting-flows.md"
+    },
+    "help-resources/mapping": {
+      "title": "Help: GL Mapping & Ledger Codes",
+      "description": "Help panel article explaining how to map Mews categories to ledger account codes in your accounting system.",
+      "keywords": [
+        "GL mapping",
+        "ledger codes",
+        "chart of accounts",
+        "revenue mapping",
+        "payment mapping",
+        "VAT mapping",
+        "cost centres",
+        "accounting category",
+        "omniboost"
+      ],
+      "path": "knowledge/help-resources/mapping.md"
+    },
+    "help-resources/fallback": {
+      "title": "Help: Fallback Accounts",
+      "description": "Help panel article explaining what fallback accounts are and what to do when unmapped entries land there.",
+      "keywords": [
+        "fallback",
+        "unmapped",
+        "ledger account",
+        "safety net",
+        "revenue fallback",
+        "payment fallback",
+        "mapping",
+        "portal warnings"
+      ],
+      "path": "knowledge/help-resources/fallback.md"
+    },
+    "help-resources/suspense": {
+      "title": "Help: Suspense Accounts",
+      "description": "Help panel article explaining how suspense accounts work for hotel payment reconciliation.",
+      "keywords": [
+        "suspense account",
+        "reconciliation",
+        "credit card",
+        "Stripe",
+        "Adyen",
+        "gateway",
+        "debit",
+        "credit",
+        "payments",
+        "clearing"
+      ],
+      "path": "knowledge/help-resources/suspense.md"
+    },
+    "help-resources/vat": {
+      "title": "Help: VAT & Tax Codes",
+      "description": "Help panel article explaining VAT mapping rules and the critical gross extraction requirement.",
+      "keywords": [
+        "VAT",
+        "tax codes",
+        "gross amount",
+        "net amount",
+        "extract",
+        "inclusive",
+        "exclusive",
+        "mapping",
+        "tax rate",
+        "accounting"
+      ],
+      "path": "knowledge/help-resources/vat.md"
+    },
+    "help-resources/ledgers": {
+      "title": "Help: Guest Ledger & City Ledger",
+      "description": "Help panel article explaining the difference between guest ledger and city ledger in hotel accounting.",
+      "keywords": [
+        "guest ledger",
+        "city ledger",
+        "accounts receivable",
+        "debtors",
+        "corporate",
+        "invoices",
+        "front-office",
+        "transient",
+        "hotel accounting"
+      ],
+      "path": "knowledge/help-resources/ledgers.md"
+    },
+    "help-resources/gateway-commission": {
+      "title": "Help: Gateway Commission Costs",
+      "description": "Help panel article explaining how Omniboost automatically splits gateway commission costs from Stripe and Adyen.",
+      "keywords": [
+        "gateway",
+        "commission",
+        "Stripe",
+        "Adyen",
+        "payment splitting",
+        "net amount",
+        "expense account",
+        "reconciliation",
+        "bank"
+      ],
+      "path": "knowledge/help-resources/gateway-commission.md"
+    },
+    "help-resources/troubleshooting": {
+      "title": "Help: Troubleshooting",
+      "description": "Help panel article covering common integration issues including unmapped categories, expired tokens, duplicate invoices, and data mismatches.",
+      "keywords": [
+        "troubleshooting",
+        "unmapped",
+        "API token",
+        "duplicate invoices",
+        "data mismatch",
+        "NORMAL payments",
+        "push not running",
+        "locked period"
+      ],
+      "path": "knowledge/help-resources/troubleshooting.md"
     }
   }
 }

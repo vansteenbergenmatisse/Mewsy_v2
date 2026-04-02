@@ -77,6 +77,179 @@ export async function checkFrontend({ pass, fail, skip: _skip, results }: Report
     results.push({ ok: false });
   }
 
+  // ── Link rules ────────────────────────────────────────────────────────────
+
+  // [link-1a] Raw https:// URL must NOT be auto-linkified
+  try {
+    const result = formatBotText('visit https://example.com for help') as string;
+    if (!result.includes('href="https://example.com"')) {
+      pass('[link-1a] raw https:// URL is not linkified');
+      results.push({ ok: true });
+    } else {
+      fail('[link-1a] raw https:// URL is not linkified', `Got: ${result}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[link-1a] raw https:// URL is not linkified', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // [link-1b] Markdown [text](url) MUST still be linkified
+  try {
+    const result = formatBotText('[read the guide](https://example.com)') as string;
+    if (result.includes('href="https://example.com"') && result.includes('read the guide')) {
+      pass('[link-1b] markdown [text](url) is linkified');
+      results.push({ ok: true });
+    } else {
+      fail('[link-1b] markdown [text](url) is linkified', `Got: ${result}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[link-1b] markdown [text](url) is linkified', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // [link-1c] Raw URL inside a callout must NOT be linkified
+  try {
+    const result = formatBotText('[callout]visit https://example.com for help[/callout]') as string;
+    if (!result.includes('href="https://example.com"') && result.includes('https://example.com')) {
+      pass('[link-1c] raw URL inside callout is not linkified');
+      results.push({ ok: true });
+    } else {
+      fail('[link-1c] raw URL inside callout is not linkified', `Got: ${result}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[link-1c] raw URL inside callout is not linkified', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // [link-1d] Bare domain (no protocol) must NOT be auto-linkified
+  try {
+    const result = formatBotText('visit example.com for help') as string;
+    if (!result.includes('href="https://example.com"') && !result.includes('href="example.com"')) {
+      pass('[link-1d] bare domain is not linkified');
+      results.push({ ok: true });
+    } else {
+      fail('[link-1d] bare domain is not linkified', `Got: ${result}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[link-1d] bare domain is not linkified', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // [link-4a] Markdown link must have target="_blank"
+  try {
+    const result = formatBotText('[guide](https://example.com)') as string;
+    if (result.includes('target="_blank"')) {
+      pass('[link-4a] markdown link has target="_blank"');
+      results.push({ ok: true });
+    } else {
+      fail('[link-4a] markdown link has target="_blank"', `Got: ${result}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[link-4a] markdown link has target="_blank"', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // [link-3a] Duplicate URL — second occurrence rendered as plain text, not <a>
+  try {
+    const result = formatBotText('[guide](https://x.com) and [guide](https://x.com)') as string;
+    const matches = result.match(/href="https:\/\/x\.com"/g) ?? [];
+    if (matches.length === 1) {
+      pass('[link-3a] duplicate URL — second rendered as plain text');
+      results.push({ ok: true });
+    } else {
+      fail('[link-3a] duplicate URL — second rendered as plain text', `Found ${matches.length} href occurrences. Got: ${result}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[link-3a] duplicate URL — second rendered as plain text', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // [link-3b] Two different URLs — both rendered as <a>
+  try {
+    const result = formatBotText('[A](https://a.com) and [B](https://b.com)') as string;
+    if (result.includes('href="https://a.com"') && result.includes('href="https://b.com"')) {
+      pass('[link-3b] two distinct URLs both rendered as <a>');
+      results.push({ ok: true });
+    } else {
+      fail('[link-3b] two distinct URLs both rendered as <a>', `Got: ${result}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[link-3b] two distinct URLs both rendered as <a>', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // [link-3c] Same URL, different anchor text — second deduplicated to plain text
+  try {
+    const result = formatBotText('[first](https://x.com) then [second](https://x.com)') as string;
+    const hrefCount = (result.match(/href="https:\/\/x\.com"/g) ?? []).length;
+    if (hrefCount === 1 && result.includes('second')) {
+      pass('[link-3c] same URL different anchor text — second is plain text');
+      results.push({ ok: true });
+    } else {
+      fail('[link-3c] same URL different anchor text — second is plain text', `href count: ${hrefCount}. Got: ${result}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[link-3c] same URL different anchor text', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // [link-2a] Related-links section on a simple response is removed
+  try {
+    const result = formatBotText('**Related links**\n\n- [guide](https://x.com)') as string;
+    if (!result.includes('section-label')) {
+      pass('[link-2a] related-links section on simple response is removed');
+      results.push({ ok: true });
+    } else {
+      fail('[link-2a] related-links section on simple response is removed', `Got: ${result}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[link-2a] related-links section on simple response is removed', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // [link-2b] Related-links section on a complex response (H1 + steps) is kept
+  try {
+    const complex = '# Setup Guide\n\n**Overview**\n\nGetting started is straightforward.\n\n1. Step one\n2. Step two\n3. Step three\n\n**Related links**\n\n- [guide](https://x.com)';
+    const result = formatBotText(complex) as string;
+    if (result.includes('section-label') && result.includes('Related links')) {
+      pass('[link-2b] related-links section on complex response is kept');
+      results.push({ ok: true });
+    } else {
+      fail('[link-2b] related-links section on complex response is kept', `Got: ${result}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[link-2b] related-links section on complex response is kept', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // [link-2c] Related-links section mid-body on complex response is moved to end
+  try {
+    const complex = '# Setup Guide\n\n**Related links**\n\nFor setup details, see [guide](https://x.com).\n\n**Overview**\n\nGetting started is straightforward.\n\n1. Step one\n2. Step two\n3. Step three';
+    const result = formatBotText(complex) as string;
+    const relatedIdx = result.indexOf('Related links');
+    const stepsIdx = result.indexOf('<ol');
+    if (relatedIdx > stepsIdx && relatedIdx > -1) {
+      pass('[link-2c] related-links section moved after steps in complex response');
+      results.push({ ok: true });
+    } else {
+      fail('[link-2c] related-links section moved after steps in complex response', `relatedIdx=${relatedIdx} stepsIdx=${stepsIdx}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[link-2c] related-links section moved after steps in complex response', (err as Error).message);
+    results.push({ ok: false });
+  }
+
   // H2 heading → converted to bold → promoted to .section-label (no <h2> tag)
   try {
     const result = formatBotText('## My Heading') as string;
@@ -1016,6 +1189,421 @@ export async function checkFrontend({ pass, fail, skip: _skip, results }: Report
         fail('CSS [#18] response-end 18px margin-top', (err as Error).message);
         results.push({ ok: false });
       }
+
+      // ── Sidebar in side-panel mode ────────────────────────────────────────
+
+      const desktopCss = css.slice(0, css.indexOf('@media (max-width: 768px)'));
+
+      // [sidebar-css-0a] Desktop: .topbar-open-sidebar base rule is display:none — hidden in fullscreen desktop (no override)
+      try {
+        const baseHidden = /\.topbar-open-sidebar\s*\{[^}]*display:\s*none/.test(desktopCss);
+        if (baseHidden) {
+          pass('CSS [sidebar-css-0a]: .topbar-open-sidebar base has display:none — hidden on desktop by default, including fullscreen');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-0a]: .topbar-open-sidebar base must have display:none to hide it in fullscreen desktop', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-0a]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // [sidebar-css-0b] Desktop: #Mewsie-app.side-panel override shows .topbar-open-sidebar as display:inline-flex
+      try {
+        const visibleSidePanel = /#Mewsie-app\.side-panel \.topbar-open-sidebar\s*\{[^}]*display:\s*inline-flex/.test(desktopCss);
+        if (visibleSidePanel) {
+          pass('CSS [sidebar-css-0b]: #Mewsie-app.side-panel .topbar-open-sidebar has display:inline-flex — button shown in side-panel desktop');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-0b]: #Mewsie-app.side-panel .topbar-open-sidebar must have display:inline-flex', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-0b]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // [sidebar-css-0c] Desktop: no #Mewsie-app.fullscreen override for .topbar-open-sidebar — button stays hidden in fullscreen desktop
+      try {
+        const noFullscreenOverride = !/#Mewsie-app\.fullscreen \.topbar-open-sidebar\s*\{[^}]*display:\s*inline-flex/.test(desktopCss);
+        if (noFullscreenOverride) {
+          pass('CSS [sidebar-css-0c]: no #Mewsie-app.fullscreen .topbar-open-sidebar inline-flex override — button stays hidden in fullscreen desktop');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-0c]: #Mewsie-app.fullscreen .topbar-open-sidebar must NOT have display:inline-flex — would make it visible in fullscreen desktop', 'Unwanted rule found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-0c]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // [sidebar-css-1] Desktop: side-panel sidebar has position:absolute (overlay, not layout column)
+      try {
+        const isOverlay = /#Mewsie-app\.side-panel #sidebar\s*\{[^}]*position:\s*absolute/.test(desktopCss);
+        if (isOverlay) {
+          pass('CSS [sidebar-css-1]: #Mewsie-app.side-panel #sidebar is position:absolute on desktop — slide-in overlay');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-1]: #Mewsie-app.side-panel #sidebar must be position:absolute on desktop', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-1]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // [sidebar-css-2] Desktop: side-panel sidebar hidden off-screen via translateX(-100%)
+      try {
+        const hiddenOffscreen = /#Mewsie-app\.side-panel #sidebar\s*\{[^}]*transform:\s*translateX\(-100%\)/.test(desktopCss);
+        if (hiddenOffscreen) {
+          pass('CSS [sidebar-css-2]: #Mewsie-app.side-panel #sidebar has translateX(-100%) when hidden — clipped by overflow:hidden');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-2]: #Mewsie-app.side-panel #sidebar must use translateX(-100%) when hidden', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-2]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // [sidebar-css-3] Desktop: side-panel sidebar expanded with translateX(0) — right:100% pins it to border
+      try {
+        const slidesIn = /#Mewsie-app\.side-panel #sidebar\.expanded\s*\{[^}]*transform:\s*translateX\(0\)/.test(desktopCss);
+        if (slidesIn) {
+          pass('CSS [sidebar-css-3]: #Mewsie-app.side-panel #sidebar.expanded has translateX(0) — right edge at chat border');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-3]: #Mewsie-app.side-panel #sidebar.expanded must use translateX(0) on desktop', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-3]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // [sidebar-css-4] Desktop: side-panel sidebar-backdrop is position:absolute (covers chat window)
+      try {
+        const backdropAbsolute = /#Mewsie-app\.side-panel #sidebar-backdrop\s*\{[^}]*position:\s*absolute/.test(desktopCss);
+        if (backdropAbsolute) {
+          pass('CSS [sidebar-css-4]: #Mewsie-app.side-panel #sidebar-backdrop is position:absolute — covers chat window area');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-4]: #Mewsie-app.side-panel #sidebar-backdrop must be position:absolute to cover chat window', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-4]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // [sidebar-css-5] Desktop: side-panel sidebar has pointer-events:auto (clickable despite parent none)
+      try {
+        const clickable = /#Mewsie-app\.side-panel #sidebar\s*\{[^}]*pointer-events:\s*auto/.test(desktopCss);
+        if (clickable) {
+          pass('CSS [sidebar-css-5]: #Mewsie-app.side-panel #sidebar has pointer-events:auto — buttons are clickable');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-5]: #Mewsie-app.side-panel #sidebar must have pointer-events:auto', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-5]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // [sidebar-css-6] Desktop: side-panel sidebar-backdrop has pointer-events:auto (backdrop click closes sidebar)
+      try {
+        const backdropClickable = /#Mewsie-app\.side-panel #sidebar-backdrop\s*\{[^}]*pointer-events:\s*auto/.test(desktopCss);
+        if (backdropClickable) {
+          pass('CSS [sidebar-css-6]: #Mewsie-app.side-panel #sidebar-backdrop has pointer-events:auto — backdrop click works');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-6]: #Mewsie-app.side-panel #sidebar-backdrop must have pointer-events:auto', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-6]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // ── Fullscreen sidebar ────────────────────────────────────────────────
+
+      // [sidebar-css-7] Fullscreen: close (X) button is hidden — widget cannot be dismissed in full-page mode
+      try {
+        const closeHidden = /#Mewsie-app\.fullscreen \.topbar-icon-btn\.danger\s*\{[^}]*display:\s*none/.test(desktopCss);
+        if (closeHidden) {
+          pass('CSS [sidebar-css-7]: #Mewsie-app.fullscreen .topbar-icon-btn.danger has display:none — close button hidden in fullscreen');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-7]: #Mewsie-app.fullscreen .topbar-icon-btn.danger must have display:none', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-7]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // [sidebar-css-8] Fullscreen: collapsed sidebar has a fixed width (icon-only strip)
+      try {
+        const collapsedWidth = /#sidebar\s*\{[^}]*width:\s*60px/.test(desktopCss);
+        if (collapsedWidth) {
+          pass('CSS [sidebar-css-8]: #sidebar base width is 60px — collapsed icon-only strip in fullscreen');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-8]: #sidebar base width must be 60px for collapsed icon strip', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-8]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // [sidebar-css-9] Fullscreen: expanded sidebar grows to a readable width
+      try {
+        const expandedWidth = /#sidebar\.expanded\s*\{[^}]*width:\s*clamp\(/.test(desktopCss);
+        if (expandedWidth) {
+          pass('CSS [sidebar-css-9]: #sidebar.expanded uses clamp() width — readable panel in fullscreen');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-9]: #sidebar.expanded must use clamp() width for fullscreen expanded state', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-9]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // [sidebar-css-10] Mobile fullscreen: sidebar becomes a slide-in overlay (position:absolute)
+      try {
+        const mobileCssBlock = css.slice(css.indexOf('@media (max-width: 768px)'));
+        const mobileOverlay = /#Mewsie-app\.fullscreen #sidebar\s*\{[^}]*position:\s*absolute/.test(mobileCssBlock);
+        if (mobileOverlay) {
+          pass('CSS [sidebar-css-10]: fullscreen sidebar is position:absolute on mobile — slide-in overlay');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-10]: fullscreen sidebar must be position:absolute on mobile', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-10]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // [sidebar-css-11] Mobile fullscreen: expanded sidebar slides in (translateX(0))
+      try {
+        const mobileCssBlock = css.slice(css.indexOf('@media (max-width: 768px)'));
+        const mobileSlidesIn = /#Mewsie-app\.fullscreen #sidebar\.expanded\s*\{[^}]*transform:\s*translateX\(0\)/.test(mobileCssBlock);
+        if (mobileSlidesIn) {
+          pass('CSS [sidebar-css-11]: fullscreen sidebar.expanded has translateX(0) on mobile — slides in');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-11]: fullscreen sidebar.expanded must use translateX(0) on mobile', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-11]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // [sidebar-css-12] Sidebar toggle button is display:flex by default — always visible in all modes
+      try {
+        const toggleVisible = /\.sidebar-toggle-btn\s*\{[^}]*display:\s*flex/.test(desktopCss);
+        if (toggleVisible) {
+          pass('CSS [sidebar-css-12]: .sidebar-toggle-btn base style has display:flex — toggle button always visible');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-12]: .sidebar-toggle-btn base style must have display:flex', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-12]', (err as Error).message);
+        results.push({ ok: false });
+      }
+
+      // [sidebar-css-13] Mobile: .topbar-open-sidebar is display:inline-flex (covers fullscreen + side-panel on mobile)
+      try {
+        const mobileCssBlock = css.slice(css.indexOf('@media (max-width: 768px)'));
+        const mobileOpenBtn = /\.topbar-open-sidebar\s*\{[^}]*display:\s*inline-flex/.test(mobileCssBlock);
+        if (mobileOpenBtn) {
+          pass('CSS [sidebar-css-13]: .topbar-open-sidebar has display:inline-flex in mobile media query — opens sidebar on mobile');
+          results.push({ ok: true });
+        } else {
+          fail('CSS [sidebar-css-13]: .topbar-open-sidebar must have display:inline-flex in mobile media query', 'Rule not found');
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        fail('CSS [sidebar-css-13]', (err as Error).message);
+        results.push({ ok: false });
+      }
     }
+  }
+
+  // ── Help resources ────────────────────────────────────────────────────────
+  // Tests for the knowledge/help-resources/*.md files and the help-items list.
+  // We test .md files directly (fs reads) so we avoid the Vite ?raw import
+  // which is not available in the Node.js/tsx test environment.
+
+  const { readFileSync, existsSync } = await import('fs');
+
+  const EXPECTED_TOPICS = [
+    'omniboost', 'mews', 'integration', 'onboarding', 'tiers',
+    'accounting-flows', 'mapping', 'fallback', 'suspense', 'vat',
+    'ledgers', 'gateway-commission', 'troubleshooting',
+  ];
+
+  const HELP_RESOURCES_DIR = join(ROOT, 'knowledge/help-resources');
+
+  // [help-1] All expected topic .md files exist in knowledge/help-resources/
+  for (const topic of EXPECTED_TOPICS) {
+    const filename = `${topic}.md`;
+    const filePath = join(HELP_RESOURCES_DIR, filename);
+    try {
+      if (existsSync(filePath)) {
+        pass(`[help-1] knowledge/help-resources/${filename} exists`);
+        results.push({ ok: true });
+      } else {
+        fail(`[help-1] knowledge/help-resources/${filename} missing`, 'File not found');
+        results.push({ ok: false });
+      }
+    } catch (err) {
+      fail(`[help-1] ${filename} existence check`, (err as Error).message);
+      results.push({ ok: false });
+    }
+  }
+
+  // [help-2] All .md files have a non-empty title: in frontmatter
+  for (const topic of EXPECTED_TOPICS) {
+    const filePath = join(HELP_RESOURCES_DIR, `${topic}.md`);
+    try {
+      if (!existsSync(filePath)) { results.push({ ok: 'skip' }); continue; }
+      const raw = readFileSync(filePath, 'utf-8');
+      const titleMatch = raw.match(/^title:\s*(.+)$/m);
+      if (titleMatch && titleMatch[1].trim()) {
+        pass(`[help-2] ${topic}.md has non-empty title: "${titleMatch[1].trim()}"`);
+        results.push({ ok: true });
+      } else {
+        fail(`[help-2] ${topic}.md is missing a title: field in frontmatter`, 'Not found');
+        results.push({ ok: false });
+      }
+    } catch (err) {
+      fail(`[help-2] ${topic}.md title check`, (err as Error).message);
+      results.push({ ok: false });
+    }
+  }
+
+  // [help-3] All .md files have a non-empty cta_message: in frontmatter (so the CTA button sends a real question)
+  for (const topic of EXPECTED_TOPICS) {
+    const filePath = join(HELP_RESOURCES_DIR, `${topic}.md`);
+    try {
+      if (!existsSync(filePath)) { results.push({ ok: 'skip' }); continue; }
+      const raw = readFileSync(filePath, 'utf-8');
+      const msgMatch = raw.match(/^cta_message:\s*(.+)$/m);
+      if (msgMatch && msgMatch[1].trim()) {
+        pass(`[help-3] ${topic}.md has non-empty cta_message`);
+        results.push({ ok: true });
+      } else {
+        fail(`[help-3] ${topic}.md is missing cta_message: in frontmatter`, 'Required for CTA button to send a message');
+        results.push({ ok: false });
+      }
+    } catch (err) {
+      fail(`[help-3] ${topic}.md cta_message check`, (err as Error).message);
+      results.push({ ok: false });
+    }
+  }
+
+  // [help-4] No .md file contains an em-dash ( — )
+  for (const topic of EXPECTED_TOPICS) {
+    const filePath = join(HELP_RESOURCES_DIR, `${topic}.md`);
+    try {
+      if (!existsSync(filePath)) { results.push({ ok: 'skip' }); continue; }
+      const raw = readFileSync(filePath, 'utf-8');
+      if (!raw.includes(' \u2014 ')) {
+        pass(`[help-4] ${topic}.md contains no em-dashes`);
+        results.push({ ok: true });
+      } else {
+        fail(`[help-4] ${topic}.md contains em-dashes ( — ) — use plain dashes or colons instead`, 'Em-dash found');
+        results.push({ ok: false });
+      }
+    } catch (err) {
+      fail(`[help-4] ${topic}.md em-dash check`, (err as Error).message);
+      results.push({ ok: false });
+    }
+  }
+
+  // [help-5] All .md files have at least one ## section heading
+  for (const topic of EXPECTED_TOPICS) {
+    const filePath = join(HELP_RESOURCES_DIR, `${topic}.md`);
+    try {
+      if (!existsSync(filePath)) { results.push({ ok: 'skip' }); continue; }
+      const raw = readFileSync(filePath, 'utf-8');
+      if (/^## /m.test(raw)) {
+        pass(`[help-5] ${topic}.md has at least one ## section heading`);
+        results.push({ ok: true });
+      } else {
+        fail(`[help-5] ${topic}.md has no ## section headings`, 'At least one required');
+        results.push({ ok: false });
+      }
+    } catch (err) {
+      fail(`[help-5] ${topic}.md section heading check`, (err as Error).message);
+      results.push({ ok: false });
+    }
+  }
+
+  // [help-6] getHelpItems('en') returns exactly 13 items (contact removed)
+  try {
+    const { getHelpItems } = await import(`${ROOT}/frontend/src/help/help-items.ts`);
+    const items = getHelpItems('en');
+    if (items.length === 13) {
+      pass('[help-6] getHelpItems("en") returns 13 items (contact support removed)');
+      results.push({ ok: true });
+    } else {
+      fail('[help-6] getHelpItems("en") must return 13 items', `Got: ${items.length}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[help-6] getHelpItems count', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // [help-7] 'contact' is not in the en help items list
+  try {
+    const { getHelpItems } = await import(`${ROOT}/frontend/src/help/help-items.ts`);
+    const items = getHelpItems('en');
+    const hasContact = items.some((i: { topic: string }) => i.topic === 'contact');
+    if (!hasContact) {
+      pass('[help-7] "contact" topic is not in en help items — correctly removed');
+      results.push({ ok: true });
+    } else {
+      fail('[help-7] "contact" topic must not appear in help items', 'Found in list');
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[help-7] contact topic absence check', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // [help-8] All en topic keys have a corresponding .md file in knowledge/help-resources/
+  try {
+    const { getHelpItems } = await import(`${ROOT}/frontend/src/help/help-items.ts`);
+    const items = getHelpItems('en');
+    let allMatch = true;
+    const missing: string[] = [];
+    for (const item of items) {
+      const fp = join(HELP_RESOURCES_DIR, `${item.topic}.md`);
+      if (!existsSync(fp)) { allMatch = false; missing.push(item.topic); }
+    }
+    if (allMatch) {
+      pass('[help-8] every en topic key has a matching .md file in knowledge/help-resources/');
+      results.push({ ok: true });
+    } else {
+      fail('[help-8] some topic keys are missing a .md file', `Missing: ${missing.join(', ')}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[help-8] topic-to-file mapping check', (err as Error).message);
+    results.push({ ok: false });
   }
 }
