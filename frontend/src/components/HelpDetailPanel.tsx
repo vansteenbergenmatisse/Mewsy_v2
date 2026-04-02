@@ -45,7 +45,7 @@ export function HelpDetailPanel({ show, topic, onBack, onCloseAll, onAskMewsie }
               <div className="help-detail-cta">
                 <h3>{content.cta.title}</h3>
                 <p>{content.cta.text}</p>
-                <button onClick={() => { onAskMewsie(content.cta.message); }}>{content.cta.button}</button>
+                <button onClick={() => { onAskMewsie(content.cta!.message); }}>{content.cta.button}</button>
               </div>
             )}
           </>

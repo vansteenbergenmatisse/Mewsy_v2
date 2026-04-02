@@ -8,6 +8,7 @@
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { spawnSync } from 'child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '../..');
@@ -1604,6 +1605,28 @@ export async function checkFrontend({ pass, fail, skip: _skip, results }: Report
     }
   } catch (err) {
     fail('[help-8] topic-to-file mapping check', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // ── [build-1] Frontend TypeScript build ────────────────────────────────────
+  // Runs `tsc -b` inside frontend/ to catch type errors (like TS18048) before
+  // they block `npm run build:frontend`. This is the earliest possible catch.
+  try {
+    const result = spawnSync('npx', ['tsc', '-b', '--noEmit'], {
+      cwd: join(ROOT, 'frontend'),
+      encoding: 'utf-8',
+      timeout: 30_000,
+    });
+    if (result.status === 0) {
+      pass('[build-1] frontend TypeScript compiles without errors');
+      results.push({ ok: true });
+    } else {
+      const output = (result.stdout || '') + (result.stderr || '');
+      fail('[build-1] frontend TypeScript compile failed', output.trim());
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[build-1] frontend TypeScript compile check', (err as Error).message);
     results.push({ ok: false });
   }
 }
