@@ -93,6 +93,24 @@ async function checkConfigSanity({ pass, fail, results }: Reporter): Promise<voi
       results.push({ ok: false });
     }
   }
+
+  // [cache-static] Sonnet: buildSystemPrompt() Block 1 must declare cache_control: ephemeral
+  // No API key needed — this just inspects the return value of the function.
+  try {
+    const { buildSystemPrompt: bsp } = await import(`${ROOT}/backend/pipeline/claude.ts`);
+    const blocks = bsp() as Array<{ type: string; cache_control?: { type: string } }>;
+    const cacheType = blocks[0]?.cache_control?.type;
+    if (cacheType === 'ephemeral') {
+      pass('[cache] Sonnet: buildSystemPrompt() Block 1 has cache_control: ephemeral');
+      results.push({ ok: true });
+    } else {
+      fail('[cache] Sonnet: buildSystemPrompt() Block 1 cache_control', `Got: ${String(cacheType)}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[cache] Sonnet: buildSystemPrompt cache_control check', (err as Error).message);
+    results.push({ ok: false });
+  }
 }
 
 // ── BASIC_MODE and language injection (requires API key) ─────────────────────
@@ -153,6 +171,43 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
     }
   } catch (err) {
     fail('multi-turn context test', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // [cache-dynamic] Sonnet: two consecutive calls with same cached system prompt
+  // must show cache_creation_input_tokens > 0 on the first call and/or
+  // cache_read_input_tokens > 0 on the second call.
+  try {
+    await new Promise(r => setTimeout(r, 1500));
+    const claudeMod = await import(`${ROOT}/backend/pipeline/claude.ts`);
+    const systemMod = await import(`${ROOT}/prompts/system.ts`);
+    const clt = claudeMod.clientWithCaching;
+    const model = claudeMod.ANSWER_MODEL;
+    const sysText = systemMod.baseSystemPrompt as string;
+    // @ts-ignore — cache_control accepted at runtime, not yet in SDK types
+    const sysBlocks = [{ type: 'text', text: sysText, cache_control: { type: 'ephemeral' } }];
+    const msgs = [{ role: 'user' as const, content: 'ping' }];
+
+    // @ts-ignore
+    const r1 = await clt.messages.create({ model, max_tokens: 5, system: sysBlocks, messages: msgs });
+    const usage1 = r1.usage as Record<string, number>;
+    const created = usage1.cache_creation_input_tokens ?? 0;
+
+    await new Promise(r => setTimeout(r, 600));
+    // @ts-ignore
+    const r2 = await clt.messages.create({ model, max_tokens: 5, system: sysBlocks, messages: msgs });
+    const usage2 = r2.usage as Record<string, number>;
+    const readFromCache = usage2.cache_read_input_tokens ?? 0;
+
+    if (created > 0 || readFromCache > 0) {
+      pass(`[cache] Sonnet: prompt caching active (created=${created}, read=${readFromCache})`);
+      results.push({ ok: true });
+    } else {
+      fail('[cache] Sonnet: prompt caching active', `cache_creation=${created}, cache_read=${readFromCache}`);
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('[cache] Sonnet: prompt caching dynamic check', (err as Error).message);
     results.push({ ok: false });
   }
 }

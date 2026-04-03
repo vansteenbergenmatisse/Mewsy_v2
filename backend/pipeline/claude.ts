@@ -46,27 +46,27 @@ import { getHistory, addToHistory } from './session.ts';
 import {
   ROUTER_MAX_DOCS,
 } from '../config/Mewsie.config.ts';
+import { callHaiku } from '../utils/haiku.ts';
+import type { ManifestCategory } from '../types/manifest.ts';
 
 // The beta header is required by Anthropic to enable prompt caching.
 // maxRetries: 4 — handles transient 529 overload errors with exponential backoff.
-const clientWithCaching = new Anthropic({
+// Exported so tests can call it directly to inspect usage.cache_read_input_tokens.
+export const clientWithCaching = new Anthropic({
   apiKey: ANTHROPIC_API_KEY,
   defaultHeaders: { 'anthropic-beta': 'prompt-caching-2024-07-31' },
   maxRetries: 4,
 });
-
-// Separate client with no caching headers, used by selectRelevantFiles().
-const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY, maxRetries: 4 });
 
 // Matches the sentinel values set in agent.ts.
 const BASIC_MODE = '__BASIC_MODE__';
 const CLARIFY_MODE_PREFIX = '__CLARIFY_MODE__';
 
 // Routing uses Haiku — fast, cheap, deterministic classification task.
-const ROUTING_MODEL = 'claude-haiku-4-5-20251001';
+export const ROUTING_MODEL = 'claude-haiku-4-5-20251001';
 
 // Answering uses Sonnet — needs to reason from documentation and respond conversationally.
-const ANSWER_MODEL = 'claude-sonnet-4-6';
+export const ANSWER_MODEL = 'claude-sonnet-4-6';
 
 // Maximum number of tokens Claude is allowed to use in its reply
 const MAX_TOKENS = 2048;
@@ -189,15 +189,83 @@ export async function chat(
   return reply;
 }
 
+// ── Stage 1: Category router ───────────────────────────────────────────────────
+
+/**
+ * Asks Haiku which categories (folders) are relevant to the user's question.
+ * Returns an array of matched category IDs (0, 1, or 2 entries).
+ * Returns empty array on any error — agent.ts falls back to full search or BASIC_MODE.
+ */
+export async function selectRelevantCategories(
+  userMessage: string,
+  categories: ManifestCategory[]
+): Promise<string[]> {
+  if (categories.length === 0) return [];
+
+  const categoryList = categories
+    .map((c, i) => `${i}: ${c.label}${c.description ? `\n   ${c.description}` : ''}`)
+    .join('\n\n');
+
+  const prompt = `You are a knowledge base router. Given a user's question and a list of knowledge base categories, decide which categories contain relevant information.
+
+Categories:
+${categoryList}
+
+User question: "${userMessage}"
+
+Rules:
+- Return only categories that are clearly relevant to the question
+- If the question spans multiple categories, return all of them
+- If nothing matches, return an empty array
+- Do NOT return more than 3 categories
+- Do NOT guess — if you are unsure, return fewer categories, not more
+
+Return a JSON object with exactly these fields:
+{"matches": [<array of category index numbers — can be empty>], "confidence": <0.0 to 1.0>}
+
+Return ONLY valid JSON. No markdown. No explanation.`;
+
+  try {
+    const response = await callHaiku(prompt);
+    console.log(`[Stage 1] Haiku raw: ${response.slice(0, 200)}`);
+    const cleaned = response.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    const parsed = JSON.parse(cleaned) as { matches?: unknown; confidence?: unknown };
+    const matches: number[] = Array.isArray(parsed.matches) ? parsed.matches as number[] : [];
+    const matchedIds = matches
+      .filter((i): i is number => typeof i === 'number' && i >= 0 && i < categories.length)
+      .map(i => categories[i].id);
+    const conf = typeof parsed.confidence === 'number' ? parsed.confidence.toFixed(2) : '?';
+    console.log(`[Stage 1] → categories: [${matchedIds.join(', ') || 'none'}] (conf: ${conf})`);
+    return matchedIds;
+  } catch (error) {
+    console.error('[Stage 1] Category routing failed, falling back:', error);
+    return [];
+  }
+}
+
 // ── Routing function ───────────────────────────────────────────────────────────
 
-// Page object shape used by the router
+// Page object shape used by the router.
+// Accepts both `label` (from ManifestPage in agent.ts) and `title` (from ManifestFile directly).
 interface Page {
   id: string;
-  label: string;
+  label?: string;   // set by flattenManifest() from file.title
+  title?: string;   // raw ManifestFile field — accepted for test convenience
   description: string;
   keywords?: string[];
+  trigger_questions?: string[];
   path: string;
+}
+
+// Formats a single manifest entry for the Haiku routing list.
+// Exported so it can be unit-tested in isolation.
+export function formatManifestEntry(page: Page, index: number): string {
+  const name = page.label ?? page.title ?? page.id;
+  const kwLine = page.keywords?.length ? `\n   Keywords: ${page.keywords.join(', ')}` : '';
+  const questions = page.trigger_questions && page.trigger_questions.length > 0
+    ? `\n   Questions: ${page.trigger_questions.join(' | ')}`
+    : '';
+  return `${index}: ${name}\n   ${page.description}${kwLine}${questions}`;
 }
 
 // History entry shape
@@ -220,12 +288,9 @@ export async function selectRelevantFiles(
   if (pages.length === 0) return { indices: [], confidence: 0.0 };
 
   // Build a numbered list of documents for Claude to choose from.
-  // Include keywords alongside description for stronger routing signal.
+  // Include keywords and trigger_questions for stronger routing signal.
   const list = pages
-    .map((p, i) => {
-      const kwLine = p.keywords?.length ? `\n   Keywords: ${p.keywords.join(', ')}` : '';
-      return `${i}: ${p.label}\n   ${p.description}${kwLine}`;
-    })
+    .map((p, i) => formatManifestEntry(p, i))
     .join('\n\n');
 
   // Build the user prompt — include recent conversation history when provided.
@@ -242,24 +307,33 @@ export async function selectRelevantFiles(
   userPromptContent += `\n\nAvailable documents:\n${list}`;
 
   try {
-    const response = await client.messages.create({
+    const response = await clientWithCaching.messages.create({
       model: ROUTING_MODEL,
       max_tokens: 60,
       temperature: 0,
-      system: `You are a document routing agent. Your only job is to select the most relevant documents from the list provided.
+      // Static system prompt marked for caching — identical on every call so it
+      // can be served from the prompt cache after the first request.
+      system: [{
+        type: 'text',
+        text: `You are a document routing agent. Your only job is to select relevant documents from the list provided.
 
 Return ONLY a JSON object in this exact format: {"docs": [index numbers], "confidence": 0.0-1.0}
 - docs: array of integer indices from the document list (0-based)
 - confidence: float from 0.0 to 1.0 representing how confident you are these documents answer the question
-- Return 1 document when the question clearly maps to a single specific topic
-- Return ALL matching documents (up to ${ROUTER_MAX_DOCS}) when the query is vague or ambiguous between several similar options (e.g. "I want to onboard" when there are guides for 12 different accounting systems — return all of them, confidence ≤ 0.60)
-- Return multiple documents when the question genuinely spans different topics
+- Return ALL documents that are relevant to answering this question — not just the most relevant one
+- If the question spans multiple topics, return all matching documents
+- Return up to ${ROUTER_MAX_DOCS} matches. Do not return a document if its individual confidence would be below 0.65
 - Return {"docs": [], "confidence": 0.0} if no documents are relevant
 - NEVER return explanations, NEVER return document names, ONLY return the JSON object`,
+        // reason: cache_control is accepted at runtime but not yet in SDK types
+        // @ts-ignore
+        cache_control: { type: 'ephemeral' },
+      }],
       messages: [{ role: 'user', content: userPromptContent }],
     });
 
     const raw = response.content?.[0]?.type === 'text' ? response.content[0].text.trim() : '';
+    console.log(`[Stage 2] Haiku raw: ${raw.slice(0, 200)}`);
 
     // Strip markdown code fences if Claude wrapped the JSON (e.g. ```json ... ```)
     const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
@@ -272,6 +346,8 @@ Return ONLY a JSON object in this exact format: {"docs": [index numbers], "confi
       const confidence = typeof parsed.confidence === 'number'
         ? Math.max(0, Math.min(1, parsed.confidence))
         : 0.0;
+      const selectedLabels = indices.map(i => `${pages[i]?.label ?? pages[i]?.title ?? pages[i]?.id ?? i}`);
+      console.log(`[Stage 2] → docs: [${selectedLabels.join(', ') || 'none'}] (conf: ${confidence.toFixed(2)})`);
       return { indices, confidence };
     } catch (parseErr) {
       console.error(`[claude] selectRelevantFiles JSON parse failed: ${(parseErr as Error).message} — raw: ${raw}`);

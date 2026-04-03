@@ -29,7 +29,8 @@ interface RoutingTest {
   description: string;
 }
 
-interface ManifestPage {
+interface ManifestFile {
+  id: string;
   title?: string;
   description?: string;
   path: string;
@@ -37,7 +38,7 @@ interface ManifestPage {
 }
 
 interface Manifest {
-  pages?: Record<string, ManifestPage>;
+  files?: ManifestFile[];
 }
 
 // Each test case: query → at least one of expectedDocIds must be in the result
@@ -81,12 +82,12 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
   let pages: { id: string; label: string; description: string; keywords: string[]; path: string }[];
   try {
     const manifest = JSON.parse(readFileSync(join(ROOT, 'knowledge', 'knowledge-manifest.json'), 'utf8')) as Manifest;
-    pages = Object.entries(manifest.pages ?? {}).map(([key, page]) => ({
-      id:          key,
-      label:       page.title ?? key,
-      description: page.description ?? '',
-      keywords:    page.keywords ?? [],
-      path:        page.path,
+    pages = (manifest.files ?? []).map(file => ({
+      id:          file.id,
+      label:       file.title ?? file.id,
+      description: file.description ?? '',
+      keywords:    file.keywords ?? [],
+      path:        file.path,
     }));
   } catch (err) {
     fail('load manifest for routing tests', (err as Error).message);

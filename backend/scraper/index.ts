@@ -20,6 +20,7 @@ import { scrapeStaticSplit } from './scrapers/static-split.ts';
 import { scrapeMulti } from './scrapers/multi.ts';
 import { scrapeConfluence } from './scrapers/confluence.ts';
 import { getScraperEntries, deleteEntry } from './pipeline/manifest.ts';
+import { enrichManifest } from './pipeline/enrich.ts';
 import { logger } from './utils/logger.ts';
 
 const forceSync = process.argv.includes('--force-sync');
@@ -185,6 +186,14 @@ async function runSync(type: 'website' | 'confluence'): Promise<void> {
     // are cleaned up regardless of whether the scrape step succeeded.
     runDeletionCheck(sources);
     logger.info(`Sync complete: ${type}`);
+
+    // Enrich manifest metadata (sections, trigger_questions, category descriptions).
+    // Runs after every sync so new files are enriched immediately.
+    try {
+      await enrichManifest();
+    } catch (err) {
+      logger.warn(`Manifest enrichment failed: ${(err as Error).message}`);
+    }
   }
 }
 

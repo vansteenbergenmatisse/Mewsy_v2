@@ -56,6 +56,9 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
     const body = await c.req.json<{ chatInput?: unknown; sessionId?: unknown }>();
     const { chatInput, sessionId } = body;
 
+    console.log(`\n${'─'.repeat(60)}`);
+    console.log(`[REQUEST] session=${String(sessionId ?? '?').slice(0, 12)} | "${String(chatInput ?? '').slice(0, 80)}"`);
+
     // Validate that both required fields are present and are strings
     if (!chatInput || typeof chatInput !== 'string') {
       return c.json({ output: 'chatInput is required.' }, 400);
