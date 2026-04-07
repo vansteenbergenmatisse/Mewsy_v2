@@ -54,6 +54,72 @@ export async function checkSession({ pass, fail, skip: _skip, results }: Reporte
     results.push({ ok: false });
   }
 
+  if (Array.isArray(session.context?.clarificationBundles) && session.context.clarificationBundles.length === 0) {
+    pass('new session has empty clarificationBundles array');
+    results.push({ ok: true });
+  } else {
+    fail('new session clarificationBundles', `Got: ${JSON.stringify(session?.context?.clarificationBundles)}`);
+    results.push({ ok: false });
+  }
+
+  if (session.context.originalQuestion === null || session.context.originalQuestion === undefined) {
+    pass('new session has null originalQuestion');
+    results.push({ ok: true });
+  } else {
+    fail('new session has null originalQuestion', `Got: ${session.context.originalQuestion}`);
+    results.push({ ok: false });
+  }
+
+  if (Array.isArray(session.context?.qaLog) && session.context.qaLog.length === 0) {
+    pass('new session has empty qaLog array');
+    results.push({ ok: true });
+  } else {
+    fail('new session qaLog', `Got: ${JSON.stringify((session?.context as Record<string, unknown>)?.qaLog)}`);
+    results.push({ ok: false });
+  }
+
+  const ctx0 = session.context as unknown as Record<string, unknown>;
+
+  if (ctx0.postAnswerMode === false) {
+    pass('new session has postAnswerMode === false');
+    results.push({ ok: true });
+  } else {
+    fail('new session postAnswerMode', `Got: ${JSON.stringify(ctx0.postAnswerMode)}`);
+    results.push({ ok: false });
+  }
+
+  if (ctx0.postAnswerSignal === null) {
+    pass('new session has postAnswerSignal === null');
+    results.push({ ok: true });
+  } else {
+    fail('new session postAnswerSignal', `Got: ${JSON.stringify(ctx0.postAnswerSignal)}`);
+    results.push({ ok: false });
+  }
+
+  if (ctx0.answerContract === null) {
+    pass('new session has answerContract === null');
+    results.push({ ok: true });
+  } else {
+    fail('new session answerContract', `Got: ${JSON.stringify(ctx0.answerContract)}`);
+    results.push({ ok: false });
+  }
+
+  if (Array.isArray(ctx0.qaLogSnapshot) && (ctx0.qaLogSnapshot as unknown[]).length === 0) {
+    pass('new session has empty qaLogSnapshot array');
+    results.push({ ok: true });
+  } else {
+    fail('new session qaLogSnapshot', `Got: ${JSON.stringify(ctx0.qaLogSnapshot)}`);
+    results.push({ ok: false });
+  }
+
+  if (ctx0.postAnswerClarifyUsed === false) {
+    pass('new session has postAnswerClarifyUsed === false');
+    results.push({ ok: true });
+  } else {
+    fail('new session postAnswerClarifyUsed', `Got: ${JSON.stringify(ctx0.postAnswerClarifyUsed)}`);
+    results.push({ ok: false });
+  }
+
   // ── History add and retrieve ───────────────────────────────────────────────
   addToHistory(id, 'user', 'hello');
   addToHistory(id, 'assistant', 'hi there');

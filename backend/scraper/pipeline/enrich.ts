@@ -3,16 +3,13 @@
  *
  * LLM-powered manifest enrichment — called at the end of every sync run.
  *
- * Three enrichment passes (in order, cheapest first):
+ * Two enrichment passes (in order, cheapest first):
  *
- *   1. Sections  (no API) — re-parse every file's ## headings from disk.
- *      Always runs. Keeps sections in sync with the current markdown content.
- *
- *   2. Trigger questions  (Haiku) — generate 5 natural user questions per file.
+ *   1. Trigger questions  (Haiku) — generate 5 natural user questions per file.
  *      Only runs for files whose trigger_questions array is empty.
  *      Preserves any manually written questions.
  *
- *   3. Category descriptions  (Haiku) — write a 10-15 word description of each
+ *   2. Category descriptions  (Haiku) — write a 10-15 word description of each
  *      category based on the titles and descriptions of its files.
  *      Only runs for categories whose description field is empty.
  *      Preserves any manually written descriptions.
@@ -21,7 +18,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { callHaiku } from '../../utils/haiku.ts';
-import { readManifest, writeManifest, enrichSections } from './manifest.ts';
+import { readManifest, writeManifest } from './manifest.ts';
 import type { ManifestCategory, ManifestFile } from '../../types/manifest.ts';
 
 // ── Trigger questions ─────────────────────────────────────────────────────────
@@ -99,13 +96,7 @@ export async function enrichManifest(): Promise<void> {
   const manifest = readManifest();
   let changed = false;
 
-  // Pass 1: sections — always refresh from disk (no API, cheap, deterministic)
-  if (enrichSections(manifest)) {
-    changed = true;
-    console.log('[enrich] sections refreshed');
-  }
-
-  // Pass 2: trigger_questions — only for files with empty arrays
+  // Pass 1: trigger_questions — only for files with empty arrays
   const needsQuestions = manifest.files.filter(f => f.trigger_questions.length === 0);
   if (needsQuestions.length > 0) {
     console.log(`[enrich] generating trigger_questions for ${needsQuestions.length} file(s)...`);
@@ -122,7 +113,7 @@ export async function enrichManifest(): Promise<void> {
     }
   }
 
-  // Pass 3: category descriptions — only for categories with empty description
+  // Pass 2: category descriptions — only for categories with empty description
   const needsDesc = manifest.categories.filter(c => !c.description.trim());
   if (needsDesc.length > 0) {
     console.log(`[enrich] generating descriptions for ${needsDesc.length} category/categories...`);

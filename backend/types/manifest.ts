@@ -1,11 +1,5 @@
 // Shared manifest types used by agent.ts, scraper, and tests.
 
-export interface ManifestSection {
-  id: string;         // slug: "gl-mapping-steps"
-  heading: string;    // original text: "GL mapping steps"
-  line_start: number; // 1-indexed line number of the ## heading
-}
-
 export interface ManifestFile {
   id: string;
   title: string;
@@ -13,7 +7,10 @@ export interface ManifestFile {
   description: string;          // max 15 words, noun phrases
   keywords: string[];           // 5–8 unique discriminating terms
   trigger_questions: string[];  // exactly 4 phrasings
-  sections: ManifestSection[];  // empty array if no ## headings
+  // User-language phrases checked in Stage 1 alongside keywords.
+  // Written from the user's perspective (e.g. "won't sync", "books not matching").
+  // Generated at doc-authoring time, not at runtime. Leave empty [] if not yet populated.
+  synonyms?: string[];
   path: string;
   source_url?: string;
   source_type?: string;

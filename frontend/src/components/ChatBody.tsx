@@ -7,12 +7,14 @@ import {
   sortButtonOptions,
 } from '../utils/chat-utils';
 import { uiStr } from '../config/chat-config';
+import { ClarifyCards } from './ClarifyCards';
+import type { ClarifyQuestion } from './ClarifyCards';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'bot' | 'welcome' | 'thinking' | 'option-buttons';
+  role: 'user' | 'bot' | 'welcome' | 'thinking' | 'option-buttons' | 'clarify-cards';
   text: string;
   msgId?: string;
   isNewGroup?: boolean;
@@ -21,6 +23,7 @@ export interface ChatMessage {
   skipBody?: boolean;
   disabled?: boolean;
   clarifying?: boolean;
+  clarifyQuestions?: ClarifyQuestion[];  // for clarify-cards role
 }
 
 // ── Bot avatar ────────────────────────────────────────────────────────────────
@@ -234,6 +237,7 @@ interface ChatBodyProps {
   inputRef: React.RefObject<HTMLTextAreaElement>;
   onSendOptionMessage: (label: string, question: string | null) => void;
   onAddOptionButtons: (options: string[], questionText: string | null, msgId: string) => void;
+  onSendClarifyAnswers: (formatted: string, summary: { q: string; a: string }[]) => void;
 }
 
 export function ChatBody({
@@ -245,6 +249,7 @@ export function ChatBody({
   inputRef,
   onSendOptionMessage,
   onAddOptionButtons,
+  onSendClarifyAnswers,
 }: ChatBodyProps) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const [showScrollBtn, setShowScrollBtn] = React.useState(false);
@@ -314,6 +319,18 @@ export function ChatBody({
               disabled={msg.disabled ?? isRequestInProgress}
               onSelect={onSendOptionMessage}
               onFocusInput={focusInput}
+            />
+          );
+        }
+
+        if (msg.role === 'clarify-cards') {
+          return (
+            <ClarifyCards
+              key={msg.id}
+              questions={msg.clarifyQuestions ?? []}
+              msgId={msg.msgId ?? msg.id}
+              disabled={msg.disabled ?? isRequestInProgress}
+              onComplete={onSendClarifyAnswers}
             />
           );
         }

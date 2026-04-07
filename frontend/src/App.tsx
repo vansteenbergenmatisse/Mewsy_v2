@@ -79,6 +79,9 @@ export default function App() {
   // ── Unread badge ───────────────────────────────────────────────────────────
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // ── Pending clarify question (set when [BUTTONS:] is shown, cleared on any send) ──
+  const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
+
   // ── Help panels ────────────────────────────────────────────────────────────
   const [showHelp, setShowHelp] = useState(false);
   const [showHelpDetail, setShowHelpDetail] = useState(false);
@@ -218,6 +221,7 @@ export default function App() {
       } as ChatMessage,
     ]);
     setInputPlaceholder(uiStr('typeOwn', selectedLanguage));
+    if (questionText) setPendingQuestion(questionText);
   }
 
   const handleAddOptionButtons = useCallback((
@@ -252,6 +256,28 @@ export default function App() {
         removeThinking();
         setIsRequestInProgress(false);
         const reply = data.output || "I didn't catch that — could you rephrase?";
+
+        // Detect clarify_questions JSON from the backend
+        try {
+          const parsed = JSON.parse(reply) as { __type?: string; questions?: { text: string; options: string[] }[] };
+          if (parsed.__type === 'clarify_questions' && Array.isArray(parsed.questions)) {
+            const id = makeMsgId();
+            setMessages(prev => [
+              ...prev,
+              {
+                id: makeId(),
+                role: 'clarify-cards' as const,
+                text: '',
+                msgId: id,
+                clarifyQuestions: parsed.questions,
+              },
+            ]);
+            return;
+          }
+        } catch {
+          // Not JSON — fall through to regular message handling
+        }
+
         const id = makeMsgId();
         addBotMessage(reply, id);
       })
@@ -285,13 +311,17 @@ export default function App() {
       prev.map(m => m.role === 'option-buttons' ? { ...m, disabled: true } : m)
     );
 
+    // If a [BUTTONS:] question is pending, treat the typed text as the answer
+    const contextToSend = pendingQuestion ? `${pendingQuestion} → ${trimmed}` : trimmed;
+    setPendingQuestion(null);
+
     addUserMessage(trimmed);
     setInputValue('');
     setAttachedFiles([]);
     setInputPlaceholder(uiStr('typeMsg', selectedLanguage));
     setIsRequestInProgress(true);
     showThinking(selectedLanguage);
-    sendToServer(trimmed);
+    sendToServer(contextToSend);
   }, [isRequestInProgress, selectedLanguage, showThinking, sendToServer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSend = useCallback(() => {
@@ -308,6 +338,7 @@ export default function App() {
 
   const handleSendOptionMessage = useCallback((label: string, question: string | null) => {
     const contextMessage = question ? `${question} → ${label}` : label;
+    setPendingQuestion(null);
     setHeroActive(false);
     addUserMessage(label);
     setInputValue('');
@@ -315,6 +346,29 @@ export default function App() {
     setIsRequestInProgress(true);
     showThinking(selectedLanguage);
     sendToServer(contextMessage);
+  }, [selectedLanguage, showThinking, sendToServer]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Clarify card completion ────────────────────────────────────────────────
+  // Called when the user has answered (or skipped) all clarifying questions.
+  // Shows the Q&A summary as a user bubble, then sends the formatted string to the backend.
+
+  const handleSendClarifyAnswers = useCallback((formatted: string, summary: { q: string; a: string }[]) => {
+    // Disable all clarify-card messages
+    setMessages(prev => prev.map(m => m.role === 'clarify-cards' ? { ...m, disabled: true } : m));
+
+    // Show a compact user bubble with the Q&A summary
+    const summaryText = summary
+      .filter(p => p.a !== '(skipped)')
+      .map(p => `${p.q} → ${p.a}`)
+      .join('\n');
+    if (summaryText) {
+      setMessages(prev => [...prev, { id: makeId(), role: 'user', text: summaryText }]);
+    }
+
+    setInputPlaceholder(uiStr('typeMsg', selectedLanguage));
+    setIsRequestInProgress(true);
+    showThinking(selectedLanguage);
+    sendToServer(formatted);
   }, [selectedLanguage, showThinking, sendToServer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Language change ────────────────────────────────────────────────────────
@@ -351,6 +405,7 @@ export default function App() {
     setMessages([]);
     setHeroActive(true);
     setInputValue('');
+    setPendingQuestion(null);
     setInputPlaceholder(uiStr('askMewsie', selectedLanguage));
     setAttachedFiles([]);
     setIsRequestInProgress(false);
@@ -441,6 +496,7 @@ export default function App() {
         onQuickAction={handleQuickAction}
         onSendOptionMessage={handleSendOptionMessage}
         onAddOptionButtons={handleAddOptionButtons}
+        onSendClarifyAnswers={handleSendClarifyAnswers}
         onAttachFile={handleAttachFile}
         onRemoveFile={handleRemoveFile}
       />

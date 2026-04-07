@@ -831,6 +831,90 @@ body {
 .bot-option-something-else { color: var(--Mewsie-text-muted); }
 .bot-option-something-else:hover:not(:disabled) { color: var(--Mewsie-blue); }
 
+/* ── ClarifyCards free-text input (Something else → type answer) ──────────── */
+.clarify-free-text { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-top: none; background: var(--surface); }
+.clarify-free-text-input { flex: 1; border: none; outline: none; background: transparent; font-size: 14px; color: var(--text); }
+.clarify-free-text-input::placeholder { color: var(--text-muted); }
+.clarify-free-text-submit { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: none; background: var(--primary); border-radius: 6px; cursor: pointer; color: white; }
+.clarify-free-text-submit:disabled { opacity: 0.4; cursor: default; }
+.clarify-free-text-submit svg { width: 14px; height: 14px; }
+
+/* ── Clarify card carousel ───────────────────────────────────────────────── */
+.clarify-card-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0 6px 40px; /* left-aligns with bot message bubbles */
+  animation: fadeInUp .2s ease;
+}
+.clarify-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px 10px;
+  background: var(--Mewsie-bg-message, var(--Mewsie-bg));
+  border: 1px solid var(--Mewsie-border);
+  border-radius: 12px 12px 0 0;
+}
+.clarify-card-question {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--Mewsie-text);
+  line-height: 1.4;
+  flex: 1;
+}
+.clarify-card-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.clarify-card-counter {
+  font-size: 12px;
+  color: var(--Mewsie-text-muted);
+  white-space: nowrap;
+}
+.clarify-card-skip {
+  font-size: 12px;
+  color: var(--Mewsie-text-muted);
+  background: none;
+  border: 1px solid var(--Mewsie-border);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: color var(--Mewsie-transition), border-color var(--Mewsie-transition);
+}
+.clarify-card-skip:hover { color: var(--Mewsie-blue); border-color: var(--Mewsie-blue); }
+.clarify-card-close {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--Mewsie-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  transition: color var(--Mewsie-transition);
+}
+.clarify-card-close:hover { color: var(--Mewsie-text); }
+.clarify-card-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--Mewsie-border);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+}
+/* Remove individual borders from option buttons inside the card — the card has its own */
+.clarify-card-options .clarify-option-btn {
+  border: none;
+  border-top: 1px solid var(--Mewsie-border);
+  border-radius: 0;
+  margin: 0;
+}
+.clarify-card-options .clarify-option-btn:first-child { border-top: none; }
+
 /* ── Bot text formatting ─────────────────────────────────────────────────── */
 .bot-text { display: flex; flex-direction: column; width: 100%; overflow-wrap: break-word; word-break: break-word; font-size: 16px; }
 .bot-text h1 { font-size: 22px; font-weight: 700; color: var(--Mewsie-text); margin: 6px 0 8px; line-height: 1.25; }

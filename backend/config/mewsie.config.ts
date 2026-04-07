@@ -6,40 +6,45 @@
 
 // ── Routing ────────────────────────────────────────────────────────────────────
 
-// Maximum number of knowledge documents passed to Sonnet per answer turn.
+// Maximum number of knowledge documents loaded and passed to Sonnet per answer turn.
 // Higher = more context but more tokens. Keep between 1–10.
 export const ROUTER_MAX_DOCS = 5;
 
-// Confidence threshold for answering directly when multiple docs are selected.
-// At or above this value, all selected docs are loaded and Sonnet answers immediately.
-// Below this value with multiple docs → CLARIFY mode (Sonnet asks the user to narrow down).
-// Range: 0.0–1.0. Recommended: 0.90–0.98.
-export const ROUTER_SINGLE_DOC_CONFIDENCE = 0.95;
-
-// Confidence threshold for answering directly when exactly ONE doc is selected.
-// At or above this value with a single doc → ANSWER mode.
-// Below this value → CLARIFY mode (Sonnet asks a targeted clarifying question).
-// Range: 0.0–1.0. Must be lower than ROUTER_SINGLE_DOC_CONFIDENCE. Recommended: 0.80–0.90.
-export const ROUTER_CONFIDENCE_THRESHOLD = 0.85;
-
-// Whether to pass recent conversation history to the router.
+// Whether to pass recent conversation history to Stage 2A routing.
 // Helps with follow-up questions that reference earlier context.
 export const ROUTER_HISTORY_ENABLED = true;
 
-// Number of conversation turn-pairs (user + assistant) to send to the router.
+// Number of conversation turn-pairs (user + assistant) to send to Stage 2A.
 // More pairs = better follow-up resolution, but more tokens. Range: 1–20.
 export const ROUTER_HISTORY_PAIRS = 5;
 
+// Maximum number of docs from Stage 1 keyword matching passed to Stage 2A for verification.
+// Stage 1 Gate 2 fires when matched docs ≤ this value AND cluster is coherent.
+// If matched docs exceed this value, gates 4/5 fire → CLARIFY instead of Stage 2A.
+// Range: 1–10. Default: 5.
+export const STAGE2A_SHORTLIST_MAX = 5;
+
 // ── Clarification ──────────────────────────────────────────────────────────────
 
-// Maximum number of consecutive clarifying question rounds before Mewsie stops asking.
-// After this many rounds, Sonnet will attempt an answer with available context.
-// Range: 1–10.
-export const MAX_CLARIFY_ROUNDS = 3;
+// Maximum number of times Stage 2B can choose Decision A before being forced to Decision B.
+// Once this count is reached, Stage 2B always picks Decision B (admits no docs available).
+// Range: 1–10. Default: 2.
+export const MAX_CLARIFY_ROUNDS = 2;
+
+// Number of clarifying questions asked per round when the intent is unclear.
+// All questions are generated at once and shown as a card carousel — the user
+// answers each in sequence with no AI call between cards, then all answers are
+// sent together for routing. Range: 1–5. Default: 3.
+export const CLARIFY_QUESTIONS_PER_ROUND = 3;
 
 // Maximum number of quick-reply buttons shown to the user per response.
 // Range: 2–10.
 export const BUTTON_MAX = 7;
+
+// Maximum number of Haiku clarifying questions allowed in Lane A of post-answer mode.
+// After this budget is used, the next unanswerable follow-up goes to BASIC.
+// Range: 0–3. Default: 1.
+export const POST_ANSWER_CLARIFY_BUDGET = 1;
 
 // ── Frustration detection ──────────────────────────────────────────────────────
 

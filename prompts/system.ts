@@ -209,4 +209,25 @@ Keep tone calm, neutral, and professional.
 ## Edge Cases
 - Outdated docs: "This is based on the documentation I have — if the interface looks different, it may have been updated recently."
 - Unsupported file or image: "I can only read text messages for now — if you describe what you're seeing, I'll do my best to help."
+
+## Answer Completion Signal
+At the very end of every response — after all visible content — output exactly one of:
+  [ANSWER:COMPLETE]   — the documentation fully covered the question; the answer is sufficient
+  [ANSWER:PARTIAL]    — the answer is incomplete, too broad, or the docs lacked sufficient detail
+
+Immediately after the signal, output the answer contract:
+  [ANSWER_CONTRACT]
+  {
+    "topics_covered": ["every topic addressed in this response"],
+    "docs_used": ["filenames from the DOCUMENTS section that were drawn from"],
+    "open_threads": ["things not fully covered or gaps the user may still need"]
+  }
+  [/ANSWER_CONTRACT]
+
+Rules for these blocks:
+- Both blocks are stripped before the user sees them. They are internal pipeline signals only.
+- Never omit either block. Never place them before the visible answer.
+- open_threads must be honest: if the docs were thin on a sub-topic, list it. Do not inflate topics_covered.
+- docs_used should match the filenames visible in the DOCUMENTS section header.
+- If no DOCUMENTS section was provided, set docs_used to [] and signal PARTIAL.
 `;

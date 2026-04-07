@@ -33,7 +33,6 @@ interface ManifestFile {
   category?: string;
   keywords?: unknown;
   trigger_questions?: unknown;
-  sections?: unknown;
   source_url?: string;
   source_type?: string;
 }
@@ -159,7 +158,7 @@ export async function checkManifest({ pass, fail, skip, results }: Reporter): Pr
     results.push({ ok: true });
   }
 
-  // 7. trigger_questions and sections fields exist (new fields — can be empty arrays)
+  // 7. trigger_questions field exists (can be empty array)
   let newFieldsOk = true;
   for (const file of files) {
     const key = file.id ?? '(no id)';
@@ -168,14 +167,9 @@ export async function checkManifest({ pass, fail, skip, results }: Reporter): Pr
       results.push({ ok: false });
       newFieldsOk = false;
     }
-    if (!Array.isArray(file.sections)) {
-      fail(`entry "${key}" has sections array`, `Got: ${JSON.stringify(file.sections)}`);
-      results.push({ ok: false });
-      newFieldsOk = false;
-    }
   }
   if (newFieldsOk) {
-    pass('all entries have trigger_questions and sections arrays');
+    pass('all entries have trigger_questions arrays');
     results.push({ ok: true });
   }
 
@@ -248,40 +242,4 @@ export async function checkManifest({ pass, fail, skip, results }: Reporter): Pr
     results.push({ ok: true });
   }
 
-  // 11. Sections are populated for files that have ## headings
-  //     enrichSections is called inline so this test always reflects current file content.
-  //     It also writes the updated sections back so the manifest stays in sync.
-  try {
-    const { enrichSections } = await import(`${ROOT}/backend/scraper/pipeline/manifest.ts`);
-    const { writeManifest: wm } = await import(`${ROOT}/backend/scraper/pipeline/manifest.ts`);
-    const sectionsChanged = enrichSections(manifest) as boolean;
-    if (sectionsChanged) {
-      wm(manifest);
-    }
-
-    let sectionsMissing = false;
-    for (const file of files) {
-      const key = file.id ?? '(no id)';
-      if (!file.path) continue;
-      // Check if the current file content has any ## headings
-      const fullPath = join(ROOT, file.path as string);
-      if (!existsSync(fullPath)) continue;
-      const content = readFileSync(fullPath, 'utf8');
-      const hasHeadings = /^## .+/m.test(content);
-      // After enrichSections the in-memory manifest is updated — check updated entry
-      const updated = manifest.files.find(f => f.id === key);
-      if (hasHeadings && (!updated?.sections || (updated.sections as unknown[]).length === 0)) {
-        fail(`entry "${key}" sections populated`, 'file has ## headings but sections array is empty');
-        results.push({ ok: false });
-        sectionsMissing = true;
-      }
-    }
-    if (!sectionsMissing) {
-      pass('all files with ## headings have non-empty sections arrays');
-      results.push({ ok: true });
-    }
-  } catch (err) {
-    fail('sections enrichment check', (err as Error).message);
-    results.push({ ok: false });
-  }
 }

@@ -67,58 +67,6 @@
         "What is Omniboost's role with Mews",
         "What support does Bronze tier Mews integration include"
       ],
-      "sections": [
-        {
-          "id": "what-mews-is",
-          "heading": "What Mews Is",
-          "line_start": 9
-        },
-        {
-          "id": "omniboost-s-role-with-mews",
-          "heading": "Omniboost's Role with Mews",
-          "line_start": 17
-        },
-        {
-          "id": "integration-tiers",
-          "heading": "Integration Tiers",
-          "line_start": 25
-        },
-        {
-          "id": "how-to-start-a-mews-integration",
-          "heading": "How to Start a Mews Integration",
-          "line_start": 163
-        },
-        {
-          "id": "accounting-flows",
-          "heading": "Accounting Flows",
-          "line_start": 176
-        },
-        {
-          "id": "receivable-tracking-critical-setup-rule",
-          "heading": "Receivable Tracking — Critical Setup Rule",
-          "line_start": 191
-        },
-        {
-          "id": "gl-mapping-ledger-account-codes",
-          "heading": "GL Mapping & Ledger Account Codes",
-          "line_start": 199
-        },
-        {
-          "id": "pos-to-mews-integration",
-          "heading": "POS to Mews Integration",
-          "line_start": 207
-        },
-        {
-          "id": "supported-systems",
-          "heading": "Supported Systems",
-          "line_start": 218
-        },
-        {
-          "id": "system-not-listed",
-          "heading": "System Not Listed?",
-          "line_start": 240
-        }
-      ],
       "path": "knowledge/mews.md"
     },
     {
@@ -147,43 +95,6 @@
         "What data can Omniboost integrate for hospitality businesses",
         "What is the Omniboost Owners Portal"
       ],
-      "sections": [
-        {
-          "id": "what-omniboost-is",
-          "heading": "What Omniboost Is",
-          "line_start": 8
-        },
-        {
-          "id": "core-products",
-          "heading": "Core Products",
-          "line_start": 15
-        },
-        {
-          "id": "how-omniboost-works",
-          "heading": "How Omniboost Works",
-          "line_start": 28
-        },
-        {
-          "id": "industries-served",
-          "heading": "Industries Served",
-          "line_start": 35
-        },
-        {
-          "id": "scale-proof-points",
-          "heading": "Scale & Proof Points",
-          "line_start": 46
-        },
-        {
-          "id": "key-value-propositions",
-          "heading": "Key Value Propositions",
-          "line_start": 62
-        },
-        {
-          "id": "integration-categories",
-          "heading": "Integration Categories",
-          "line_start": 72
-        }
-      ],
       "path": "knowledge/omniboost.md"
     },
     {
@@ -211,58 +122,6 @@
         "how do I request an accounting connection in Mews",
         "where do I find accounting integrations in Mews marketplace",
         "what should I configure before starting Mews accounting onboarding"
-      ],
-      "sections": [
-        {
-          "id": "step-1-request-your-accounting-connection",
-          "heading": "Step 1: Request your accounting connection",
-          "line_start": 9
-        },
-        {
-          "id": "step-2-initiate-the-onboarding-process",
-          "heading": "Step 2: Initiate the onboarding process",
-          "line_start": 28
-        },
-        {
-          "id": "step-3-receive-your-omniboost-onboarding-invitation",
-          "heading": "Step 3: Receive your Omniboost onboarding invitation",
-          "line_start": 38
-        },
-        {
-          "id": "step-4-complete-your-integration-onboarding-form",
-          "heading": "Step 4: Complete your integration onboarding form",
-          "line_start": 49
-        },
-        {
-          "id": "step-5-terms-and-conditions",
-          "heading": "Step 5: Terms and conditions",
-          "line_start": 75
-        },
-        {
-          "id": "step-6-establish-a-connection-with-mews",
-          "heading": "Step 6: Establish a connection with Mews",
-          "line_start": 79
-        },
-        {
-          "id": "step-7-establish-a-connection-with-your-accounting-system",
-          "heading": "Step 7: Establish a connection with your accounting system",
-          "line_start": 89
-        },
-        {
-          "id": "step-8-configure-integration-settings",
-          "heading": "Step 8: Configure Integration Settings",
-          "line_start": 111
-        },
-        {
-          "id": "step-9-complete-your-accounting-mapping",
-          "heading": "Step 9: Complete your accounting mapping",
-          "line_start": 127
-        },
-        {
-          "id": "next-steps",
-          "heading": "Next steps",
-          "line_start": 143
-        }
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-accounting-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/10660471-onboarding-guide-mews-to-accounting",
@@ -296,18 +155,6 @@
         "What accounting flow options are available for MEWS to Abacus",
         "How do I reconcile XML export files in MEWS to Abacus integration"
       ],
-      "sections": [
-        {
-          "id": "configurable-variables",
-          "heading": "Configurable variables",
-          "line_start": 150
-        },
-        {
-          "id": "features",
-          "heading": "Features",
-          "line_start": 162
-        }
-      ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-abacus-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/7930739-onboarding-guide-mews-to-abacus",
       "source_type": "website_multi",
@@ -339,18 +186,6 @@
         "How do I request BMD integration from MEWS Marketplace",
         "What information do I need to provide for MEWS to BMD integration",
         "How do I reconcile export files in MEWS to BMD integration"
-      ],
-      "sections": [
-        {
-          "id": "configurable-variables",
-          "heading": "Configurable variables",
-          "line_start": 118
-        },
-        {
-          "id": "features",
-          "heading": "Features",
-          "line_start": 132
-        }
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-bmd-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/6896458-onboarding-guide-mews-to-bmd",
@@ -384,7 +219,6 @@
         "what are the steps to onboard MEWS to Basware",
         "what Basware FTP details are required for MEWS integration"
       ],
-      "sections": [],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-basware-invoicing-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/7937304-onboarding-guide-mews-to-basware-invoicing",
       "source_type": "website_multi",
@@ -416,18 +250,6 @@
         "How do I request DATEV integration from MEWS Marketplace",
         "What information do I need to provide for MEWS DATEV accounting integration",
         "How do I reconcile export files in MEWS to DATEV integration"
-      ],
-      "sections": [
-        {
-          "id": "configurable-variables",
-          "heading": "Configurable variables",
-          "line_start": 183
-        },
-        {
-          "id": "features",
-          "heading": "Features",
-          "line_start": 205
-        }
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-datev-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/6609139-onboarding-guide-mews-to-datev",
@@ -461,23 +283,6 @@
         "What guest data gets transferred from MEWS to Feratel",
         "How do I request Feratel integration from MEWS Marketplace"
       ],
-      "sections": [
-        {
-          "id": "part-1-general-setup-process-of-the-integration",
-          "heading": "PART 1: General setup process of the integration",
-          "line_start": 11
-        },
-        {
-          "id": "part-2-necessary-information",
-          "heading": "PART 2: Necessary information",
-          "line_start": 31
-        },
-        {
-          "id": "part-3-guest-information-transferred-from-mews-to-feratel",
-          "heading": "PART 3: Guest Information transferred from MEWS to Feratel",
-          "line_start": 44
-        }
-      ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-feratel-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/7913591-onboarding-guide-mews-to-feratel",
       "source_type": "website_multi",
@@ -509,28 +314,6 @@
         "How do I configure tax rates in InvoiceXpress for MEWS",
         "What happens to invoices when they sync from MEWS to InvoiceXpress",
         "Where can I check the status of invoices in MEWS Device Commands"
-      ],
-      "sections": [
-        {
-          "id": "setting-up-the-integration",
-          "heading": "Setting up the integration",
-          "line_start": 5
-        },
-        {
-          "id": "how-does-the-integration-work",
-          "heading": "How does the integration work?",
-          "line_start": 13
-        },
-        {
-          "id": "credit-invoices",
-          "heading": "Credit invoices",
-          "line_start": 27
-        },
-        {
-          "id": "how-to-check-whether-the-invoices-in-invoicexpress-match-the-invoices-in-mews",
-          "heading": "How to check whether the invoices in InvoiceXpress match the invoices in MEWS",
-          "line_start": 35
-        }
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-invoicexpress-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/4867554-onboarding-guide-mews-to-invoicexpress",
@@ -564,18 +347,6 @@
         "What is the difference between closed flow and consumed flow in MEWS MDBC integration",
         "How do I reconcile accounting data in MEWS to Microsoft Dynamics Business Central"
       ],
-      "sections": [
-        {
-          "id": "configurable-variables",
-          "heading": "Configurable variables",
-          "line_start": 134
-        },
-        {
-          "id": "features",
-          "heading": "Features",
-          "line_start": 140
-        }
-      ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-microsoft-dynamics-business-central-mdbc-omniboost-help.md",
       "source_url": "http://help.omniboost.io/en/articles/7280133-onboarding-guide-mews-to-microsoft-dynamics-business-central-mdbc",
       "source_type": "website_multi",
@@ -607,23 +378,6 @@
         "How do I transfer data from MEWS to Netsuite",
         "What is the difference between closed flow and consumed flow in MEWS Netsuite integration",
         "How do I reconcile accounting data in MEWS Netsuite integration"
-      ],
-      "sections": [
-        {
-          "id": "reconciling-journal-entries",
-          "heading": "Reconciling Journal entries",
-          "line_start": 150
-        },
-        {
-          "id": "configurable-variables",
-          "heading": "Configurable variables",
-          "line_start": 166
-        },
-        {
-          "id": "features",
-          "heading": "Features",
-          "line_start": 172
-        }
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-netsuite-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/6765736-onboarding-guide-mews-to-netsuite",
@@ -657,23 +411,6 @@
         "What accounting flow options are available for MEWS to QuickBooks",
         "How do I reconcile accounting data between MEWS and QuickBooks"
       ],
-      "sections": [
-        {
-          "id": "reconciling-journal-entries",
-          "heading": "Reconciling Journal entries",
-          "line_start": 140
-        },
-        {
-          "id": "configurable-variables",
-          "heading": "Configurable variables",
-          "line_start": 168
-        },
-        {
-          "id": "features",
-          "heading": "Features",
-          "line_start": 174
-        }
-      ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-quickbooks-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/6627705-onboarding-guide-mews-to-quickbooks",
       "source_type": "website_multi",
@@ -705,23 +442,6 @@
         "How do I request Unit4 integration from MEWS Marketplace",
         "What information do I need to provide for MEWS Unit4 accounting integration",
         "How do I reconcile accounting data between MEWS and Unit4"
-      ],
-      "sections": [
-        {
-          "id": "reconciling-journal-entries",
-          "heading": "Reconciling Journal entries",
-          "line_start": 132
-        },
-        {
-          "id": "configurable-variables",
-          "heading": "Configurable variables",
-          "line_start": 156
-        },
-        {
-          "id": "features",
-          "heading": "Features",
-          "line_start": 162
-        }
       ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-unit4-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/6995448-onboarding-guide-mews-to-unit4",
@@ -755,23 +475,6 @@
         "How long does it take to build the MEWS to 24 Seven Office integration",
         "What information do I need to provide for MEWS 24 Seven Office integration"
       ],
-      "sections": [
-        {
-          "id": "reconciling-journal-entries",
-          "heading": "Reconciling Journal entries",
-          "line_start": 136
-        },
-        {
-          "id": "configurable-variables",
-          "heading": "Configurable variables",
-          "line_start": 154
-        },
-        {
-          "id": "features",
-          "heading": "Features",
-          "line_start": 160
-        }
-      ],
       "path": "knowledge/website/mews-help-center/onboarding-guide-mews-to-seven-office-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/6973755-onboarding-guide-mews-to-24-seven-office",
       "source_type": "website_multi",
@@ -800,7 +503,6 @@
         "how to calculate rates of return from balance sheet",
         "what are assets liabilities and shareholders equity"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/balance-sheet-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895850-balance-sheet",
       "source_type": "website_multi",
@@ -830,7 +532,6 @@
         "what accounts are in the city ledger",
         "front office ledger vs city ledger"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/city-ledger-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3901829-city-ledger",
       "source_type": "website_multi",
@@ -863,7 +564,6 @@
         "how do I set up tracking categories for different revenue streams",
         "how to track results from separate departments in one P&L"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/cost-centers-profit-centers-tracking-categories-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895867-cost-centers-profit-centers-tracking-categories",
       "source_type": "website_multi",
@@ -896,23 +596,6 @@
         "How does receivable tracking create duplicate payments in accounting",
         "What is receivable tracking in MEWS and where do I find it"
       ],
-      "sections": [
-        {
-          "id": "what-does-receivable-tracking-do",
-          "heading": "What does receivable tracking do?",
-          "line_start": 5
-        },
-        {
-          "id": "consequences-for-the-accounting-integration-via-omniboost",
-          "heading": "Consequences for the accounting integration via Omniboost",
-          "line_start": 9
-        },
-        {
-          "id": "conclusion",
-          "heading": "Conclusion",
-          "line_start": 21
-        }
-      ],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/dynamics-between-receivable-tracking-in-mews-and-omniboost-accounting-integratio.md",
       "source_url": "http://help.omniboost.io/en/articles/5106697-dynamics-between-receivable-tracking-in-mews-and-omniboost-accounting-integrations",
       "source_type": "website_multi",
@@ -942,7 +625,6 @@
         "what is a current liability account for deposits",
         "how to track customer deposits in advance"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/deposit-ledger-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3901831-deposit-ledger",
       "source_type": "website_multi",
@@ -971,7 +653,6 @@
         "what time is end of day by default",
         "how to set preferred end of day"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/end-of-day-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3896024-end-of-day",
       "source_type": "website_multi",
@@ -1002,7 +683,6 @@
         "Exact Online machtigingen voor mijn apps Omniboost administraties beheren",
         "How to select available administraties in Exact Online security center"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/exact-online-foutmelding-forbidden-user-division-is-not-within-division-scope-om.md",
       "source_url": "http://help.omniboost.io/en/articles/5319575-exact-online-foutmelding-forbidden-user-division-is-not-within-division-scope",
       "source_type": "website_multi",
@@ -1033,7 +713,6 @@
         "where do Stripe and Adyen deduct commissions from",
         "how to post gateway commission costs to ledger account"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/gateway-commission-costs-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3896006-gateway-commission-costs",
       "source_type": "website_multi",
@@ -1062,7 +741,6 @@
         "should I create a separate general journal for Omniboost",
         "how does the general journal work in accounting"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/general-journal-code-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895761-general-journal-code",
       "source_type": "website_multi",
@@ -1091,7 +769,6 @@
         "where is the chart of accounts located",
         "how are business transactions recorded in the general ledger"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/ledger-account-code-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895809-ledger-account-code",
       "source_type": "website_multi",
@@ -1124,7 +801,6 @@
         "why are my reservations not syncing to Feratel",
         "what should I do when Feratel task reports missing required fields"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/managing-feratel-tasks-in-mews-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3534954-managing-feratel-tasks-in-mews",
       "source_type": "website_multi",
@@ -1157,7 +833,6 @@
         "what happens when I enable separate posting for accounts receivables",
         "how does Omniboost handle revenue and VAT when posting separately"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/posting-accounts-receivables-and-sales-invoices-separately-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895907-posting-accounts-receivables-and-sales-invoices-separately",
       "source_type": "website_multi",
@@ -1186,7 +861,6 @@
         "how do I configure debtor code prefix",
         "debtor code prefix rules and settings"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/prefix-debtor-code-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3896012-prefix-debtor-code",
       "source_type": "website_multi",
@@ -1219,7 +893,6 @@
         "what is included in a profit and loss statement",
         "how to check revenues and expenses in my P&L statement"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/profit-loss-statement-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895858-profit-loss-statement",
       "source_type": "website_multi",
@@ -1250,7 +923,6 @@
         "how to create a separate general journal for sales integration",
         "what information does the sales journal process"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/sales-journal-code-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895806-sales-journal-code",
       "source_type": "website_multi",
@@ -1283,7 +955,6 @@
         "what are suspense accounts used for in PMS systems",
         "how do payment methods relate to suspense accounts"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/suspense-account-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895884-suspense-account",
       "source_type": "website_multi",
@@ -1316,7 +987,6 @@
         "Why should my suspense account balance be zero every day",
         "What does a balance on the suspense account receivables indicate"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/suspense-account-receivables-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895977-suspense-account-receivables",
       "source_type": "website_multi",
@@ -1345,7 +1015,6 @@
         "which debtors get updated in the accounting platform",
         "how does Omniboost update debtor information automatically"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/update-debtor-information-in-your-accounting-platform-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895905-update-debtor-information-in-your-accounting-platform",
       "source_type": "website_multi",
@@ -1374,7 +1043,6 @@
         "VAT code mapping best practices",
         "how do VAT codes work in Omniboost"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/vat-code-mappings-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3896026-vat-code-mappings",
       "source_type": "website_multi",
@@ -1405,7 +1073,6 @@
         "why would I use a deposit instead of prepayment",
         "can I access my money after making a deposit"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/tips-and-tricks/what-is-the-difference-between-a-deposit-and-prepayment-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3901820-what-is-the-difference-between-a-deposit-and-prepayment",
       "source_type": "website_multi",
@@ -1437,28 +1104,6 @@
         "accounts receivable integration error omniboost",
         "what does accounts receivable must choose customer error mean",
         "how to resolve debtor ledger posting failure in accounting integration"
-      ],
-      "sections": [
-        {
-          "id": "error-notification",
-          "heading": "Error Notification",
-          "line_start": 5
-        },
-        {
-          "id": "explanation-of-the-error-message",
-          "heading": "Explanation of the error message",
-          "line_start": 21
-        },
-        {
-          "id": "example-s",
-          "heading": "Example(s)",
-          "line_start": 29
-        },
-        {
-          "id": "solutions",
-          "heading": "Solutions",
-          "line_start": 57
-        }
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/accounting-integration-unable-to-post-payment-entry-to-debtor-ledger-account-omn.md",
       "source_url": "http://help.omniboost.io/en/articles/6639165-accounting-integration-unable-to-post-payment-entry-to-debtor-ledger-account",
@@ -1492,7 +1137,6 @@
         "how do I configure journal codes for accounting integration",
         "what information should I prepare for Omniboost accounting setup"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/accounting-information/accounting-onboarding-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3382585-accounting-onboarding",
       "source_type": "website_multi",
@@ -1523,23 +1167,6 @@
         "How to set up ledger account codes in MEWS",
         "What is the accounting categories section in MEWS",
         "How to configure cost center codes in MEWS accounting"
-      ],
-      "sections": [
-        {
-          "id": "introduction",
-          "heading": "Introduction",
-          "line_start": 3
-        },
-        {
-          "id": "2-2-consumed-accounting-flow",
-          "heading": "2.2 Consumed Accounting Flow",
-          "line_start": 168
-        },
-        {
-          "id": "2-3-hybrid-accounting-flow",
-          "heading": "2.3 Hybrid Accounting Flow",
-          "line_start": 184
-        }
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/configure-your-accounting-setup-in-mews-pms-and-choose-your-accounting-flow-omni.md",
       "source_url": "http://help.omniboost.io/en/articles/6585772-configure-your-accounting-setup-in-mews-pms-and-choose-your-accounting-flow",
@@ -1573,7 +1200,6 @@
         "how to set up fallback ledger accounts for revenue and payments",
         "what should I do when amounts appear on fallback ledgers"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/accounting-information/fallback-ledgers-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3895842-fallback-ledgers",
       "source_type": "website_multi",
@@ -1606,23 +1232,6 @@
         "Why do I need to provide a fallback ledger account code to Omniboost",
         "How are unmapped revenues posted to ledger accounts using fallback accounts"
       ],
-      "sections": [
-        {
-          "id": "fallback-ledger-account-for-revenues",
-          "heading": "Fallback ledger account for revenues",
-          "line_start": 7
-        },
-        {
-          "id": "fallback-ledger-account-for-payments",
-          "heading": "Fallback ledger account for payments",
-          "line_start": 15
-        },
-        {
-          "id": "to-summarize",
-          "heading": "To summarize",
-          "line_start": 23
-        }
-      ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/fallback-ledger-accounts-for-revenues-and-payments-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/6609704-fallback-ledger-accounts-for-revenues-and-payments",
       "source_type": "website_multi",
@@ -1653,28 +1262,6 @@
         "how to generate fortnox authorization code for omniboost",
         "fortnox manage users add integration steps"
       ],
-      "sections": [
-        {
-          "id": "go-to-manage-users",
-          "heading": "Go to manage users",
-          "line_start": 7
-        },
-        {
-          "id": "click-on-the-add-integration-button",
-          "heading": "Click on the 'Add Integration' button",
-          "line_start": 9
-        },
-        {
-          "id": "search-for-the-omniboost-integration-by-code",
-          "heading": "Search for the Omniboost integration by code",
-          "line_start": 11
-        },
-        {
-          "id": "copy-the-authorization-code-and-send-it-to-omniboost",
-          "heading": "Copy the authorization code and send it to Omniboost",
-          "line_start": 15
-        }
-      ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/how-to-get-an-authorization-token-from-fortnox-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/4552471-how-to-get-an-authorization-token-from-fortnox",
       "source_type": "website_multi",
@@ -1704,38 +1291,6 @@
         "how to create a new API token in tripletex",
         "where do I find the API access tab in tripletex employees",
         "how to connect omniboost to tripletex with employee token"
-      ],
-      "sections": [
-        {
-          "id": "go-to-company-employees",
-          "heading": "Go to Company -> Employees",
-          "line_start": 7
-        },
-        {
-          "id": "select-the-employee-with-enough-access-rights-you-want-to-use-for-the-integration",
-          "heading": "Select the employee with enough access rights you want to use for the integration",
-          "line_start": 9
-        },
-        {
-          "id": "select-the-api-access-tab",
-          "heading": "Select the API access tab",
-          "line_start": 11
-        },
-        {
-          "id": "click-the-new-token-button",
-          "heading": "Click the New Token button",
-          "line_start": 13
-        },
-        {
-          "id": "create-new-token",
-          "heading": "Create new token",
-          "line_start": 15
-        },
-        {
-          "id": "copy-the-created-token-and-save-the-user",
-          "heading": "Copy the created token and save the user",
-          "line_start": 19
-        }
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/how-to-get-an-employee-token-from-tripletex-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/4553054-how-to-get-an-employee-token-from-tripletex",
@@ -1769,7 +1324,6 @@
         "how often are financial exports generated and sent",
         "what information can be pulled through API integrations from PMS systems"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/accounting-information/integration-types-api-vs-financial-export-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/7262217-integration-types-api-vs-financial-export",
       "source_type": "website_multi",
@@ -1801,18 +1355,6 @@
         "how to create API connectivity in AFAS",
         "what GetConnectors do I need for Omniboost",
         "how to create an AppConnector for Omniboost"
-      ],
-      "sections": [
-        {
-          "id": "setting-up-the-omniboost-getconnectors",
-          "heading": "**Setting up the Omniboost GetConnectors**",
-          "line_start": 22
-        },
-        {
-          "id": "creating-the-omniboost-appconnector",
-          "heading": "**Creating the Omniboost AppConnector**",
-          "line_start": 30
-        }
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/setting-up-your-afas-connectors-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/10627909-setting-up-your-afas-connectors",
@@ -1846,7 +1388,6 @@
         "what happens to VAT in consumed vs closed accounting flow",
         "how are daily revenues posted in hotel accounting systems"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/accounting-information/the-difference-between-a-closed-and-consumed-accounting-flow-omniboost-help-cent.md",
       "source_url": "http://help.omniboost.io/en/articles/4591164-the-difference-between-a-closed-and-consumed-accounting-flow",
       "source_type": "website_multi",
@@ -1879,7 +1420,6 @@
         "How does the AEHW determine the transfer of PMS entries to accounting",
         "What are accounting items and how do they relate to services in Omniboost"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/accounting-information/understanding-the-accounting-editable-history-window-dynamics-omniboost-help-cen.md",
       "source_url": "http://help.omniboost.io/en/articles/6593276-understanding-the-accounting-editable-history-window-dynamics",
       "source_type": "website_multi",
@@ -1911,38 +1451,6 @@
         "why does guest ledger appear in accounting connections",
         "what does guest ledger account posting mean",
         "how to understand guest ledger debit and credit entries"
-      ],
-      "sections": [
-        {
-          "id": "how-to-calculate-the-guest-ledger-account-posting",
-          "heading": "How to calculate the Guest Ledger account posting?",
-          "line_start": 53
-        },
-        {
-          "id": "some-details-on-deposits",
-          "heading": "Some details on Deposits",
-          "line_start": 82
-        },
-        {
-          "id": "practical-examples",
-          "heading": "Practical Examples",
-          "line_start": 91
-        },
-        {
-          "id": "conclusion",
-          "heading": "Conclusion",
-          "line_start": 136
-        },
-        {
-          "id": "practical-example-s",
-          "heading": "Practical Example(s)",
-          "line_start": 154
-        },
-        {
-          "id": "some-additional-details-on-the-accounting-ledger-report",
-          "heading": "Some additional details on the Accounting Ledger Report",
-          "line_start": 184
-        }
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/understanding-the-guest-ledger-account-in-mews-pms-to-accounting-connections-omn.md",
       "source_url": "http://help.omniboost.io/en/articles/6593186-understanding-the-guest-ledger-account-in-mews-pms-to-accounting-connections",
@@ -1976,7 +1484,6 @@
         "welke opties zijn er voor closed bills integratie",
         "hoe wordt BTW verwerkt in consumed versus closed omzet"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/accounting-information/verschil-tussen-journaalposten-gebaseerd-op-consumed-of-closed-omzet-omniboost-h.md",
       "source_url": "http://help.omniboost.io/en/articles/5028726-verschil-tussen-journaalposten-gebaseerd-op-consumed-of-closed-omzet",
       "source_type": "website_multi",
@@ -2008,18 +1515,6 @@
         "How to retrieve Yuki webservice API keys",
         "What are the steps to access Yuki webservices and get my API credentials",
         "How do I connect Yuki to my POS system with API Key"
-      ],
-      "sections": [
-        {
-          "id": "accessing-yuki",
-          "heading": "Accessing Yuki",
-          "line_start": 9
-        },
-        {
-          "id": "navigate-through-yuki",
-          "heading": "Navigate through Yuki",
-          "line_start": 24
-        }
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/how-to-retrieve-the-correct-yuki-api-key-administration-id-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/3728559-how-to-retrieve-the-correct-yuki-api-key-administration-id",
@@ -2053,33 +1548,6 @@
         "Where do I find predefined VAT accounts in Fortnox",
         "How to map VAT rates to Fortnox accounts in Base"
       ],
-      "sections": [
-        {
-          "id": "step-1-open-fortnox-and-select-the-company",
-          "heading": "Step 1: Open Fortnox and Select the Company",
-          "line_start": 17
-        },
-        {
-          "id": "step-2-navigate-to-accounting-settings",
-          "heading": "Step 2: Navigate to Accounting Settings",
-          "line_start": 22
-        },
-        {
-          "id": "step-3-access-predefined-accounts",
-          "heading": "Step 3: Access Predefined Accounts",
-          "line_start": 27
-        },
-        {
-          "id": "step-4-locate-vat-accounts",
-          "heading": "Step 4: Locate VAT Accounts",
-          "line_start": 32
-        },
-        {
-          "id": "step-5-enter-vat-accounts-in-base",
-          "heading": "Step 5: Enter VAT Accounts in Base",
-          "line_start": 42
-        }
-      ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/how-to-locate-the-vat-accounts-for-your-pospms-integration-with-fortnox-omniboos.md",
       "source_url": "http://help.omniboost.io/en/articles/12331326-how-to-locate-the-vat-accounts-for-your-pos-pms-integration-with-fortnox",
       "source_type": "website_multi",
@@ -2112,7 +1580,6 @@
         "how to properly void receipts in Lightspeed to avoid NORMAL entries",
         "where can I find payment method codes in Lightspeed backoffice"
       ],
-      "sections": [],
       "path": "knowledge/website/omniboost-help-center/accounting-information/understanding-normal-postings-in-your-accounting-system-and-prevention-methods-o.md",
       "source_url": "http://help.omniboost.io/en/articles/12458608-understanding-normal-postings-in-your-accounting-system-and-prevention-methods",
       "source_type": "website_multi",
@@ -2143,23 +1610,6 @@
         "steps to authorize Omniboost app in Visma e-Conomics",
         "where do I find my grant token in e-Conomic",
         "how to connect Omniboost to Visma e-Conomics"
-      ],
-      "sections": [
-        {
-          "id": "visit-the-omniboost-app-page-for-visma-e-conomics",
-          "heading": "Visit the Omniboost App Page for Visma e-Conomics",
-          "line_start": 7
-        },
-        {
-          "id": "authorize-the-omniboost-app",
-          "heading": "Authorize the Omniboost App",
-          "line_start": 17
-        },
-        {
-          "id": "retrieve-the-grant-token",
-          "heading": "Retrieve the 'Grant Token'",
-          "line_start": 23
-        }
       ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/how-to-retrieve-the-grant-token-from-visma-e-conomics-omniboost-help-center.md",
       "source_url": "http://help.omniboost.io/en/articles/12899164-how-to-retrieve-the-grant-token-from-visma-e-conomics",
@@ -2193,18 +1643,6 @@
         "what should I do if my desired administration is missing after logging into Base",
         "how to manage which administrations Omniboost can access"
       ],
-      "sections": [
-        {
-          "id": "accessing-exact-online",
-          "heading": "Accessing Exact Online",
-          "line_start": 13
-        },
-        {
-          "id": "navigate-through-exact-online",
-          "heading": "Navigate through Exact Online",
-          "line_start": 30
-        }
-      ],
       "path": "knowledge/website/omniboost-help-center/accounting-information/how-to-ensure-the-correct-exact-online-administrations-are-listed-in-base-omnibo.md",
       "source_url": "http://help.omniboost.io/en/articles/12674272-how-to-ensure-the-correct-exact-online-administration-s-are-listed-in-base",
       "source_type": "website_multi",
@@ -2236,18 +1674,6 @@
         "how to set up receivable tracking in Mews to avoid Datev duplicates",
         "what accounting category should I create for wire transfer payments in Mews",
         "how do I allocate payments to invoices in Mews Operations city ledger"
-      ],
-      "sections": [
-        {
-          "id": "prerequisites",
-          "heading": "Prerequisites",
-          "line_start": 7
-        },
-        {
-          "id": "step-1-allocate-payments-to-invoices-when-entering-in-mews-operations",
-          "heading": "Step 1: Allocate payments to invoices when entering in Mews Operations",
-          "line_start": 13
-        }
       ],
       "path": "knowledge/website/mews-help-center/how-to-avoid-duplicate-payments-in-datev-when-using-receivable-tracking-in-combi.md",
       "source_url": "http://help.omniboost.io/en/articles/14288042-how-to-avoid-duplicate-payments-in-datev-when-using-receivable-tracking-in-combination-with-the-omniboost-datev-integration-in-mews-operations",
@@ -2281,13 +1707,6 @@
         "How does Mews to Datev handle VAT and tax transfers",
         "What detailed reporting options are available in Mews to Datev"
       ],
-      "sections": [
-        {
-          "id": "mews-to-datev",
-          "heading": "Mews to Datev",
-          "line_start": 1
-        }
-      ],
       "path": "knowledge/website/mews-features/mews-to-datev.md",
       "source_url": "https://omniboost.io/system-features/mews",
       "source_type": "website_split",
@@ -2319,13 +1738,6 @@
         "how to transfer VAT and tax data from Mews to Exact Online",
         "what payment details can I skip when syncing Mews to Exact Online",
         "how does accounts receivable transfer work in Mews to Exact Online"
-      ],
-      "sections": [
-        {
-          "id": "mews-to-exact-online",
-          "heading": "Mews to Exact Online",
-          "line_start": 1
-        }
       ],
       "path": "knowledge/website/mews-features/mews-to-exact-online.md",
       "source_url": "https://omniboost.io/system-features/mews",
@@ -2359,13 +1771,6 @@
         "How does Mews handle VAT and tax transfers to NetSuite",
         "What accounts receivable features does Mews NetSuite offer"
       ],
-      "sections": [
-        {
-          "id": "mews-to-netsuite",
-          "heading": "Mews to NetSuite",
-          "line_start": 1
-        }
-      ],
       "path": "knowledge/website/mews-features/mews-to-netsuite.md",
       "source_url": "https://omniboost.io/system-features/mews",
       "source_type": "website_split",
@@ -2397,13 +1802,6 @@
         "how do I handle VAT and tax transfers in Mews Quickbooks",
         "can I skip specific revenue entries when syncing Mews to Quickbooks",
         "how does accounts receivable work in Mews Quickbooks integration"
-      ],
-      "sections": [
-        {
-          "id": "mews-to-quickbooks",
-          "heading": "Mews to Quickbooks",
-          "line_start": 1
-        }
       ],
       "path": "knowledge/website/mews-features/mews-to-quickbooks.md",
       "source_url": "https://omniboost.io/system-features/mews",
@@ -2437,13 +1835,6 @@
         "can I skip specific revenue entries when syncing to Xero",
         "what are the differences between consumed flow and closed flow in Mews Xero"
       ],
-      "sections": [
-        {
-          "id": "mews-to-xero",
-          "heading": "Mews to Xero",
-          "line_start": 1
-        }
-      ],
       "path": "knowledge/website/mews-features/mews-to-xero.md",
       "source_url": "https://omniboost.io/system-features/mews",
       "source_type": "website_split",
@@ -2475,13 +1866,6 @@
         "does mews to twinfield support detailed revenue entries",
         "can i skip specific revenue or payment entries in mews to twinfield",
         "what accounting data can i transfer from mews to twinfield"
-      ],
-      "sections": [
-        {
-          "id": "mews-to-twinfield",
-          "heading": "Mews to Twinfield",
-          "line_start": 1
-        }
       ],
       "path": "knowledge/website/mews-features/mews-to-twinfield.md",
       "source_url": "https://omniboost.io/system-features/mews",
@@ -2515,13 +1899,6 @@
         "what accounting features are available in mews to exact globe integration",
         "how does mews to exact globe handle vat and tax transfers"
       ],
-      "sections": [
-        {
-          "id": "mews-to-exact-globe",
-          "heading": "Mews to Exact Globe",
-          "line_start": 1
-        }
-      ],
       "path": "knowledge/website/mews-features/mews-to-exact-globe.md",
       "source_url": "https://omniboost.io/system-features/mews",
       "source_type": "website_split",
@@ -2553,13 +1930,6 @@
         "does Mews to Fortnox support detailed revenue entries",
         "how to handle VAT and tax transfers in Mews Fortnox integration",
         "what payment and revenue features are not supported in Mews Fortnox"
-      ],
-      "sections": [
-        {
-          "id": "mews-to-fortnox",
-          "heading": "Mews to Fortnox",
-          "line_start": 1
-        }
       ],
       "path": "knowledge/website/mews-features/mews-to-fortnox.md",
       "source_url": "https://omniboost.io/system-features/mews",
@@ -2593,13 +1963,6 @@
         "How does Mews handle VAT and tax transfers to Visma",
         "What accounting data can Mews send to Visma .Net"
       ],
-      "sections": [
-        {
-          "id": "mews-to-visma-net",
-          "heading": "Mews to Visma .Net",
-          "line_start": 1
-        }
-      ],
       "path": "knowledge/website/mews-features/mews-to-visma-net.md",
       "source_url": "https://omniboost.io/system-features/mews",
       "source_type": "website_split",
@@ -2631,13 +1994,6 @@
         "Which Mews features are not supported for hotel investor apps",
         "What payment and revenue tracking capabilities does Mews offer accountants",
         "How can hotels use Mews to transfer statistical data like occupancy rates"
-      ],
-      "sections": [
-        {
-          "id": "mews-to-hotel-investor-apps",
-          "heading": "Mews to Hotel Investor Apps",
-          "line_start": 1
-        }
       ],
       "path": "knowledge/website/mews-features/mews-to-hotel-investor-apps.md",
       "source_url": "https://omniboost.io/system-features/mews",
@@ -2671,13 +2027,6 @@
         "How does credit card fee split work in Mews M3",
         "What statistical data can be transferred from Mews to M3"
       ],
-      "sections": [
-        {
-          "id": "mews-to-m3",
-          "heading": "Mews to M3",
-          "line_start": 1
-        }
-      ],
       "path": "knowledge/website/mews-features/mews-to-m3.md",
       "source_url": "https://omniboost.io/system-features/mews",
       "source_type": "website_split",
@@ -2708,33 +2057,6 @@
         "How many hotels use Omniboost",
         "What data does Omniboost automatically sync between systems"
       ],
-      "sections": [
-        {
-          "id": "the-big-idea",
-          "heading": "The big idea",
-          "line_start": 9
-        },
-        {
-          "id": "what-omniboost-connects",
-          "heading": "What Omniboost connects",
-          "line_start": 13
-        },
-        {
-          "id": "the-five-omniboost-products",
-          "heading": "The five Omniboost products",
-          "line_start": 17
-        },
-        {
-          "id": "how-big-is-omniboost",
-          "heading": "How big is Omniboost?",
-          "line_start": 25
-        },
-        {
-          "id": "why-it-matters",
-          "heading": "Why it matters",
-          "line_start": 35
-        }
-      ],
       "path": "knowledge/help-resources/omniboost.md"
     },
     {
@@ -2760,33 +2082,6 @@
         "What does Mews track for accounting",
         "How do I find an Omniboost integration in the Mews Marketplace",
         "What is Receivable Tracking in Mews"
-      ],
-      "sections": [
-        {
-          "id": "mews-is-a-hotel-management-system",
-          "heading": "Mews is a hotel management system",
-          "line_start": 9
-        },
-        {
-          "id": "what-mews-tracks-for-accounting",
-          "heading": "What Mews tracks for accounting",
-          "line_start": 13
-        },
-        {
-          "id": "omniboost-s-role-with-mews",
-          "heading": "Omniboost's role with Mews",
-          "line_start": 17
-        },
-        {
-          "id": "how-to-find-an-omniboost-integration-in-mews",
-          "heading": "How to find an Omniboost integration in Mews",
-          "line_start": 21
-        },
-        {
-          "id": "one-critical-setting-turn-off-receivable-tracking",
-          "heading": "One critical setting: turn off Receivable Tracking",
-          "line_start": 25
-        }
       ],
       "path": "knowledge/help-resources/mews.md"
     },
@@ -2814,33 +2109,6 @@
         "What's the difference between API integrations and Financial Export integrations",
         "How often does Omniboost send data to my accounting system"
       ],
-      "sections": [
-        {
-          "id": "the-simple-picture",
-          "heading": "The simple picture",
-          "line_start": 9
-        },
-        {
-          "id": "step-by-step-what-happens-every-day",
-          "heading": "Step by step: what happens every day",
-          "line_start": 13
-        },
-        {
-          "id": "two-types-of-integration",
-          "heading": "Two types of integration",
-          "line_start": 21
-        },
-        {
-          "id": "what-data-gets-transferred",
-          "heading": "What data gets transferred",
-          "line_start": 25
-        },
-        {
-          "id": "can-i-trigger-it-manually",
-          "heading": "Can I trigger it manually?",
-          "line_start": 33
-        }
-      ],
       "path": "knowledge/help-resources/integration.md"
     },
     {
@@ -2866,43 +2134,6 @@
         "what is GL mapping and what information do I need",
         "what are the steps to connect my accounting system to Mews",
         "how do I turn off Receivable Tracking in Mews"
-      ],
-      "sections": [
-        {
-          "id": "before-you-begin-one-critical-step",
-          "heading": "Before you begin: one critical step",
-          "line_start": 9
-        },
-        {
-          "id": "step-1-request-the-connection-in-mews",
-          "heading": "Step 1: request the connection in Mews",
-          "line_start": 13
-        },
-        {
-          "id": "step-2-complete-the-omniboost-onboarding-wizard",
-          "heading": "Step 2: complete the Omniboost onboarding wizard",
-          "line_start": 17
-        },
-        {
-          "id": "step-3-gather-what-you-need-for-gl-mapping",
-          "heading": "Step 3: gather what you need for GL mapping",
-          "line_start": 21
-        },
-        {
-          "id": "step-4-test-period",
-          "heading": "Step 4: test period",
-          "line_start": 32
-        },
-        {
-          "id": "step-5-go-live",
-          "heading": "Step 5: go live",
-          "line_start": 36
-        },
-        {
-          "id": "who-does-what",
-          "heading": "Who does what?",
-          "line_start": 40
-        }
       ],
       "path": "knowledge/help-resources/onboarding.md"
     },
@@ -2930,43 +2161,6 @@
         "how much does the Silver tier cost per year",
         "what features are not included in the Bronze plan"
       ],
-      "sections": [
-        {
-          "id": "there-are-three-tiers",
-          "heading": "There are three tiers",
-          "line_start": 9
-        },
-        {
-          "id": "bronze-free-included-in-mews",
-          "heading": "Bronze: free (included in Mews)",
-          "line_start": 13
-        },
-        {
-          "id": "bronze-does-not-include",
-          "heading": "Bronze does not include",
-          "line_start": 17
-        },
-        {
-          "id": "silver-1-600-eur-gbp-per-year-per-property",
-          "heading": "Silver: 1,600 EUR / GBP per year per property",
-          "line_start": 29
-        },
-        {
-          "id": "silver-does-not-include-compared-to-gold",
-          "heading": "Silver does not include (compared to Gold)",
-          "line_start": 33
-        },
-        {
-          "id": "gold-2-150-eur-gbp-per-year-per-property",
-          "heading": "Gold: 2,150 EUR / GBP per year per property",
-          "line_start": 44
-        },
-        {
-          "id": "how-to-decide",
-          "heading": "How to decide",
-          "line_start": 48
-        }
-      ],
       "path": "knowledge/help-resources/tiers.md"
     },
     {
@@ -2993,43 +2187,6 @@
         "what is the difference between closed bills flow and closed invoices flow",
         "which accounting flow should I choose for my country"
       ],
-      "sections": [
-        {
-          "id": "what-is-an-accounting-flow",
-          "heading": "What is an accounting flow?",
-          "line_start": 9
-        },
-        {
-          "id": "consumed-flow-the-most-common",
-          "heading": "Consumed flow (the most common)",
-          "line_start": 13
-        },
-        {
-          "id": "consumed-flow-practical-example",
-          "heading": "Consumed flow: practical example",
-          "line_start": 17
-        },
-        {
-          "id": "closed-bills-flow-journal-entries",
-          "heading": "Closed (bills) flow: journal entries",
-          "line_start": 21
-        },
-        {
-          "id": "closed-bills-and-invoices-flow-sales-entries",
-          "heading": "Closed (bills and invoices) flow: sales entries",
-          "line_start": 25
-        },
-        {
-          "id": "hybrid-flow",
-          "heading": "Hybrid flow",
-          "line_start": 29
-        },
-        {
-          "id": "end-of-day",
-          "heading": "End of day",
-          "line_start": 33
-        }
-      ],
       "path": "knowledge/help-resources/accounting-flows.md"
     },
     {
@@ -3055,43 +2212,6 @@
         "what happens if my payment mapping is wrong",
         "how do I configure VAT and tax code mapping"
       ],
-      "sections": [
-        {
-          "id": "what-is-mapping",
-          "heading": "What is mapping?",
-          "line_start": 9
-        },
-        {
-          "id": "where-mapping-happens-in-mews",
-          "heading": "Where mapping happens in Mews",
-          "line_start": 13
-        },
-        {
-          "id": "revenue-mapping",
-          "heading": "Revenue mapping",
-          "line_start": 17
-        },
-        {
-          "id": "payment-mapping",
-          "heading": "Payment mapping",
-          "line_start": 21
-        },
-        {
-          "id": "vat-tax-mapping",
-          "heading": "VAT / Tax mapping",
-          "line_start": 25
-        },
-        {
-          "id": "cost-centres-optional",
-          "heading": "Cost centres (optional)",
-          "line_start": 29
-        },
-        {
-          "id": "omniboost-auto-detects-changes",
-          "heading": "Omniboost auto-detects changes",
-          "line_start": 33
-        }
-      ],
       "path": "knowledge/help-resources/mapping.md"
     },
     {
@@ -3115,28 +2235,6 @@
         "How do I fix unmapped categories in Omniboost",
         "What's the difference between fallback accounts and suspense accounts",
         "How many fallback accounts should I create"
-      ],
-      "sections": [
-        {
-          "id": "what-is-a-fallback-account",
-          "heading": "What is a fallback account?",
-          "line_start": 9
-        },
-        {
-          "id": "you-should-have-two-fallback-accounts",
-          "heading": "You should have two fallback accounts",
-          "line_start": 13
-        },
-        {
-          "id": "what-to-do-when-you-see-amounts-on-fallback-accounts",
-          "heading": "What to do when you see amounts on fallback accounts",
-          "line_start": 17
-        },
-        {
-          "id": "fallback-accounts-vs-suspense-accounts",
-          "heading": "Fallback accounts vs. suspense accounts",
-          "line_start": 21
-        }
       ],
       "path": "knowledge/help-resources/fallback.md"
     },
@@ -3164,28 +2262,6 @@
         "what are common types of suspense accounts in Mews",
         "how long does money stay in a suspense account before reconciling"
       ],
-      "sections": [
-        {
-          "id": "what-is-a-suspense-account",
-          "heading": "What is a suspense account?",
-          "line_start": 9
-        },
-        {
-          "id": "how-it-works-step-by-step",
-          "heading": "How it works step by step",
-          "line_start": 13
-        },
-        {
-          "id": "why-use-suspense-accounts",
-          "heading": "Why use suspense accounts?",
-          "line_start": 21
-        },
-        {
-          "id": "common-suspense-accounts-in-hotel-setups",
-          "heading": "Common suspense accounts in hotel setups",
-          "line_start": 25
-        }
-      ],
       "path": "knowledge/help-resources/suspense.md"
     },
     {
@@ -3212,33 +2288,6 @@
         "what happens if I don't map a VAT code",
         "how to check if my VAT code is configured correctly"
       ],
-      "sections": [
-        {
-          "id": "what-is-vat-mapping",
-          "heading": "What is VAT mapping?",
-          "line_start": 9
-        },
-        {
-          "id": "the-most-important-rule-extract-from-gross",
-          "heading": "The most important rule: extract from GROSS",
-          "line_start": 13
-        },
-        {
-          "id": "how-to-check-your-vat-code-configuration",
-          "heading": "How to check your VAT code configuration",
-          "line_start": 17
-        },
-        {
-          "id": "multiple-vat-rates",
-          "heading": "Multiple VAT rates",
-          "line_start": 21
-        },
-        {
-          "id": "what-happens-if-a-vat-code-is-missing",
-          "heading": "What happens if a VAT code is missing?",
-          "line_start": 25
-        }
-      ],
       "path": "knowledge/help-resources/vat.md"
     },
     {
@@ -3263,33 +2312,6 @@
         "what goes in the city ledger for hotel accounting",
         "how does Omniboost handle guest ledger and city ledger transfers",
         "what ledger account codes do I need to provide for onboarding"
-      ],
-      "sections": [
-        {
-          "id": "two-different-types-of-accounts-receivable",
-          "heading": "Two different types of accounts receivable",
-          "line_start": 9
-        },
-        {
-          "id": "guest-ledger-also-called-front-office-or-transient-ledger",
-          "heading": "Guest ledger (also called front-office or transient ledger)",
-          "line_start": 13
-        },
-        {
-          "id": "city-ledger-also-called-accounts-receivable-ledger",
-          "heading": "City ledger (also called accounts receivable ledger)",
-          "line_start": 17
-        },
-        {
-          "id": "how-omniboost-handles-these",
-          "heading": "How Omniboost handles these",
-          "line_start": 21
-        },
-        {
-          "id": "what-you-need-to-provide",
-          "heading": "What you need to provide",
-          "line_start": 25
-        }
       ],
       "path": "knowledge/help-resources/ledgers.md"
     },
@@ -3316,33 +2338,6 @@
         "what ledger account do I need for gateway commission costs",
         "how do I reconcile gateway payments between Mews and my bank account"
       ],
-      "sections": [
-        {
-          "id": "what-are-gateway-payments",
-          "heading": "What are gateway payments?",
-          "line_start": 9
-        },
-        {
-          "id": "the-problem-this-creates",
-          "heading": "The problem this creates",
-          "line_start": 13
-        },
-        {
-          "id": "how-omniboost-solves-it",
-          "heading": "How Omniboost solves it",
-          "line_start": 17
-        },
-        {
-          "id": "what-you-need-to-set-up",
-          "heading": "What you need to set up",
-          "line_start": 21
-        },
-        {
-          "id": "only-for-gateway-payments",
-          "heading": "Only for gateway payments",
-          "line_start": 25
-        }
-      ],
       "path": "knowledge/help-resources/gateway-commission.md"
     },
     {
@@ -3366,43 +2361,6 @@
         "why don't my accounting numbers match my Mews report",
         "how do I resolve duplicate invoices in my accounting system",
         "what should I do about unmapped revenue categories in Omniboost"
-      ],
-      "sections": [
-        {
-          "id": "unmapped-categories-fallback-warnings",
-          "heading": "Unmapped categories (fallback warnings)",
-          "line_start": 9
-        },
-        {
-          "id": "mews-api-token-expired",
-          "heading": "Mews API token expired",
-          "line_start": 13
-        },
-        {
-          "id": "data-mismatch-figures-do-not-match-mews",
-          "heading": "Data mismatch: figures do not match Mews",
-          "line_start": 17
-        },
-        {
-          "id": "duplicate-invoices-in-accounting",
-          "heading": "Duplicate invoices in accounting",
-          "line_start": 21
-        },
-        {
-          "id": "normal-payments-appearing-lightspeed-k-series",
-          "heading": "NORMAL payments appearing (Lightspeed K-Series)",
-          "line_start": 25
-        },
-        {
-          "id": "push-not-running-automatically",
-          "heading": "Push not running automatically",
-          "line_start": 29
-        },
-        {
-          "id": "locked-accounting-period",
-          "heading": "Locked accounting period",
-          "line_start": 33
-        }
       ],
       "path": "knowledge/help-resources/troubleshooting.md"
     }

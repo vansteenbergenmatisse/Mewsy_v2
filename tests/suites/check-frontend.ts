@@ -1439,6 +1439,24 @@ export async function checkFrontend({ pass, fail, skip: _skip, results }: Report
         fail('CSS [sidebar-css-13]', (err as Error).message);
         results.push({ ok: false });
       }
+
+      // [clarify-css-1] .clarify-free-text class exists — needed for "Something else" inline input
+      if (css.includes('.clarify-free-text')) {
+        pass('CSS [clarify-css-1]: .clarify-free-text class exists in styles.css');
+        results.push({ ok: true });
+      } else {
+        fail('CSS [clarify-css-1]: .clarify-free-text missing from styles.css', '');
+        results.push({ ok: false });
+      }
+
+      // [clarify-css-2] .clarify-free-text-input class exists — the text field inside the container
+      if (css.includes('.clarify-free-text-input')) {
+        pass('CSS [clarify-css-2]: .clarify-free-text-input class exists in styles.css');
+        results.push({ ok: true });
+      } else {
+        fail('CSS [clarify-css-2]: .clarify-free-text-input missing from styles.css', '');
+        results.push({ ok: false });
+      }
     }
   }
 

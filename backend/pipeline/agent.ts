@@ -6,40 +6,75 @@
  *   Step 1 — Load the manifest
  *     Read knowledge-manifest.json to get the full list of available docs.
  *
- *   Step 2 — Route (or skip routing)
- *     Check if routing should be skipped (short follow-up, greeting, etc.).
- *     If routing: Stage 1 selects categories, Stage 2 selects files within them.
- *     If skipping: reuse lastLoadedDocIds from session context.
+ *   Step 2 — Stage 1: keyword filter with thematic clustering
+ *     Score every doc by unique keyword+synonym hits in the user message + qaLog.
+ *     Apply one of four gates based on match count (and theme for the 6+ case):
+ *       Gate 1: 0 matched → BASIC
+ *       Gate 2: 1–SHORTLIST_MAX matched → Stage 2A (always, regardless of theme diversity)
+ *       Gate 3: 6+ matched, all one theme → CLARIFY(THEME_OVERFLOW)
+ *       Gate 4: 6+ matched, multiple themes → CLARIFY(TOO_BROAD)
  *
- *   Step 3 — Load
- *     Read the selected .md files from disk and build one context block.
- *     Enter BASIC_MODE if 0 docs returned or confidence < threshold.
+ *   Step 3 — Stage 2A: per-doc verification
+ *     Haiku reasons whether each shortlisted doc directly addresses the question.
+ *     Returns passes: boolean (no confidence float).
+ *     Docs not passing the threshold go to Stage 2B.
  *
- *   Step 4 — Answer
- *     Pass message + context to claude.ts, which calls the API and returns a reply.
+ *   Step 4 — Stage 2B: routing recovery
+ *     Haiku decides: Decision A (ask more → CLARIFY with STAGE2B_NEEDS_CONTEXT)
+ *     or Decision B (admit no docs available → BASIC carousel).
+ *     Forced to Decision B when clarifyRoundCounter >= MAX_CLARIFY_ROUNDS.
  *
- *   Step 5 — Update session context
+ *   Step 5 — Load and answer (ANSWER mode)
+ *     Read the passing .md files from disk and build one context block.
+ *     Pass message + context to claude.ts, which calls the Sonnet API.
+ *
+ *   Step 6 — CLARIFY or BASIC
+ *     CLARIFY: Haiku generates one targeted question based on trigger reason.
+ *     BASIC: Haiku generates 3-question card carousel.
+ *     Both append incoming Q&A pairs to session.qaLog.
+ *
+ *   Step 7 — Update session context
  *     Store doc IDs, extract previousQuestion, detect frustration/tools/setup type,
- *     update clarifyRoundCounter.
+ *     update clarifyRoundCounter (Stage 2B Decision A only).
+ *
+ * ── Theme field ────────────────────────────────────────────────────────────────
+ *
+ * Thematic clustering uses the `theme` field on ManifestPage, which is derived
+ * from the manifest `category` field (1:1 mapping). The category is the folder path
+ * for scraped docs (e.g. "website/mews-help-center") and a logical grouping key for
+ * manually authored docs (e.g. "mews.md", "omniboost.md"). This is the semantic
+ * grouping used by Stage 1 to detect whether matched docs are coherent (1–2 themes)
+ * or diverse (3+ themes). When adding new docs via the scraper, ensure the `category`
+ * field is set correctly — it doubles as the routing theme.
  */
 
 import { readFileSync } from 'fs';
 import { readFile } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { chat, selectRelevantFiles, selectRelevantCategories } from './claude.ts';
+import {
+  chat,
+  verifyDocuments,
+  recoverRouting,
+  generateClarifyQuestion,
+  generateClarifyingQuestions,
+} from './claude.ts';
+import type { QueryContext, Page, AnswerContract } from './claude.ts';
 import {
   getSession,
   updateContext,
+  addToHistory,
 } from './session.ts';
+import type { ClarificationBundle } from './session.ts';
 import {
   ROUTER_MAX_DOCS,
-  ROUTER_CONFIDENCE_THRESHOLD,
-  ROUTER_SINGLE_DOC_CONFIDENCE,
   ROUTER_HISTORY_ENABLED,
   ROUTER_HISTORY_PAIRS,
+  MAX_CLARIFY_ROUNDS,
+  STAGE2A_SHORTLIST_MAX,
+  POST_ANSWER_CLARIFY_BUDGET,
 } from '../config/Mewsie.config.ts';
-import type { Manifest, ManifestCategory } from '../types/manifest.ts';
+import type { Manifest } from '../types/manifest.ts';
 import { migrateManifest } from '../scraper/pipeline/manifest.ts';
 
 // __dirname is not available in ES modules by default — this reconstructs it
@@ -54,31 +89,45 @@ const INDEX_PATH = join(ROOT, 'knowledge', 'knowledge-manifest.json');
 // Sentinel value passed to claude.ts when no knowledge files matched at all.
 const BASIC_MODE = '__BASIC_MODE__';
 
-// Sentinel prefix passed to claude.ts when docs were found but confidence is low.
-// The agent appends candidate document summaries so Claude can ask a targeted question.
-const CLARIFY_MODE_PREFIX = '__CLARIFY_MODE__';
-
 // Pure greetings/acks/closings — routing is skipped for these
 const SKIP_ROUTING_GREETINGS = new Set([
   'hi', 'hello', 'hey', 'thanks', 'thank you', 'ok', 'okay', 'got it',
   'bye', 'goodbye', 'sure', 'yes', 'no', 'yep', 'nope', 'great',
 ]);
 
-// Shape of a flattened manifest page entry (used internally and by routing)
+// Static fallback used when generateClarifyQuestion fails (Haiku parse error).
+// This should be rare — Haiku is reliable at returning JSON.
+const STATIC_CLARIFY_REPLY = [
+  'Could you give me a bit more context about what you\'re looking for?',
+  '',
+  '[BUTTONS:]',
+  '- Onboarding / getting started',
+  '- Accounting integration setup',
+  '- GL mapping and reporting',
+  '- Troubleshooting an issue',
+  '- Something else',
+].join('\n');
+
+// ── ManifestPage ─────────────────────────────────────────────────────────────
+//
+// Shape of a flattened manifest page entry (used internally and by routing).
+// `theme` is derived from `category` — see file header for explanation.
+
 export interface ManifestPage {
   id: string;
   label: string;
   description: string;
   path: string;
   category: string;
+  // Semantic grouping for Stage 1 thematic clustering. Derived from category (1:1 mapping).
+  // Docs with the same theme are considered a coherent cluster.
+  theme: string;
   keywords?: string[];
+  synonyms?: string[];
   trigger_questions?: string[];
 }
 
 // ── Manifest loading ────────────────────────────────────────────────────────────
-//
-// Exported so tests can import and mock it directly.
-// Synchronous so vi.spyOn(fs, 'readFileSync') works in unit tests.
 
 export function loadManifest(manifestPath: string = INDEX_PATH): Manifest {
   const raw = JSON.parse(readFileSync(manifestPath, 'utf-8'));
@@ -88,6 +137,7 @@ export function loadManifest(manifestPath: string = INDEX_PATH): Manifest {
 // ── Manifest flattening ─────────────────────────────────────────────────────────
 
 // Turns the manifest's files array into a flat array.
+// `theme` is set to `category` — both represent the same semantic grouping.
 function flattenManifest(manifest: Manifest): ManifestPage[] {
   return manifest.files.map(file => ({
     id:               file.id,
@@ -95,9 +145,160 @@ function flattenManifest(manifest: Manifest): ManifestPage[] {
     description:      file.description,
     path:             file.path,
     category:         file.category,
+    theme:            file.category,   // theme = category (1:1 mapping, see file header)
     keywords:         file.keywords,
+    synonyms:         file.synonyms,
     trigger_questions: file.trigger_questions,
   }));
+}
+
+// ── Keyword pre-filter ──────────────────────────────────────────────────────────
+
+// Zero-LLM pre-filter: scores each doc by how many of its unique keywords + synonyms
+// appear in the user message (substring match, case-insensitive, deduplicated).
+// Returns only matched docs, ranked by overlap count. No fallback, no cap.
+// Exported for unit testing.
+export function keywordPreFilter(pages: ManifestPage[], userMessage: string): ManifestPage[] {
+  return keywordPreFilterScored(pages, userMessage).map(s => s.page);
+}
+
+// Internal scored version — returns hit counts needed for gate logic.
+function keywordPreFilterScored(
+  pages: ManifestPage[],
+  userMessage: string
+): { page: ManifestPage; hits: number }[] {
+  const msgLower = userMessage.toLowerCase();
+  return pages
+    .map(page => {
+      // Deduplicate keywords + synonyms so a repeated term never inflates the score.
+      const terms = [...new Set([...(page.keywords ?? []), ...(page.synonyms ?? [])])];
+      const hits = terms.filter(t => msgLower.includes(t.toLowerCase())).length;
+      return { page, hits };
+    })
+    .filter(s => s.hits > 0)
+    .sort((a, b) => b.hits - a.hits);
+}
+
+// ── Thematic coherence ──────────────────────────────────────────────────────────
+
+// Determines whether a set of matched docs forms a coherent cluster.
+// Coherent = 1 or 2 distinct themes. Diverse = 3+ distinct themes.
+function computeThematicCoherence(docs: ManifestPage[]): {
+  coherent: boolean;
+  themes: string[];
+  dominantTheme: string | null;
+} {
+  const themes = [...new Set(docs.map(d => d.theme))];
+  const coherent = themes.length <= 2;
+  const counts = new Map<string, number>();
+  for (const d of docs) counts.set(d.theme, (counts.get(d.theme) ?? 0) + 1);
+  const dominantTheme = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  return { coherent, themes, dominantTheme };
+}
+
+// ── Topic overlap check ─────────────────────────────────────────────────────────
+
+// Returns true when the user's follow-up message shares vocabulary with the topics
+// or open threads from the previous answer contract. Used to detect continuation
+// (Lane A) vs. a genuinely new question (Lane B) — no API call needed.
+function hasTopicOverlap(userMessage: string, contract: AnswerContract): boolean {
+  const lower = userMessage.toLowerCase();
+  const terms = [
+    ...contract.topics_covered,
+    ...contract.open_threads,
+  ]
+    .join(' ')
+    .split(/[\s,.()\-/]+/)
+    .map(t => t.toLowerCase())
+    .filter(t => t.length >= 4); // ignore short stop-words
+
+  return terms.some(t => lower.includes(t));
+}
+
+// ── Pass threshold ──────────────────────────────────────────────────────────────
+
+// Minimum number of docs that must pass Stage 2A for the result to proceed to ANSWER.
+function getPassThreshold(shortlistSize: number): number {
+  if (shortlistSize <= 2) return 1;
+  if (shortlistSize === 3) return 2;
+  return 3; // 4–5
+}
+
+// ── Stage 2A + 2B runner ────────────────────────────────────────────────────────
+
+// History entry shape (matches HistoryEntry in claude.ts)
+interface HistoryEntry {
+  role: string;
+  content: string;
+}
+
+// QA log entry
+interface QAEntry {
+  question: string;
+  answer: string;
+  source: 'BASIC' | 'CLARIFY';
+}
+
+// Runs Stage 2A (verification) and, if threshold not met, Stage 2B (recovery).
+// Returns the set of pages that passed verification, the CLARIFY trigger reason
+// (when Stage 2B chose Decision A), and whether Stage 2B chose Decision B.
+async function runStage2(
+  shortlist: ManifestPage[],
+  userMessage: string,
+  history: HistoryEntry[],
+  qaLog: QAEntry[],
+  clarifyRoundCounter: number
+): Promise<{
+  selectedPages: ManifestPage[];
+  clarifyTriggerReason: 'STAGE2B_NEEDS_CONTEXT' | null;
+  decisionB: boolean;
+}> {
+  // Stage 2A: per-doc verification
+  const stage2aResult = await verifyDocuments(
+    shortlist as unknown as Page[],
+    userMessage,
+    qaLog,
+    history
+  );
+
+  // Match verification results back to pages by docId, with index fallback
+  const passingPages = shortlist.filter((page, i) => {
+    const result = stage2aResult.results.find(r => r.docId === page.id)
+      ?? stage2aResult.results[i];
+    return result?.passes === true;
+  });
+
+  const threshold = getPassThreshold(shortlist.length);
+
+  if (passingPages.length >= threshold) {
+    console.log(`[STAGE 2A] ${passingPages.length}/${shortlist.length} docs passed verification → ANSWER`);
+    return { selectedPages: passingPages, clarifyTriggerReason: null, decisionB: false };
+  }
+
+  // Stage 2B: routing recovery
+  console.log(`[STAGE 2A] ${passingPages.length}/${shortlist.length} passed (threshold ${threshold}) → Stage 2B`);
+
+  if (clarifyRoundCounter >= MAX_CLARIFY_ROUNDS) {
+    console.log(`[STAGE 2B] clarifyRoundCounter=${clarifyRoundCounter} >= MAX_CLARIFY_ROUNDS=${MAX_CLARIFY_ROUNDS} → forced Decision B`);
+    return { selectedPages: [], clarifyTriggerReason: null, decisionB: true };
+  }
+
+  const stage2bResult = await recoverRouting(
+    shortlist as unknown as Page[],
+    userMessage,
+    qaLog,
+    history,
+    stage2aResult.results,
+    clarifyRoundCounter
+  );
+
+  if (stage2bResult.decision === 'A') {
+    console.log(`[STAGE 2B] Decision A — ${stage2bResult.reason}`);
+    return { selectedPages: [], clarifyTriggerReason: 'STAGE2B_NEEDS_CONTEXT', decisionB: false };
+  } else {
+    console.log(`[STAGE 2B] Decision B — ${stage2bResult.reason}`);
+    return { selectedPages: [], clarifyTriggerReason: null, decisionB: true };
+  }
 }
 
 // ── File loading ───────────────────────────────────────────────────────────────
@@ -128,6 +329,15 @@ export interface SessionContext {
   frustrationCounter: number;
   clarifyRoundCounter: number;
   previousQuestion: string | null;
+  clarificationBundles: ClarificationBundle[];
+  originalQuestion?: string | null;
+  qaLog: QAEntry[];
+  // Post-answer state (mirrors session.ts SessionContext)
+  postAnswerMode: boolean;
+  postAnswerSignal: 'COMPLETE' | 'PARTIAL' | null;
+  answerContract: AnswerContract | null;
+  qaLogSnapshot: QAEntry[];
+  postAnswerClarifyUsed: boolean;
 }
 
 // Returns true when routing should be skipped for this message.
@@ -140,7 +350,6 @@ export function shouldSkipRouting(userMessage: string, sessionContext: SessionCo
   const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
 
   // Pure greeting or ack — skip routing only if we have docs to reuse
-  // (no point skipping if there's nothing in the session to fall back on)
   if (SKIP_ROUTING_GREETINGS.has(trimmed)) {
     return sessionContext.lastLoadedDocIds.length > 0;
   }
@@ -156,19 +365,9 @@ export function shouldSkipRouting(userMessage: string, sessionContext: SessionCo
   return false;
 }
 
-// ── Mode determination ─────────────────────────────────────────────────────────
-//
-// Exported for testing.
+// ── Mode type ──────────────────────────────────────────────────────────────────
 
 export type RoutingMode = 'ANSWER' | 'CLARIFY' | 'BASIC';
-
-export function determineMode(result: { matches: string[]; confidence: number }): RoutingMode {
-  const { matches, confidence } = result;
-  if (matches.length === 0) return 'BASIC';
-  if (confidence >= ROUTER_SINGLE_DOC_CONFIDENCE) return 'ANSWER';
-  if (matches.length === 1 && confidence >= ROUTER_CONFIDENCE_THRESHOLD) return 'ANSWER';
-  return 'CLARIFY';
-}
 
 // ── Context extraction helpers ──────────────────────────────────────────────────
 
@@ -220,17 +419,39 @@ function detectSetupType(text: string): string | null {
   return null;
 }
 
+// ── Clarify answer parser ──────────────────────────────────────────────────────
+//
+// The frontend sends all answered clarifying questions as a single message in the format:
+//   Q: [question text]\nA: [answer text]\nQ: ...\nA: ...
+// This function parses that format into Q&A pairs.
+// Returns empty array if the message doesn't match the format.
+
+export function parseClarifyAnswers(message: string): { q: string; a: string }[] {
+  const lines = message.split('\n').map(l => l.trim()).filter(Boolean);
+  const pairs: { q: string; a: string }[] = [];
+  let currentQ: string | null = null;
+  for (const line of lines) {
+    if (line.startsWith('Q: ')) {
+      currentQ = line.slice(3).trim();
+    } else if (line.startsWith('A: ') && currentQ !== null) {
+      pairs.push({ q: currentQ, a: line.slice(3).trim() });
+      currentQ = null;
+    }
+  }
+  return pairs;
+}
+
 // ── Main pipeline ───────────────────────────────────────────────────────────────
 
 // Called by server.ts for every incoming chat message.
 // Runs the full pipeline and returns the final reply string.
 export async function handleMessage(sessionId: string, userMessage: string): Promise<string> {
   const session = getSession(sessionId);
-  const context = session.context;
+  const context = session.context as unknown as SessionContext;
   const history = session.history;
   const isFirstMessage = history.length === 0;
 
-  console.log(`[agent] isFirstMessage=${isFirstMessage} | history=${history.length} turns`);
+  console.log(`[SESSION]  history=${history.length} turns, isFirst=${isFirstMessage}`);
 
   // Step 1: Load the manifest
   let manifest: Manifest = { categories: [], files: [] };
@@ -242,124 +463,343 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
 
   const allPages = flattenManifest(manifest);
 
-  // Step 2: Determine routing strategy
+  // ── Post-answer routing gate ────────────────────────────────────────────────
+  //
+  // Fires before Stage 1 when the previous turn was a successful ANSWER.
+  // Stage 2B (recoverRouting) never runs in this gate — the blockade is implicit
+  // because both paths that stay in docs return early before Stage 1 executes.
+  //
+  // PARTIAL  → same docs, Sonnet continues the answer
+  // COMPLETE + topic overlap → Lane A: same docs, Sonnet goes deeper
+  // COMPLETE + no overlap   → Lane B: clear state, fall through to Stage 1
+  if (context.postAnswerMode && context.lastLoadedDocIds.length > 0) {
+    const isPartial = context.postAnswerSignal === 'PARTIAL';
+    const hasContract = context.answerContract !== null;
+    const overlap = hasContract
+      ? hasTopicOverlap(userMessage, context.answerContract!)
+      : false;
+    const stayInDocs = isPartial || (context.postAnswerSignal === 'COMPLETE' && overlap);
+
+    if (!stayInDocs) {
+      // Lane B: new unrelated question — clear post-answer state, let Stage 1 run
+      console.log('[POST-ANSWER] COMPLETE + no overlap → Lane B (full reset, Stage 1)');
+      updateContext(sessionId, {
+        postAnswerMode: false,
+        postAnswerSignal: null,
+        answerContract: null,
+        qaLogSnapshot: [],
+        postAnswerClarifyUsed: false,
+      });
+      // falls through to normal pipeline below
+    } else {
+      // PARTIAL or Lane A: reload same docs, go straight to Sonnet
+      console.log(`[POST-ANSWER] ${isPartial ? 'PARTIAL' : 'COMPLETE + overlap → Lane A'} — reusing docs, skipping routing`);
+
+      const cachedPages = allPages.filter(p => context.lastLoadedDocIds.includes(p.id));
+      const cachedContents = await loadKnowledgeFiles(cachedPages);
+      const cachedKnowledge = cachedContents.length > 0 ? cachedContents.join('\n\n---\n\n') : null;
+
+      const cachedQA = (context.qaLogSnapshot ?? []).map(e => ({ q: e.question, a: e.answer }));
+      const postAnswerQueryContext: QueryContext = {
+        originalQuestion: context.originalQuestion || userMessage,
+        clarifyingQA: cachedQA.length > 0 ? cachedQA : undefined,
+        selectedFiles: cachedPages.map(p => p.label),
+        answerContract: context.answerContract ?? undefined,
+      };
+
+      const postChatResult = await chat(
+        sessionId,
+        userMessage,
+        cachedKnowledge,
+        context as unknown as Parameters<typeof chat>[3],
+        postAnswerQueryContext
+      );
+      let postReply = postChatResult.reply;
+      const postSignal = postChatResult.signal;
+      const postContract = postChatResult.contract;
+
+      // Lane A clarify budget: if Sonnet responded with buttons, check whether
+      // the budget allows it (POST_ANSWER_CLARIFY_BUDGET). On budget exhaustion,
+      // replace with BASIC carousel and exit post-answer mode.
+      if (!isPartial && postReply.includes('[BUTTONS:]')) {
+        if (!context.postAnswerClarifyUsed) {
+          console.log(`[POST-ANSWER] Lane A — clarify question used (budget: ${POST_ANSWER_CLARIFY_BUDGET})`);
+          updateContext(sessionId, { postAnswerClarifyUsed: true });
+        } else {
+          console.log('[POST-ANSWER] Lane A — clarify budget exhausted → BASIC carousel');
+          const qaForBasic = (context.qaLogSnapshot ?? []).map(e => ({ q: e.question, a: e.answer }));
+          postReply = await generateClarifyingQuestions(userMessage, null, qaForBasic);
+          updateContext(sessionId, {
+            postAnswerMode: false,
+            postAnswerSignal: null,
+            answerContract: null,
+            qaLogSnapshot: [],
+            postAnswerClarifyUsed: false,
+          });
+        }
+      }
+
+      // Update post-answer state based on new signal
+      if (postSignal !== 'PARTIAL') {
+        updateContext(sessionId, {
+          postAnswerMode: false,
+          postAnswerSignal: null,
+          answerContract: null,
+          qaLogSnapshot: [],
+          clarifyRoundCounter: 0,
+          originalQuestion: null,
+          qaLog: [],
+        });
+      } else {
+        updateContext(sessionId, {
+          postAnswerSignal: postSignal,
+          answerContract: postContract,
+        });
+      }
+
+      // Common session tail updates (run even on early return)
+      const postPrevQ = postReply.trimStart().startsWith('{') ? null : extractPreviousQuestion(postReply);
+      updateContext(sessionId, { previousQuestion: postPrevQ });
+      if (detectFrustration(userMessage)) {
+        updateContext(sessionId, { frustrationCounter: (context.frustrationCounter || 0) + 1 });
+      }
+      const postTools = detectTools(userMessage);
+      if (postTools.length > 0) {
+        updateContext(sessionId, { tools: [...new Set([...(context.tools || []), ...postTools])] });
+      }
+      if (!context.setupType) {
+        const st = detectSetupType(userMessage) || detectSetupType(postReply);
+        if (st) updateContext(sessionId, { setupType: st });
+      }
+
+      console.log(`[REPLY]    ${postReply.split(/\s+/).filter(Boolean).length} words sent to user (post-answer)`);
+      return postReply;
+    }
+  }
+
+  // ── Pre-routing context ──────────────────────────────────────────────────────
+  // Parse Q&A answers before routing.
+  const incomingQAPairs = parseClarifyAnswers(userMessage);
+
+  // Build the enriched query for Stage 1: user message + all accumulated Q&A answers.
+  // This gives Stage 1 richer signal on re-runs after BASIC or CLARIFY rounds.
+  const currentQALog: QAEntry[] = context.qaLog ?? [];
+  const qaAnswerText = currentQALog.length > 0
+    ? ' ' + currentQALog.map(e => e.answer).join(' ')
+    : '';
+
+  // When re-routing on a Q&A answer batch, use the stored original question
+  // (not the "Q: ...\nA: ..." formatted string) as the base for Stage 1 scoring.
+  const routingBaseMessage = incomingQAPairs.length > 0 && context.originalQuestion
+    ? context.originalQuestion
+    : userMessage;
+
+  // Stage 1 query = base message + all accumulated Q&A answers
+  const stage1Query = (routingBaseMessage + qaAnswerText).trim();
+
+  // Step 2: Routing
   let selectedPages: ManifestPage[] = [];
-  let confidence = 0.0;
+  let clarifyTriggerReason: 'DIVERSE_TOPICS' | 'THEME_OVERFLOW' | 'TOO_BROAD' | 'STAGE2B_NEEDS_CONTEXT' | null = null;
+  let clarifyMatchedMeta: { title: string; theme: string }[] = [];
+  let stage2bDecisionB = false;
 
   const skipRouting = shouldSkipRouting(userMessage, context, isFirstMessage);
 
   if (skipRouting && context.lastLoadedDocIds.length > 0) {
-    // Reuse the previously loaded docs
     selectedPages = allPages.filter(p => context.lastLoadedDocIds.includes(p.id));
-    confidence = 1.0;
-    console.log(`[agent] skip-routing — reusing docs: ${selectedPages.map(p => p.label).join(', ') || '(none)'}`);
+    console.log(`[STAGE 1]  Skipped — short follow-up, reusing previous docs`);
   } else if (allPages.length > 0) {
-    // Two-stage routing
     try {
-      // Stage 1: classify into categories (only when categories are defined)
-      let filesToSearch = allPages;
+      // Stage 1: score all docs with deduplicated keyword+synonym matching
+      const scored = keywordPreFilterScored(allPages, stage1Query);
+      const matchedDocCount = scored.length;
 
-      if (manifest.categories.length > 0) {
-        // Only run Stage 1 when ALL categories have descriptions.
-        // If any category is undescribed, Haiku can't make reliable decisions
-        // and may pick the wrong category, silently restricting Stage 2 to wrong files.
-        const allCatsDescribed = manifest.categories.every(c => c.description.trim().length > 0);
+      if (matchedDocCount === 0) {
+        // Gate 1: 0 matched → BASIC
+        console.log(`[STAGE 1]  0/${allPages.length} docs matched → BASIC`);
 
-        if (!allCatsDescribed) {
-          console.log('[Stage 1] skipped — categories lack descriptions, searching all files');
-        } else {
-          const matchedCategoryIds = await selectRelevantCategories(userMessage, manifest.categories);
-          console.log(`[Stage 1] Matched categories: [${matchedCategoryIds.join(', ')}]`);
+      } else if (matchedDocCount <= STAGE2A_SHORTLIST_MAX) {
+        // Gate 2: 1–SHORTLIST_MAX matched → Stage 2A always.
+        // Theme diversity is irrelevant here — Stage 2A evaluates each doc independently.
+        // A question matching docs across different topic areas is still a specific question.
+        const shortlist = scored.map(s => s.page);
+        console.log(`[STAGE 1]  ${matchedDocCount}/${allPages.length} docs matched → Stage 2A`);
 
-          if (matchedCategoryIds.length === 0) {
-            // All categories are well-described and none matched — genuine out-of-scope question
-            console.log('[agent] Stage 1 returned no categories — entering BASIC_MODE');
-            const reply = await chat(sessionId, userMessage, BASIC_MODE, context);
-            updateContext(sessionId, { lastLoadedDocIds: [] });
-            updateContext(sessionId, { previousQuestion: extractPreviousQuestion(reply) });
-            return reply;
-          }
-
-          // Filter files to only those in matched categories
-          const filtered = allPages.filter(p => matchedCategoryIds.includes(p.category));
-          // Safety: if filtering leaves 0 files, fall back to full search
-          filesToSearch = filtered.length > 0 ? filtered : allPages;
+        let conversationHistory: HistoryEntry[] = [];
+        if (ROUTER_HISTORY_ENABLED && history.length > 0) {
+          conversationHistory = history.slice(-(ROUTER_HISTORY_PAIRS * 2)) as HistoryEntry[];
         }
-        console.log(`[Stage 2] Searching ${filesToSearch.length} files`);
+
+        const stage2Result = await runStage2(
+          shortlist,
+          routingBaseMessage,
+          conversationHistory,
+          currentQALog,
+          context.clarifyRoundCounter ?? 0
+        );
+
+        selectedPages = stage2Result.selectedPages;
+        clarifyTriggerReason = stage2Result.clarifyTriggerReason;
+        stage2bDecisionB = stage2Result.decisionB;
+
+      } else {
+        // 6+ docs matched
+        const allMatched = scored.map(s => s.page);
+        const { themes, dominantTheme } = computeThematicCoherence(allMatched);
+
+        if (themes.length === 1) {
+          // Gate 4: 6+ matched, all one theme → CLARIFY(THEME_OVERFLOW)
+          console.log(`[STAGE 1]  ${matchedDocCount}/${allPages.length} docs matched, all theme: "${dominantTheme}" → CLARIFY(THEME_OVERFLOW)`);
+          clarifyTriggerReason = 'THEME_OVERFLOW';
+          clarifyMatchedMeta = allMatched.slice(0, 10).map(d => ({ title: d.label, theme: d.theme }));
+        } else {
+          // Gate 5: 6+ matched, multiple themes → CLARIFY(TOO_BROAD)
+          console.log(`[STAGE 1]  ${matchedDocCount}/${allPages.length} docs matched, themes: [${themes.join(', ')}] → CLARIFY(TOO_BROAD)`);
+          clarifyTriggerReason = 'TOO_BROAD';
+          clarifyMatchedMeta = scored.slice(0, 10).map(s => ({ title: s.page.label, theme: s.page.theme }));
+        }
       }
-
-      // Stage 2: file-level routing on the filtered subset
-      let conversationHistory: { role: string; content: string }[] = [];
-      if (ROUTER_HISTORY_ENABLED && history.length > 0) {
-        const pairCount = ROUTER_HISTORY_PAIRS * 2;
-        conversationHistory = history.slice(-pairCount);
-      }
-
-      const result = await selectRelevantFiles(filesToSearch, userMessage, conversationHistory);
-      confidence = result.confidence;
-
-      const cappedIndices = result.indices.slice(0, ROUTER_MAX_DOCS);
-      selectedPages = cappedIndices.map(i => filesToSearch[i]).filter(Boolean);
-
-      const mode = determineMode({ matches: selectedPages.map(p => p.id), confidence });
-      const docNames = selectedPages.map(p => `"${p.label}"`).join(', ') || '(none)';
-      console.log(`[Routing] Mode=${mode} | docs=[${docNames}] | conf=${confidence.toFixed(2)}`);
     } catch (err) {
       console.error(`[agent] routing failed: ${(err as Error).message}`);
     }
   }
 
-  // Step 3: Load files and build context block.
-  //
-  // Decision tree:
-  //   - Any docs AND confidence >= ROUTER_SINGLE_DOC_CONFIDENCE (0.95) → load all, answer directly
-  //   - Exactly 1 doc AND confidence >= ROUTER_CONFIDENCE_THRESHOLD (0.85) → load and answer
-  //   - Multiple docs AND confidence < 0.95 → CLARIFY_MODE (ambiguous query)
-  //   - 1 doc but confidence < 0.85 → CLARIFY_MODE (low certainty)
-  //   - No docs at all → BASIC_MODE
-  let knowledgeContent: string = BASIC_MODE;
-
-  if (selectedPages.length >= 1 && confidence >= ROUTER_SINGLE_DOC_CONFIDENCE) {
-    const contents = await loadKnowledgeFiles(selectedPages);
-    if (contents.length > 0) {
-      knowledgeContent = contents.join('\n\n---\n\n');
-      console.log(`[agent] high confidence (${confidence.toFixed(2)}) — answering directly with ${selectedPages.length} doc(s)`);
-    }
-  } else if (selectedPages.length === 1 && confidence >= ROUTER_CONFIDENCE_THRESHOLD) {
-    const contents = await loadKnowledgeFiles(selectedPages);
-    if (contents.length > 0) {
-      knowledgeContent = contents.join('\n\n---\n\n');
-    }
-  } else if (selectedPages.length > 1) {
-    const candidateSummary = selectedPages
-      .map(p => `- ${p.label}: ${p.description}`)
-      .join('\n');
-    knowledgeContent = `${CLARIFY_MODE_PREFIX}\n${candidateSummary}`;
-    console.log(`[agent] multiple candidates (${selectedPages.length}) — entering CLARIFY_MODE`);
-  } else if (selectedPages.length === 1 && confidence < ROUTER_CONFIDENCE_THRESHOLD) {
-    const candidateSummary = selectedPages
-      .map(p => `- ${p.label}: ${p.description}`)
-      .join('\n');
-    knowledgeContent = `${CLARIFY_MODE_PREFIX}\n${candidateSummary}`;
-    console.log(`[agent] low confidence (${confidence.toFixed(2)}) — entering CLARIFY_MODE`);
+  // Step 3: Determine mode
+  let finalMode: RoutingMode;
+  if (clarifyTriggerReason !== null) {
+    finalMode = 'CLARIFY';
+  } else if (stage2bDecisionB) {
+    finalMode = 'BASIC';
+  } else if (selectedPages.length > 0) {
+    finalMode = 'ANSWER';
   } else {
-    console.log('[agent] no docs found — entering BASIC_MODE');
+    finalMode = 'BASIC';
   }
 
-  // Step 4: Send message + knowledge to Claude, passing session context
-  const finalMode = knowledgeContent === BASIC_MODE ? 'BASIC' : knowledgeContent.startsWith(CLARIFY_MODE_PREFIX) ? 'CLARIFY' : 'ANSWER';
-  console.log(`[agent] → calling Sonnet in ${finalMode} mode (${finalMode === 'ANSWER' ? selectedPages.length + ' doc(s) loaded' : 'no docs'})`);
-  const reply = await chat(sessionId, userMessage, knowledgeContent, context);
+  console.log(`[MODE]     ${finalMode}`);
 
-  console.log(`[agent] Sonnet replied (${reply.split(/\s+/).filter(Boolean).length} words)`);
+  // Step 4: Build reply
 
-  // Step 5: Update session context after each turn
+  let reply: string;
+  let knowledgeContent: string | null = BASIC_MODE;
+  let queryContext: QueryContext | null = null;
+  let answerSignal: import('./claude.ts').AnswerSignal | null = null;
+  let answerContract: AnswerContract | null = null;
 
-  const didLoadDocs = knowledgeContent !== BASIC_MODE && !knowledgeContent.startsWith(CLARIFY_MODE_PREFIX);
-  const loadedDocIds = didLoadDocs ? selectedPages.map(p => p.id) : [];
+  if (finalMode === 'ANSWER') {
+    // Load full content of passing docs only
+    const capped = selectedPages.slice(0, ROUTER_MAX_DOCS);
+    const contents = await loadKnowledgeFiles(capped);
+
+    if (contents.length > 0) {
+      knowledgeContent = contents.join('\n\n---\n\n');
+    } else {
+      // Docs exist but couldn't be read — answer from base knowledge
+      knowledgeContent = null;
+    }
+
+    // Build qaLog as clarifyingQA for Sonnet's queryContext
+    const clarifyingQA = currentQALog.map(e => ({ q: e.question, a: e.answer }));
+
+    queryContext = {
+      originalQuestion: context.originalQuestion || userMessage,
+      clarifyingQA: clarifyingQA.length > 0 ? clarifyingQA : undefined,
+      selectedFiles: capped.map(p => p.label),
+    };
+
+    console.log(`[ANSWER]   ${capped.length} doc(s) loaded`);
+    const chatResult = await chat(sessionId, userMessage, knowledgeContent, context as unknown as Parameters<typeof chat>[3], queryContext);
+    reply = chatResult.reply;
+    answerSignal = chatResult.signal;
+    answerContract = chatResult.contract;
+
+  } else if (finalMode === 'CLARIFY') {
+    // Generate targeted question based on trigger reason
+    const clarifyResult = await generateClarifyQuestion(
+      userMessage,
+      clarifyTriggerReason!,
+      clarifyMatchedMeta,
+      currentQALog,
+      { tools: context.tools, setupType: context.setupType }
+    );
+
+    if (clarifyResult) {
+      reply = `${clarifyResult.question}\n\n[BUTTONS:]\n${clarifyResult.options.map(o => `- ${o}`).join('\n')}`;
+    } else {
+      reply = STATIC_CLARIFY_REPLY;
+      console.log('[CLARIFY]  Fell back to static reply (generateClarifyQuestion returned null)');
+    }
+
+    addToHistory(sessionId, 'user', userMessage);
+    addToHistory(sessionId, 'assistant', reply);
+
+    if (!context.originalQuestion) {
+      updateContext(sessionId, { originalQuestion: userMessage });
+    }
+
+    // Increment clarifyRoundCounter only for Stage 2B Decision A (not Stage 1 gates).
+    // Stage 1 gates are free — the counter tracks only the costly "we tried routing but
+    // couldn't find good docs" recovery cycles.
+    if (clarifyTriggerReason === 'STAGE2B_NEEDS_CONTEXT') {
+      updateContext(sessionId, { clarifyRoundCounter: (context.clarifyRoundCounter ?? 0) + 1 });
+    }
+
+  } else {
+    // BASIC mode — generate the 3-question card carousel via Haiku.
+    // Also fires when Stage 2B chose Decision B (redirect to a fresh carousel).
+    const clarifyingQA = currentQALog.map(e => ({ q: e.question, a: e.answer }));
+    reply = await generateClarifyingQuestions(userMessage, null, clarifyingQA);
+
+    addToHistory(sessionId, 'user', userMessage);
+    addToHistory(sessionId, 'assistant', reply);
+
+    if (!context.originalQuestion) {
+      updateContext(sessionId, { originalQuestion: userMessage });
+    }
+  }
+
+  console.log(`[REPLY]    ${reply.split(/\s+/).filter(Boolean).length} words sent to user`);
+
+  // Step 5: Update session context
+
+  // Track which docs were loaded (only in ANSWER mode)
+  const loadedDocIds = finalMode === 'ANSWER' ? selectedPages.map(p => p.id) : [];
   updateContext(sessionId, { lastLoadedDocIds: loadedDocIds });
 
-  const previousQuestion = extractPreviousQuestion(reply);
+  if (finalMode === 'ANSWER') {
+    // Snapshot the qaLog before potentially clearing it (Lane A needs this for future turns).
+    updateContext(sessionId, { qaLogSnapshot: [...currentQALog] });
+
+    if (answerSignal !== 'PARTIAL') {
+      // COMPLETE or no signal — full reset of clarification state.
+      updateContext(sessionId, {
+        clarifyRoundCounter: 0,
+        originalQuestion: null,
+        qaLog: [],
+      });
+    }
+    // Always enter post-answer mode so the next message goes through the gate.
+    updateContext(sessionId, {
+      postAnswerMode: true,
+      postAnswerSignal: answerSignal,
+      answerContract: answerContract,
+      postAnswerClarifyUsed: false,
+    });
+  } else {
+    // CLARIFY or BASIC — append incoming Q&A to qaLog for future Stage 1 re-runs.
+    if (incomingQAPairs.length > 0) {
+      const source = (finalMode === 'CLARIFY' ? 'CLARIFY' : 'BASIC') as 'BASIC' | 'CLARIFY';
+      const newEntries: QAEntry[] = incomingQAPairs.map(p => ({
+        question: p.q,
+        answer: p.a,
+        source,
+      }));
+      updateContext(sessionId, { qaLog: [...currentQALog, ...newEntries] });
+    }
+  }
+
+  // Don't extract a "previous question" from JSON (clarify card replies).
+  const previousQuestion = reply.trimStart().startsWith('{') ? null : extractPreviousQuestion(reply);
   updateContext(sessionId, { previousQuestion });
 
   if (detectFrustration(userMessage)) {
@@ -380,15 +820,6 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
     if (setupType) {
       updateContext(sessionId, { setupType });
     }
-  }
-
-  const replyWordCount = reply.split(/\s+/).filter(Boolean).length;
-  const replyEndsWithQuestion = reply.trim().slice(-200).includes('?');
-
-  if (replyEndsWithQuestion) {
-    updateContext(sessionId, { clarifyRoundCounter: (context.clarifyRoundCounter || 0) + 1 });
-  } else if (replyWordCount > 100 && !replyEndsWithQuestion) {
-    updateContext(sessionId, { clarifyRoundCounter: 0 });
   }
 
   return reply;

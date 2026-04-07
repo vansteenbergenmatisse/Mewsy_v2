@@ -1,41 +1,16 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import config from '../config.ts';
-import type { Manifest, ManifestFile, ManifestCategory, ManifestSection } from '../../types/manifest.ts';
+import type { Manifest, ManifestFile, ManifestCategory } from '../../types/manifest.ts';
 
 const manifestPath = join(process.cwd(), config.manifestPath);
 
 // ── Exported types (re-exported for convenience) ──────────────────────────────
-export type { Manifest, ManifestFile, ManifestCategory, ManifestSection };
+export type { Manifest, ManifestFile, ManifestCategory };
 
 // Shape of a scraper entry (ManifestFile with slug attached, for internal use)
 interface ScraperEntry extends ManifestFile {
   slug: string;
-}
-
-// ── Section parser ─────────────────────────────────────────────────────────────
-
-/**
- * Reads a markdown string and returns all ## headings with their line numbers.
- * Only ## (h2) — not # (h1) or ### (h3+).
- */
-export function parseSections(markdownContent: string): ManifestSection[] {
-  const lines = markdownContent.split('\n');
-  const sections: ManifestSection[] = [];
-
-  lines.forEach((line, index) => {
-    const match = line.match(/^## (.+)/);
-    if (match) {
-      const heading = match[1].trim();
-      sections.push({
-        id: heading.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
-        heading: heading,
-        line_start: index + 1, // convert 0-indexed to 1-indexed
-      });
-    }
-  });
-
-  return sections;
 }
 
 // ── Category helper ────────────────────────────────────────────────────────────
@@ -131,7 +106,6 @@ export function migrateManifest(raw: unknown): Manifest {
           description: page.description ?? '',
           keywords: page.keywords ?? [],
           trigger_questions: [],
-          sections: [],
           path: page.path ?? '',
           source_url: page.source_url,
           source_type: page.source_type,
@@ -154,7 +128,6 @@ export function migrateManifest(raw: unknown): Manifest {
         description: entry.description ?? '',
         keywords: entry.keywords ?? [],
         trigger_questions: [],
-        sections: [],
         path: entry.path ?? '',
         source_url: entry.source_url,
         source_type: entry.source_type,
@@ -193,14 +166,12 @@ function validateEntry(slug: string, entry: Partial<ManifestFile>): void {
  * Automatically derives category from path, calls ensureCategoryExists,
  * and stamps trigger_questions/sections with safe defaults if not provided.
  */
-export function upsertEntry(slug: string, entry: Partial<ManifestFile>, markdownContent?: string): void {
+export function upsertEntry(slug: string, entry: Partial<ManifestFile>): void {
   validateEntry(slug, entry);
   const manifest = readManifest();
 
   const category = deriveCategoryFromPath(entry.path ?? '');
   ensureCategoryExists(manifest, category);
-
-  const sections = markdownContent ? parseSections(markdownContent) : (entry.sections ?? []);
 
   const existing = manifest.files.findIndex(f => f.id === slug);
   const updated: ManifestFile = {
@@ -210,7 +181,6 @@ export function upsertEntry(slug: string, entry: Partial<ManifestFile>, markdown
     description: entry.description!,
     keywords: entry.keywords!,
     trigger_questions: entry.trigger_questions ?? [],
-    sections,
     path: entry.path!,
     source_url: entry.source_url,
     source_type: entry.source_type,
@@ -242,28 +212,6 @@ export function deleteEntry(slug: string): boolean {
   manifest.files.splice(idx, 1);
   writeManifest(manifest);
   return true;
-}
-
-/**
- * Reads the markdown content for every file in the manifest and refreshes
- * the `sections` array from the current ## headings.
- * Mutates the manifest in place. Returns true if any sections changed.
- * No API calls — safe to run on every sync and in tests.
- */
-export function enrichSections(manifest: Manifest): boolean {
-  const root = process.cwd();
-  let changed = false;
-  for (const file of manifest.files) {
-    try {
-      const content = readFileSync(join(root, file.path), 'utf-8');
-      const fresh = parseSections(content);
-      if (JSON.stringify(fresh) !== JSON.stringify(file.sections)) {
-        file.sections = fresh;
-        changed = true;
-      }
-    } catch { /* skip unreadable files */ }
-  }
-  return changed;
 }
 
 /**

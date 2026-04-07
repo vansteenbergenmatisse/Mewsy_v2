@@ -303,58 +303,6 @@ export async function checkScraper({ pass, fail, skip: _skip, results }: Reporte
     results.push({ ok: false });
   }
 
-  // ── enrichSections ────────────────────────────────────────────────────────
-  // No API key needed — enrichSections reads files from disk and parses headings.
-  const { enrichSections } = await import(`${ROOT}/backend/scraper/pipeline/manifest.ts`);
-
-  try {
-    // Build a small in-memory manifest pointing at a known file with ## headings
-    const testManifestForSections = {
-      categories: [],
-      files: [
-        {
-          id: 'mews',
-          title: 'Test',
-          category: 'mews.md',
-          description: 'test',
-          keywords: ['test'],
-          trigger_questions: [],
-          sections: [],           // intentionally empty
-          path: 'knowledge/mews.md',
-        },
-      ],
-    };
-    const changed = enrichSections(testManifestForSections) as boolean;
-    if (changed && testManifestForSections.files[0].sections.length > 0) {
-      pass('enrichSections fills sections from ## headings in file content');
-      results.push({ ok: true });
-    } else {
-      fail('enrichSections fills sections', `changed=${changed}, sections=${JSON.stringify(testManifestForSections.files[0].sections)}`);
-      results.push({ ok: false });
-    }
-  } catch (err) {
-    fail('enrichSections', (err as Error).message);
-    results.push({ ok: false });
-  }
-
-  try {
-    // enrichSections returns false when sections are already up to date
-    const mOrig = readM() as { categories: unknown[]; files: { sections: unknown[] }[] };
-    // First call populates sections, second call on the same object returns false
-    enrichSections(mOrig);
-    const secondRun = enrichSections(mOrig) as boolean;
-    if (secondRun === false) {
-      pass('enrichSections returns false when nothing changed (idempotent)');
-      results.push({ ok: true });
-    } else {
-      fail('enrichSections idempotent', 'Expected false on second run, got true');
-      results.push({ ok: false });
-    }
-  } catch (err) {
-    fail('enrichSections idempotency', (err as Error).message);
-    results.push({ ok: false });
-  }
-
   // ── generateTriggerQuestions / generateCategoryDescription / enrichManifest
   // These make real Haiku API calls — skip when no key is set.
   const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
@@ -398,8 +346,8 @@ export async function checkScraper({ pass, fail, skip: _skip, results }: Reporte
       await new Promise(r => setTimeout(r, 1200));
       const cat = { id: 'test-cat', label: 'Mews Help Center', description: '' };
       const catFiles = [
-        { id: 'f1', title: 'Onboarding Guide | Mews to Xero', description: 'Connects Mews PMS to Xero via Omniboost', keywords: [], trigger_questions: [], sections: [], path: '', category: 'test-cat' },
-        { id: 'f2', title: 'Onboarding Guide | Mews to DATEV', description: 'Connects Mews PMS to DATEV via Omniboost', keywords: [], trigger_questions: [], sections: [], path: '', category: 'test-cat' },
+        { id: 'f1', title: 'Onboarding Guide | Mews to Xero', description: 'Connects Mews PMS to Xero via Omniboost', keywords: [], trigger_questions: [], path: '', category: 'test-cat' },
+        { id: 'f2', title: 'Onboarding Guide | Mews to DATEV', description: 'Connects Mews PMS to DATEV via Omniboost', keywords: [], trigger_questions: [], path: '', category: 'test-cat' },
       ];
       const desc = await generateCategoryDescription(cat, catFiles) as string;
       if (typeof desc === 'string' && desc.trim().length >= 5) {

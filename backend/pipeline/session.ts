@@ -39,10 +39,18 @@ const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
  *     frustrationCounter: 0,
  *     clarifyRoundCounter: 0,
  *     previousQuestion: null,
+ *     clarificationBundles: [],   // completed Q&A rounds, keyed by category IDs
  *   },
  *   lastActive: Date.now(),
  * }
  */
+
+// One completed clarification round: the category IDs that triggered it + all Q&A pairs.
+// Keyed by categoryIds so the router can reload relevant context when the same topic recurs.
+export interface ClarificationBundle {
+  categoryIds: string[];
+  qaPairs: { q: string; a: string }[];
+}
 
 interface SessionContext {
   language: string | null;
@@ -50,8 +58,36 @@ interface SessionContext {
   setupType: string | null;
   lastLoadedDocIds: string[];
   frustrationCounter: number;
+  // Tracks how many times Stage 2B has chosen Decision A in this session.
+  // Hard limit: when this reaches MAX_CLARIFY_ROUNDS, Stage 2B is forced to Decision B.
   clarifyRoundCounter: number;
   previousQuestion: string | null;
+  // Stores completed clarification bundles keyed by their matched category IDs.
+  // Kept for backward compatibility. New code uses qaLog instead.
+  clarificationBundles: ClarificationBundle[];
+  // The user's original natural-language question, stored on entering CLARIFY/BASIC mode.
+  // Used for re-routing Q&A responses and for Sonnet's queryContext so it knows the
+  // original intent rather than just seeing the "Q: ...\nA: ..." formatted string.
+  originalQuestion?: string | null;
+  // Flat log of all Q&A collected during this session (from BASIC and CLARIFY turns).
+  // Built up over the session lifetime. Passed to every stage and mode without exception.
+  // Reset to [] on each successful ANSWER turn.
+  qaLog: { question: string; answer: string; source: 'BASIC' | 'CLARIFY' }[];
+  // Post-answer state — set after every successful ANSWER turn.
+  // Cleared when a new unrelated question (Lane B) is detected.
+  postAnswerMode: boolean;
+  postAnswerSignal: 'COMPLETE' | 'PARTIAL' | null;
+  answerContract: {
+    topics_covered: string[];
+    docs_used: string[];
+    open_threads: string[];
+  } | null;
+  // Snapshot of qaLog at the point of the last successful ANSWER.
+  // Used in Lane A so Sonnet retains the clarification context from before the answer.
+  qaLogSnapshot: { question: string; answer: string; source: 'BASIC' | 'CLARIFY' }[];
+  // True once a Haiku clarifying question has been issued in Lane A.
+  // Prevents infinite clarification loops in post-answer mode.
+  postAnswerClarifyUsed: boolean;
 }
 
 interface Session {
@@ -75,6 +111,14 @@ function createSession(): Session {
       frustrationCounter: 0,
       clarifyRoundCounter: 0,
       previousQuestion: null,
+      clarificationBundles: [],
+      originalQuestion: null,
+      qaLog: [],
+      postAnswerMode: false,
+      postAnswerSignal: null,
+      answerContract: null,
+      qaLogSnapshot: [],
+      postAnswerClarifyUsed: false,
     },
     lastActive: Date.now(),
   };

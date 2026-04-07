@@ -45,6 +45,7 @@ interface ChatWidgetProps {
   onQuickAction: (label: string) => void;
   onSendOptionMessage: (label: string, question: string | null) => void;
   onAddOptionButtons: (options: string[], questionText: string | null, msgId: string) => void;
+  onSendClarifyAnswers: (formatted: string, summary: { q: string; a: string }[]) => void;
   onAttachFile: (file: File) => void;
   onRemoveFile: (id: string) => void;
 }
@@ -269,6 +270,7 @@ export function ChatWidget({
   onQuickAction,
   onSendOptionMessage,
   onAddOptionButtons,
+  onSendClarifyAnswers,
   onAttachFile,
   onRemoveFile,
 }: ChatWidgetProps) {
@@ -345,6 +347,7 @@ export function ChatWidget({
             inputRef={inputRef}
             onSendOptionMessage={onSendOptionMessage}
             onAddOptionButtons={onAddOptionButtons}
+            onSendClarifyAnswers={onSendClarifyAnswers}
           />
         )}
 
