@@ -182,186 +182,126 @@ async function checkConfigSanity({ pass, fail, results }: Reporter): Promise<voi
   }
 }
 
+// ── Helper ────────────────────────────────────────────────────────────────────
+
+/** Returns true when the Anthropic API responds with HTTP 529 (overloaded). */
+function is529(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err));
+  return msg.startsWith('529') || msg.includes('overloaded_error') || msg.includes('Overloaded');
+}
+
 // ── BASIC_MODE and language injection (requires API key) ─────────────────────
+// Wave 1: all independent single-call tests run in parallel (unique sessions, no shared state).
+// Wave 2: cache dynamic check — two consecutive calls to the same endpoint, must be sequential.
+// Multi-turn is covered in check-chat with stricter assertions; not duplicated here.
 
 async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter): Promise<void> {
   const { handleMessage } = await import(`${ROOT}/backend/pipeline/agent.ts`);
+  const { generateClarifyingQuestions, chat: chatFn, clientWithCaching: clt, ANSWER_MODEL: model } = await import(`${ROOT}/backend/pipeline/claude.ts`);
 
-  // BASIC mode: completely out-of-scope question should not hallucinate an answer
-  // Expected: Stage 1 matches 0 docs → BASIC → 3-card JSON carousel
-  try {
-    await new Promise(r => setTimeout(r, 2000));
-    const reply1 = await handleMessage(`test-basic-${Date.now()}`, 'who won the world cup in 1998?') as string;
-    const lower1 = reply1.toLowerCase();
-    const hallucinates = lower1.includes('france') && !lower1.includes("don't") && !lower1.includes('outside') && !lower1.includes('not sure') && !lower1.includes("can't");
-    if (!hallucinates) {
-      pass('BASIC mode: out-of-scope question returns card carousel or graceful non-answer (no hallucination)');
-      results.push({ ok: true });
-    } else {
-      fail('BASIC mode: out-of-scope question', `Got overconfident reply: "${reply1.slice(0, 120)}"`);
-      results.push({ ok: false });
-    }
-  } catch (err) {
-    fail('BASIC mode test', (err as Error).message);
-    results.push({ ok: false });
-  }
+  // ── Wave 1: independent tests — fire together ────────────────────────────
+  await Promise.all([
 
-  // CLARIFY mode: broad query should trigger a clarifying question with [BUTTONS:]
-  // Expected: Stage 1 matches 6+ docs across multiple themes → TOO_BROAD → CLARIFY with question
-  try {
-    await new Promise(r => setTimeout(r, 2000));
-    const reply2 = await handleMessage(`test-clarify-${Date.now()}`, 'help me with my accounting integration setup') as string;
-    const hasClarifySignal = reply2.includes('[BUTTONS:]') || reply2.includes('?');
-    if (hasClarifySignal) {
-      pass('CLARIFY mode: broad query returns a clarifying question or buttons');
-      results.push({ ok: true });
-    } else {
-      fail('CLARIFY mode: broad query should return question or [BUTTONS:]', `Got: "${reply2.slice(0, 150)}"`);
-      results.push({ ok: false });
-    }
-  } catch (err) {
-    fail('CLARIFY mode test', (err as Error).message);
-    results.push({ ok: false });
-  }
-
-  // Language injection: first message with a language system note should be answered in that language
-  try {
-    const langSessionId = `test-lang-${Date.now()}`;
-    const messageWithNote = '[System note: the user has selected their language to German. For the remainder of this conversation, always respond in German.]\n\nWas macht Omniboost?';
-    const reply2 = await handleMessage(langSessionId, messageWithNote) as string;
-    const lower2 = reply2.toLowerCase();
-    const looksGerman = lower2.includes('die ') || lower2.includes('der ') || lower2.includes('und ') || lower2.includes('ist ') || lower2.includes('mit ');
-    if (looksGerman) {
-      pass('language injection: German system note produces a German reply');
-      results.push({ ok: true });
-    } else {
-      skip('language injection', 'Reply did not contain detectable German words — may be a borderline case');
-      results.push({ ok: 'skip' });
-    }
-  } catch (err) {
-    fail('language injection test', (err as Error).message);
-    results.push({ ok: false });
-  }
-
-  // Multi-turn context: second message in session should have context from first
-  try {
-    const multiTurnId = `test-multiturn-pipeline-${Date.now()}`;
-    await handleMessage(multiTurnId, 'what is the bronze tier?');
-    // Brief pause between calls to avoid triggering 529 overload on rapid bursts
-    await new Promise(r => setTimeout(r, 2000));
-    const reply3 = await handleMessage(multiTurnId, 'what about the silver tier?') as string;
-    if (typeof reply3 === 'string' && reply3.trim().length > 0) {
-      pass('multi-turn: second message in same session gets a non-empty reply');
-      results.push({ ok: true });
-    } else {
-      fail('multi-turn context', 'Got empty reply on second turn');
-      results.push({ ok: false });
-    }
-  } catch (err) {
-    fail('multi-turn context test', (err as Error).message);
-    results.push({ ok: false });
-  }
-
-  // generateClarifyingQuestions: must return valid JSON with __type clarify_questions
-  // (or the plain-text fallback string on transient Haiku JSON failures — skip in that case)
-  try {
-    await new Promise(r => setTimeout(r, 1500));
-    const { generateClarifyingQuestions } = await import(`${ROOT}/backend/pipeline/claude.ts`);
-    const raw = await generateClarifyingQuestions('how do I connect my accounting system?', null, []) as string;
-
-    // If Haiku failed to produce valid JSON, the function returns a plain-text fallback.
-    // This is correct graceful-degradation behaviour — skip rather than fail.
-    let jsonOk = false;
-    try {
-      const parsed = JSON.parse(raw) as { __type?: string; questions?: { text: string; options: string[] }[] };
-      const hasType      = parsed.__type === 'clarify_questions';
-      const hasQuestions = Array.isArray(parsed.questions) && parsed.questions.length > 0;
-      const firstQ       = parsed.questions?.[0];
-      const hasText      = typeof firstQ?.text === 'string' && firstQ.text.length > 0;
-      const hasOptions   = Array.isArray(firstQ?.options) && firstQ.options.length >= 2;
-      jsonOk = hasType && hasQuestions && hasText && hasOptions;
-      if (jsonOk) {
-        pass(`generateClarifyingQuestions: returns valid clarify_questions JSON (${parsed.questions!.length} questions)`);
-        results.push({ ok: true });
-      } else {
-        fail('generateClarifyingQuestions: JSON structure', `type=${hasType} questions=${hasQuestions} text=${hasText} options=${hasOptions}`);
-        results.push({ ok: false });
+    // BASIC mode: out-of-scope question must not hallucinate an answer
+    (async () => {
+      try {
+        const reply = await handleMessage(`test-basic-${Date.now()}`, 'who won the world cup in 1998?') as string;
+        const lower = reply.toLowerCase();
+        const hallucinates = lower.includes('france') && !lower.includes("don't") && !lower.includes('outside') && !lower.includes('not sure') && !lower.includes("can't");
+        if (!hallucinates) { pass('BASIC mode: out-of-scope question returns card carousel or graceful non-answer (no hallucination)'); results.push({ ok: true }); }
+        else { fail('BASIC mode: out-of-scope question', `Got overconfident reply: "${reply.slice(0, 120)}"`); results.push({ ok: false }); }
+      } catch (err) {
+        if (is529(err)) { skip('BASIC mode test', 'API overloaded (529) — transient'); results.push({ ok: 'skip' }); }
+        else { fail('BASIC mode test', (err as Error).message); results.push({ ok: false }); }
       }
-    } catch {
-      // Plain-text fallback is acceptable graceful-degradation behaviour
-      skip('generateClarifyingQuestions: JSON output', 'Haiku returned plain-text fallback (transient JSON failure — acceptable)');
-      results.push({ ok: 'skip' });
-    }
-  } catch (err) {
-    fail('generateClarifyingQuestions test', (err as Error).message);
-    results.push({ ok: false });
-  }
+    })(),
 
-  // chat() returns { reply, signal, contract } — signal/contract stripped from visible reply
+    // CLARIFY mode: broad query → TOO_BROAD → clarifying question
+    (async () => {
+      try {
+        const reply = await handleMessage(`test-clarify-${Date.now()}`, 'help me with my accounting integration setup') as string;
+        if (reply.includes('[BUTTONS:]') || reply.includes('?')) { pass('CLARIFY mode: broad query returns a clarifying question or buttons'); results.push({ ok: true }); }
+        else { fail('CLARIFY mode: broad query should return question or [BUTTONS:]', `Got: "${reply.slice(0, 150)}"`); results.push({ ok: false }); }
+      } catch (err) {
+        if (is529(err)) { skip('CLARIFY mode test', 'API overloaded (529) — transient'); results.push({ ok: 'skip' }); }
+        else { fail('CLARIFY mode test', (err as Error).message); results.push({ ok: false }); }
+      }
+    })(),
+
+    // Language injection: German system note → German reply
+    (async () => {
+      try {
+        const msg = '[System note: the user has selected their language to German. For the remainder of this conversation, always respond in German.]\n\nWas macht Omniboost?';
+        const reply = await handleMessage(`test-lang-${Date.now()}`, msg) as string;
+        const lower = reply.toLowerCase();
+        const looksGerman = lower.includes('die ') || lower.includes('der ') || lower.includes('und ') || lower.includes('ist ') || lower.includes('mit ');
+        if (looksGerman) { pass('language injection: German system note produces a German reply'); results.push({ ok: true }); }
+        else { skip('language injection', 'Reply did not contain detectable German words — may be a borderline case'); results.push({ ok: 'skip' }); }
+      } catch (err) {
+        if (is529(err)) { skip('language injection test', 'API overloaded (529) — transient'); results.push({ ok: 'skip' }); }
+        else { fail('language injection test', (err as Error).message); results.push({ ok: false }); }
+      }
+    })(),
+
+    // generateClarifyingQuestions: valid JSON or acceptable plain-text fallback
+    (async () => {
+      try {
+        const raw = await generateClarifyingQuestions('how do I connect my accounting system?', null, []) as string;
+        try {
+          const parsed = JSON.parse(raw) as { __type?: string; questions?: { text: string; options: string[] }[] };
+          const hasType      = parsed.__type === 'clarify_questions';
+          const hasQuestions = Array.isArray(parsed.questions) && parsed.questions.length > 0;
+          const firstQ       = parsed.questions?.[0];
+          const hasText      = typeof firstQ?.text === 'string' && firstQ.text.length > 0;
+          const hasOptions   = Array.isArray(firstQ?.options) && firstQ.options.length >= 2;
+          if (hasType && hasQuestions && hasText && hasOptions) { pass(`generateClarifyingQuestions: returns valid clarify_questions JSON (${parsed.questions!.length} questions)`); results.push({ ok: true }); }
+          else { fail('generateClarifyingQuestions: JSON structure', `type=${hasType} questions=${hasQuestions} text=${hasText} options=${hasOptions}`); results.push({ ok: false }); }
+        } catch {
+          skip('generateClarifyingQuestions: JSON output', 'Haiku returned plain-text fallback (transient JSON failure — acceptable)');
+          results.push({ ok: 'skip' });
+        }
+      } catch (err) {
+        if (is529(err)) { skip('generateClarifyingQuestions test', 'API overloaded (529) — transient'); results.push({ ok: 'skip' }); }
+        else { fail('generateClarifyingQuestions test', (err as Error).message); results.push({ ok: false }); }
+      }
+    })(),
+
+    // chat() return shape: { reply, signal, contract } with signal stripped from reply
+    (async () => {
+      try {
+        const result = await chatFn(`test-chat-result-${Date.now()}`, 'what does Omniboost do?', null, null, null) as { reply: string; signal: string | null; contract: Record<string, unknown> | null };
+        const hasReplyString       = typeof result.reply === 'string' && result.reply.trim().length > 0;
+        const replyHasNoSignalBlock = !result.reply.includes('[ANSWER:') && !result.reply.includes('[ANSWER_CONTRACT]');
+        const hasSignalKey          = 'signal' in result;
+        const hasContractKey        = 'contract' in result;
+        if (hasReplyString && replyHasNoSignalBlock && hasSignalKey && hasContractKey) { pass('chat() returns { reply, signal, contract } and strips signal/contract from reply'); results.push({ ok: true }); }
+        else { fail('chat() return shape or signal stripping', `hasReply=${hasReplyString} noBlocks=${replyHasNoSignalBlock} hasSignal=${hasSignalKey} hasContract=${hasContractKey}`); results.push({ ok: false }); }
+      } catch (err) {
+        if (is529(err)) { skip('chat() return shape test', 'API overloaded (529) — transient'); results.push({ ok: 'skip' }); }
+        else { fail('chat() return shape test', (err as Error).message); results.push({ ok: false }); }
+      }
+    })(),
+
+  ]);
+
+  // ── Wave 2: cache dynamic — two consecutive calls, must stay sequential ───
   try {
-    await new Promise(r => setTimeout(r, 1500));
-    const { chat: chatFn } = await import(`${ROOT}/backend/pipeline/claude.ts`);
-    const testSessionId = `test-chat-result-${Date.now()}`;
-    const result = await chatFn(
-      testSessionId,
-      'what does Omniboost do?',
-      null,   // no docs — BASIC-style
-      null,
-      null
-    ) as { reply: string; signal: string | null; contract: Record<string, unknown> | null };
-
-    const hasReplyString = typeof result.reply === 'string' && result.reply.trim().length > 0;
-    const replyHasNoSignalBlock = !result.reply.includes('[ANSWER:') && !result.reply.includes('[ANSWER_CONTRACT]');
-    const hasSignalKey = 'signal' in result;
-    const hasContractKey = 'contract' in result;
-
-    if (hasReplyString && replyHasNoSignalBlock && hasSignalKey && hasContractKey) {
-      pass('chat() returns { reply, signal, contract } and strips signal/contract from reply');
-      results.push({ ok: true });
-    } else {
-      fail('chat() return shape or signal stripping', `hasReply=${hasReplyString} noBlocks=${replyHasNoSignalBlock} hasSignal=${hasSignalKey} hasContract=${hasContractKey}`);
-      results.push({ ok: false });
-    }
-  } catch (err) {
-    fail('chat() return shape test', (err as Error).message);
-    results.push({ ok: false });
-  }
-
-  // [cache-dynamic] Sonnet: two consecutive calls with same cached system prompt
-  // must show cache_creation_input_tokens > 0 on the first call and/or
-  // cache_read_input_tokens > 0 on the second call.
-  try {
-    await new Promise(r => setTimeout(r, 1500));
-    const claudeMod = await import(`${ROOT}/backend/pipeline/claude.ts`);
-    const systemMod = await import(`${ROOT}/prompts/system.ts`);
-    const clt = claudeMod.clientWithCaching;
-    const model = claudeMod.ANSWER_MODEL;
-    const sysText = systemMod.baseSystemPrompt as string;
+    const { baseSystemPrompt: sysText } = await import(`${ROOT}/prompts/system.ts`);
     // @ts-ignore — cache_control accepted at runtime, not yet in SDK types
     const sysBlocks = [{ type: 'text', text: sysText, cache_control: { type: 'ephemeral' } }];
     const msgs = [{ role: 'user' as const, content: 'ping' }];
-
     // @ts-ignore
     const r1 = await clt.messages.create({ model, max_tokens: 5, system: sysBlocks, messages: msgs });
-    const usage1 = r1.usage as Record<string, number>;
-    const created = usage1.cache_creation_input_tokens ?? 0;
-
+    const created = ((r1.usage as Record<string, number>).cache_creation_input_tokens ?? 0);
     await new Promise(r => setTimeout(r, 600));
     // @ts-ignore
     const r2 = await clt.messages.create({ model, max_tokens: 5, system: sysBlocks, messages: msgs });
-    const usage2 = r2.usage as Record<string, number>;
-    const readFromCache = usage2.cache_read_input_tokens ?? 0;
-
-    if (created > 0 || readFromCache > 0) {
-      pass(`[cache] Sonnet: prompt caching active (created=${created}, read=${readFromCache})`);
-      results.push({ ok: true });
-    } else {
-      fail('[cache] Sonnet: prompt caching active', `cache_creation=${created}, cache_read=${readFromCache}`);
-      results.push({ ok: false });
-    }
+    const readFromCache = ((r2.usage as Record<string, number>).cache_read_input_tokens ?? 0);
+    if (created > 0 || readFromCache > 0) { pass(`[cache] Sonnet: prompt caching active (created=${created}, read=${readFromCache})`); results.push({ ok: true }); }
+    else { fail('[cache] Sonnet: prompt caching active', `cache_creation=${created}, cache_read=${readFromCache}`); results.push({ ok: false }); }
   } catch (err) {
-    fail('[cache] Sonnet: prompt caching dynamic check', (err as Error).message);
-    results.push({ ok: false });
+    if (is529(err)) { skip('[cache] Sonnet: prompt caching dynamic check', 'API overloaded (529) — transient'); results.push({ ok: 'skip' }); }
+    else { fail('[cache] Sonnet: prompt caching dynamic check', (err as Error).message); results.push({ ok: false }); }
   }
 }
 

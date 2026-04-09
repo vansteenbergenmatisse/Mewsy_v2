@@ -47,7 +47,7 @@ interface Manifest {
 }
 
 export async function checkRouting({ pass, fail, skip, results }: Reporter): Promise<void> {
-  const { keywordPreFilter } = await import(`${ROOT}/backend/pipeline/agent.ts`);
+  const { keywordPreFilter, findShortTokenCandidates } = await import(`${ROOT}/backend/pipeline/agent.ts`);
   const { STAGE2A_SHORTLIST_MAX } = await import(`${ROOT}/backend/config/Mewsie.config.ts`);
 
   // Load manifest to get pages list
@@ -136,6 +136,86 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
     results.push({ ok: true });
   } else {
     fail('keywordPreFilter: specific query should match at least 1 doc', `Got 0`);
+    results.push({ ok: false });
+  }
+
+  // ── Fuzzy matching tests (no API call needed) ─────────────────────────────
+
+  // Test: typo "quicbkook" still matches QuickBooks docs (Damerau distance 2 = transposition + insertion)
+  const fuzzyQB = keywordPreFilter(pages, 'quicbkook');
+  const fuzzyQBHasQuickBooks = fuzzyQB.some(p =>
+    (p.keywords ?? []).some((kw: string) => /quickbooks/i.test(kw)) || /quickbooks/i.test(p.label)
+  );
+  if (fuzzyQBHasQuickBooks) {
+    pass('fuzzy match: "quicbkook" matches QuickBooks docs (Damerau typo tolerance)');
+    results.push({ ok: true });
+  } else {
+    fail('fuzzy match: "quicbkook" should fuzzy-match QuickBooks docs', `Got: ${fuzzyQB.map((p: { label: string }) => p.label).join(', ') || 'none'}`);
+    results.push({ ok: false });
+  }
+
+  // Test: truncation "twinfiel" (missing trailing 'd') still matches Twinfield docs
+  const fuzzyTwinfield = keywordPreFilter(pages, 'twinfiel');
+  if (fuzzyTwinfield.length > 0) {
+    pass(`fuzzy match: "twinfiel" matches ${fuzzyTwinfield.length} doc(s) (truncation tolerance → "Twinfield")`);
+    results.push({ ok: true });
+  } else {
+    fail('fuzzy match: "twinfiel" should fuzzy-match Twinfield docs (1 edit from "Twinfield")', 'Got 0 matches');
+    results.push({ ok: false });
+  }
+
+  // Test: completely unrelated gibberish returns 0 docs (fuzzy doesn't over-match)
+  const noFuzzyNoise = keywordPreFilter(pages, 'zxkqwj blfmvp');
+  if (noFuzzyNoise.length === 0) {
+    pass('fuzzy match: unrelated gibberish returns 0 docs (no over-matching)');
+    results.push({ ok: true });
+  } else {
+    fail('fuzzy match: gibberish should return 0 docs', `Got ${noFuzzyNoise.length}`);
+    results.push({ ok: false });
+  }
+
+  // Test: out-of-scope query still returns 0 docs even with fuzzy enabled
+  const fuzzyOOS = keywordPreFilter(pages, 'who won the world cup in 1998');
+  if (fuzzyOOS.length === 0) {
+    pass('fuzzy match: out-of-scope query still returns 0 docs with fuzzy enabled');
+    results.push({ ok: true });
+  } else {
+    fail('fuzzy match: out-of-scope query should still return 0 docs', `Got ${fuzzyOOS.length}`);
+    results.push({ ok: false });
+  }
+
+  // ── Short-token candidate detection tests (no API call needed) ────────────
+
+  // Test: "xer" → prefix-matches Xero docs
+  const xeroTokens = ['xer'];
+  const xeroCandidates = findShortTokenCandidates(xeroTokens, pages);
+  const hasXero = xeroCandidates.some((c: string) => /xero/i.test(c));
+  if (hasXero) {
+    pass(`short-token: "xer" surfaces Xero as a candidate (got: [${xeroCandidates.join(', ')}])`);
+    results.push({ ok: true });
+  } else {
+    fail('short-token: "xer" should surface Xero as a candidate', `Got: [${xeroCandidates.join(', ')}]`);
+    results.push({ ok: false });
+  }
+
+  // Test: common stop words like "for", "the" do NOT produce candidates
+  const stopWordTokens = ['for', 'the', 'how'];
+  const stopCandidates = findShortTokenCandidates(stopWordTokens, pages);
+  if (stopCandidates.length === 0) {
+    pass('short-token: stop words ("for", "the", "how") produce no candidates');
+    results.push({ ok: true });
+  } else {
+    fail('short-token: stop words should produce 0 candidates', `Got: [${stopCandidates.join(', ')}]`);
+    results.push({ ok: false });
+  }
+
+  // Test: empty token list returns empty candidates
+  const emptyCandidates = findShortTokenCandidates([], pages);
+  if (emptyCandidates.length === 0) {
+    pass('short-token: empty token list returns no candidates');
+    results.push({ ok: true });
+  } else {
+    fail('short-token: empty token list should return 0 candidates', `Got ${emptyCandidates.length}`);
     results.push({ ok: false });
   }
 

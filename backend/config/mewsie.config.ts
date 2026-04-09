@@ -10,6 +10,12 @@
 // Higher = more context but more tokens. Keep between 1–10.
 export const ROUTER_MAX_DOCS = 5;
 
+// Whether to use Damerau-Levenshtein fuzzy matching in the keyword pre-filter.
+// When true, keywords ≥ 5 chars tolerate 1 edit (6–10 chars) or 2 edits (11+ chars).
+// Keywords < 5 chars always use exact matching to prevent false positives on short
+// terms like "GL", "POS", "VAT". Set false to revert to pure substring matching.
+export const FUZZY_MATCH_ENABLED = true;
+
 // Whether to pass recent conversation history to Stage 2A routing.
 // Helps with follow-up questions that reference earlier context.
 export const ROUTER_HISTORY_ENABLED = true;

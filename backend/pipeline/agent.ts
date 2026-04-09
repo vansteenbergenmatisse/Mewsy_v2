@@ -73,6 +73,7 @@ import {
   MAX_CLARIFY_ROUNDS,
   STAGE2A_SHORTLIST_MAX,
   POST_ANSWER_CLARIFY_BUDGET,
+  FUZZY_MATCH_ENABLED,
 } from '../config/Mewsie.config.ts';
 import type { Manifest } from '../types/manifest.ts';
 import { migrateManifest } from '../scraper/pipeline/manifest.ts';
@@ -152,11 +153,103 @@ function flattenManifest(manifest: Manifest): ManifestPage[] {
   }));
 }
 
+// ── Damerau-Levenshtein edit distance ──────────────────────────────────────────
+//
+// Counts the minimum number of single-character edits (insert, delete, substitute,
+// or adjacent transposition) needed to transform string `a` into string `b`.
+// Transpositions (e.g. "quicbkook" → "quickbook") count as 1 edit, not 2.
+// Used by fuzzy keyword matching and short-token candidate detection.
+
+function damerauLevenshtein(a: string, b: string): number {
+  const la = a.length;
+  const lb = b.length;
+  if (la === 0) return lb;
+  if (lb === 0) return la;
+
+  // dp[i][j] = edit distance between a[0..i-1] and b[0..j-1]
+  const dp: number[][] = Array.from({ length: la + 1 }, (_, i) =>
+    Array.from({ length: lb + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+
+  for (let i = 1; i <= la; i++) {
+    for (let j = 1; j <= lb; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,           // deletion
+        dp[i][j - 1] + 1,           // insertion
+        dp[i - 1][j - 1] + cost     // substitution
+      );
+      // Adjacent transposition (Damerau extension)
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        dp[i][j] = Math.min(dp[i][j], dp[i - 2][j - 2] + cost);
+      }
+    }
+  }
+  return dp[la][lb];
+}
+
+// ── Short-token candidate detection ────────────────────────────────────────────
+//
+// When the Stage 1 keyword filter returns 0 matches AND the message contains tokens
+// that are < 5 chars, try to find keyword matches via prefix matching (for 2–4 char
+// tokens) rather than silently falling through to the generic BASIC carousel.
+//
+// Returns up to 3 candidate keyword display strings (e.g. ["QuickBooks", "Sage"])
+// so the pipeline can ask "Did you mean X, Y, or Z?" instead.
+//
+// Common English stop words are excluded so "in", "for", "the" don't trigger this.
+
+const SHORT_STOPWORDS = new Set([
+  'i', 'a', 'an', 'the', 'in', 'on', 'at', 'to', 'do', 'is', 'it',
+  'be', 'of', 'my', 'me', 'we', 'no', 'yes', 'ok', 'hi', 'hey',
+  'how', 'why', 'can', 'for', 'or', 'if', 'not', 'but', 'and',
+  'get', 'set', 'use', 'new', 'old', 'all', 'any', 'its',
+  'are', 'was', 'has', 'had', 'did', 'got', 'put', 'try',
+  'help', 'need', 'want', 'know', 'have', 'find', 'show', 'tell',
+  'more', 'less', 'also', 'just', 'only', 'even', 'then', 'than',
+  'some', 'with', 'from', 'that', 'this', 'what', 'when', 'who',
+]);
+
+export function findShortTokenCandidates(msgTokens: string[], pages: ManifestPage[]): string[] {
+  const shortTokens = msgTokens.filter(t => t.length >= 2 && t.length < 5 && !SHORT_STOPWORDS.has(t));
+  if (shortTokens.length === 0) return [];
+
+  // Collect all unique single-word keywords/synonyms (skip multi-word phrases —
+  // prefix matching against "accounting software" on a 2-char token is noise).
+  const singleWordKeywords = [...new Set(
+    pages.flatMap(p => [...(p.keywords ?? []), ...(p.synonyms ?? [])])
+      .filter(kw => !/\s/.test(kw))
+  )];
+
+  const seen = new Set<string>();
+  const candidates: { keyword: string; dist: number }[] = [];
+
+  for (const token of shortTokens) {
+    for (const kw of singleWordKeywords) {
+      const kwLower = kw.toLowerCase();
+      if (seen.has(kwLower)) continue;
+
+      // Primary: prefix match — token is a prefix of the keyword
+      // e.g. "xer" → "xero", "sag" → "sage", "dat" → "datev"
+      if (kwLower.startsWith(token)) {
+        seen.add(kwLower);
+        candidates.push({ keyword: kw, dist: 0 });
+      }
+    }
+  }
+
+  // Return top 3 unique candidates, shortest edit distance first, then alphabetically
+  return candidates
+    .sort((a, b) => a.dist - b.dist || a.keyword.localeCompare(b.keyword))
+    .slice(0, 3)
+    .map(c => c.keyword);
+}
+
 // ── Keyword pre-filter ──────────────────────────────────────────────────────────
 
 // Zero-LLM pre-filter: scores each doc by how many of its unique keywords + synonyms
-// appear in the user message (substring match, case-insensitive, deduplicated).
-// Returns only matched docs, ranked by overlap count. No fallback, no cap.
+// appear in the user message (substring match + optional fuzzy match, case-insensitive,
+// deduplicated). Returns only matched docs, ranked by overlap count. No fallback, no cap.
 // Exported for unit testing.
 export function keywordPreFilter(pages: ManifestPage[], userMessage: string): ManifestPage[] {
   return keywordPreFilterScored(pages, userMessage).map(s => s.page);
@@ -168,11 +261,29 @@ function keywordPreFilterScored(
   userMessage: string
 ): { page: ManifestPage; hits: number }[] {
   const msgLower = userMessage.toLowerCase();
+  // Tokenise for fuzzy matching — only used when FUZZY_MATCH_ENABLED is true.
+  const msgTokens = msgLower.split(/[\s,.()\-/]+/).filter(t => t.length >= 3);
+
   return pages
     .map(page => {
       // Deduplicate keywords + synonyms so a repeated term never inflates the score.
       const terms = [...new Set([...(page.keywords ?? []), ...(page.synonyms ?? [])])];
-      const hits = terms.filter(t => msgLower.includes(t.toLowerCase())).length;
+      const hits = terms.filter(t => {
+        const k = t.toLowerCase();
+
+        // Fast path: exact substring match (case-insensitive)
+        if (msgLower.includes(k)) return true;
+
+        // Fuzzy path: Damerau-Levenshtein for keywords ≥ 5 chars.
+        // Short keywords (< 5 chars, e.g. "GL", "POS", "VAT") are excluded —
+        // 1–2 edits on a 3–4 char string would produce too many false positives.
+        // Thresholds: 5–6 char keywords → 1 edit; 7+ char keywords → 2 edits.
+        // 2 edits is necessary for common transposition+insertion typos like
+        // "quicbkook" → "quickbooks" (adjacent swap + missing trailing char).
+        if (!FUZZY_MATCH_ENABLED || k.length < 5) return false;
+        const maxEdits = k.length <= 6 ? 1 : 2;
+        return msgTokens.some(w => damerauLevenshtein(w, k) <= maxEdits);
+      }).length;
       return { page, hits };
     })
     .filter(s => s.hits > 0)
@@ -203,6 +314,23 @@ function computeThematicCoherence(docs: ManifestPage[]): {
 // (Lane A) vs. a genuinely new question (Lane B) — no API call needed.
 function hasTopicOverlap(userMessage: string, contract: AnswerContract): boolean {
   const lower = userMessage.toLowerCase();
+
+  // Meta-follow-up short-circuit: phrases that clearly deepen or continue the
+  // previous answer regardless of vocabulary overlap with the contract.
+  // "step 5", "go in depth", "tell me more", etc. are always Lane A.
+  const META_PATTERNS = [
+    /\bgo\s+in\s+depth\b/,
+    /\btell\s+me\s+more\b/,
+    /\belaborate\b/,
+    /\bstep\s+\d+\b/,
+    /\bmore\s+detail\b/,
+    /\bexplain\s+more\b/,
+    /\bwhat\s+about\s+step\b/,
+    /\bcan\s+you\s+expand\b/,
+    /\bgo\s+deeper\b/,
+  ];
+  if (META_PATTERNS.some(p => p.test(lower))) return true;
+
   const terms = [
     ...contract.topics_covered,
     ...contract.open_threads,
@@ -438,6 +566,17 @@ export function parseClarifyAnswers(message: string): { q: string; a: string }[]
       currentQ = null;
     }
   }
+
+  // Also handle button-click format: "question text → answer text"
+  // The frontend sends button selections as "[question] → [chosen option]".
+  // This format is not parsed by the Q:/A: loop above.
+  if (pairs.length === 0 && message.includes(' → ')) {
+    const arrowIdx = message.lastIndexOf(' → ');
+    const q = message.slice(0, arrowIdx).trim();
+    const a = message.slice(arrowIdx + 3).trim();
+    if (q && a) pairs.push({ q, a });
+  }
+
   return pairs;
 }
 
@@ -583,10 +722,14 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
 
   // Build the enriched query for Stage 1: user message + all accumulated Q&A answers.
   // This gives Stage 1 richer signal on re-runs after BASIC or CLARIFY rounds.
+  // Include both the persisted qaLog AND the incoming pairs from this turn so that
+  // a button click's answer narrows the search immediately (not only on the next turn).
   const currentQALog: QAEntry[] = context.qaLog ?? [];
-  const qaAnswerText = currentQALog.length > 0
-    ? ' ' + currentQALog.map(e => e.answer).join(' ')
-    : '';
+  const allAnswers = [
+    ...currentQALog.map(e => e.answer),
+    ...incomingQAPairs.map(p => p.a),
+  ].filter(Boolean);
+  const qaAnswerText = allAnswers.length > 0 ? ' ' + allAnswers.join(' ') : '';
 
   // When re-routing on a Q&A answer batch, use the stored original question
   // (not the "Q: ...\nA: ..." formatted string) as the base for Stage 1 scoring.
@@ -602,6 +745,7 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
   let clarifyTriggerReason: 'DIVERSE_TOPICS' | 'THEME_OVERFLOW' | 'TOO_BROAD' | 'STAGE2B_NEEDS_CONTEXT' | null = null;
   let clarifyMatchedMeta: { title: string; theme: string }[] = [];
   let stage2bDecisionB = false;
+  let shortTokenCandidates: string[] = [];
 
   const skipRouting = shouldSkipRouting(userMessage, context, isFirstMessage);
 
@@ -615,8 +759,18 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
       const matchedDocCount = scored.length;
 
       if (matchedDocCount === 0) {
-        // Gate 1: 0 matched → BASIC
-        console.log(`[STAGE 1]  0/${allPages.length} docs matched → BASIC`);
+        // Gate 1: 0 matched → check for short-token candidates before falling to BASIC.
+        // If the message contains short tokens (2–4 chars, non-stop-word) that prefix-match
+        // known keywords, surface them as a targeted CLARIFY ("Did you mean X, Y, Z?")
+        // instead of showing the generic 3-question carousel.
+        const msgTokensForCandidates = stage1Query.toLowerCase().split(/[\s,.()\-/]+/).filter(Boolean);
+        shortTokenCandidates = findShortTokenCandidates(msgTokensForCandidates, allPages);
+        if (shortTokenCandidates.length > 0) {
+          clarifyTriggerReason = 'TOO_BROAD';
+          console.log(`[STAGE 1]  0/${allPages.length} docs matched, short token → CLARIFY candidates: [${shortTokenCandidates.join(', ')}]`);
+        } else {
+          console.log(`[STAGE 1]  0/${allPages.length} docs matched → BASIC`);
+        }
 
       } else if (matchedDocCount <= STAGE2A_SHORTLIST_MAX) {
         // Gate 2: 1–SHORTLIST_MAX matched → Stage 2A always.
@@ -714,20 +868,28 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
     answerContract = chatResult.contract;
 
   } else if (finalMode === 'CLARIFY') {
-    // Generate targeted question based on trigger reason
-    const clarifyResult = await generateClarifyQuestion(
-      userMessage,
-      clarifyTriggerReason!,
-      clarifyMatchedMeta,
-      currentQALog,
-      { tools: context.tools, setupType: context.setupType }
-    );
-
-    if (clarifyResult) {
-      reply = `${clarifyResult.question}\n\n[BUTTONS:]\n${clarifyResult.options.map(o => `- ${o}`).join('\n')}`;
+    if (shortTokenCandidates.length > 0) {
+      // Short-token path: we know what the user probably means — ask directly.
+      // No Haiku call needed; surface the prefix-matched candidates as buttons.
+      const options = [...shortTokenCandidates, 'Something else'].map(c => `- ${c}`).join('\n');
+      reply = `Could you clarify what you're looking for?\n\n[BUTTONS:]\n${options}`;
+      console.log(`[CLARIFY] Short-token candidates: [${shortTokenCandidates.join(', ')}]`);
     } else {
-      reply = STATIC_CLARIFY_REPLY;
-      console.log('[CLARIFY]  Fell back to static reply (generateClarifyQuestion returned null)');
+      // Generate targeted question based on trigger reason
+      const clarifyResult = await generateClarifyQuestion(
+        userMessage,
+        clarifyTriggerReason!,
+        clarifyMatchedMeta,
+        currentQALog,
+        { tools: context.tools, setupType: context.setupType }
+      );
+
+      if (clarifyResult) {
+        reply = `${clarifyResult.question}\n\n[BUTTONS:]\n${clarifyResult.options.map(o => `- ${o}`).join('\n')}`;
+      } else {
+        reply = STATIC_CLARIFY_REPLY;
+        console.log('[CLARIFY]  Fell back to static reply (generateClarifyQuestion returned null)');
+      }
     }
 
     addToHistory(sessionId, 'user', userMessage);

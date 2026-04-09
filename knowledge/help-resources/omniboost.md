@@ -35,3 +35,17 @@ Omniboost connects over 450 software configurations across hotels, restaurants, 
 ## Why it matters
 
 Every time a person manually copies a number from one system to another, there is a chance for a mistake. Omniboost removes that risk entirely. It also means your accountant gets the numbers automatically every morning instead of waiting for someone to send a file. That is time saved, errors avoided, and better financial data quality across the board.
+
+## Who uses Omniboost?
+
+- **Management Companies**:Multi-property portfolio oversight with unified reporting and automated workflows across all properties.
+- **Hospitality Groups & Chains**:Connecting multiple brands and systems at scale.
+- **Boutiques & Smaller Independent Hotels**:Simplified connectivity with self-onboarding options.
+- **Restaurants & Cafes**:POS-to-accounting and POS-to-PMS flows for single or multi-location food and beverage businesses.
+- **Vendors & Tech Providers**:Integration partnerships to extend a platform's reach and compatibility.
+
+Notable clients include Strawberry Group, Generator, MCR, Van der Valk, Efteling, Bastion Hotels, Lark Hotels, Bob W, and Conscious Hotels.
+
+## What types of systems does Omniboost connect?
+
+Omniboost connects systems across 16 categories: Accounting, Employee Management, Event Management, Guest Experience, Housekeeping, Inventory, Loyalty, Marketing, Point of Sale, Property Management System, Regulatory, Restaurant Management, Revenue Management, Self Order, Statistics, and Subscription.

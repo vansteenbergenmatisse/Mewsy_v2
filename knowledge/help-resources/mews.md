@@ -25,3 +25,12 @@ In the Mews Marketplace, look at the description beneath a connection name. If i
 ## One critical setting: turn off Receivable Tracking
 
 Before you activate any Omniboost integration, you must turn OFF Receivable Tracking in Mews. If it is left on, both Mews and Omniboost will try to create invoices, and you will end up with duplicates in your accounting system. Where to find it: Mews Menu, then Settings, then Property, then Finance, then Accounting Configuration, then turn off Receivable Tracking.
+
+## POS to Mews integration
+
+If your property uses a Point of Sale system (restaurant, bar, spa), Omniboost can also connect it to Mews:
+
+- **Room Charge**:Revenue from the POS is charged directly to a guest profile in Mews using their name or room number. The guest settles the bill at check-out rather than at the POS.
+- **Check Closure**:A guest's check can be closed using the "Room Charge" payment method without requiring immediate payment at the POS terminal.
+- **Guest Lookup**:Staff can search for guests in Mews by name or room number directly from the POS.
+- **Consolidated Accounting Reports**:All POS transactions automatically appear in the Outlets section of the Mews Accounting Report, giving one unified revenue overview across the entire property.

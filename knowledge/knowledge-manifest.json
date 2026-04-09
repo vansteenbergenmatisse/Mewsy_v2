@@ -1,16 +1,6 @@
 {
   "categories": [
     {
-      "id": "mews.md",
-      "label": "Mews integration overview",
-      "description": "Mews and Omniboost integration: Bronze/Silver/Gold tiers, accounting flows, GL mapping, onboarding, and supported systems"
-    },
-    {
-      "id": "omniboost.md",
-      "label": "Omniboost platform overview",
-      "description": "What Omniboost is, its five core products (Accounting, PMS, POS, Insights, Owners Portal), and the hospitality industries it serves"
-    },
-    {
       "id": "website/mews-help-center",
       "label": "Mews help center",
       "description": "Step-by-step onboarding guides for connecting Mews PMS to specific accounting systems (Xero, DATEV, Exact, QuickBooks, and others) via Omniboost"
@@ -38,64 +28,32 @@
   ],
   "files": [
     {
-      "id": "mews",
-      "title": "Mews PMS & Omniboost Integration",
-      "category": "mews.md",
-      "description": "Covers everything about Mews and the Omniboost integration: Bronze/Silver/Gold tiers, accounting flows (Consumed, Closed, Hybrid), GL mapping, onboarding steps, POS connections, receivable tracking, and all supported systems.",
+      "id": "help-resources/supported-systems",
+      "title": "Help: Supported Systems",
+      "category": "help-resources",
+      "description": "Lists all accounting, POS, PMS, and supplementary systems supported by the Omniboost Mews integration, plus guidance for unlisted systems.",
       "keywords": [
-        "mews",
-        "bronze",
-        "silver",
-        "gold",
-        "integration tiers",
-        "accounting flow",
-        "consumed",
-        "closed",
-        "hybrid",
-        "GL mapping",
-        "ledger",
+        "supported systems",
+        "accounting software",
         "POS",
-        "receivable tracking",
-        "onboarding",
-        "omniboost",
-        "supported systems"
+        "Xero",
+        "QuickBooks",
+        "Datev",
+        "NetSuite",
+        "Lightspeed",
+        "Toast",
+        "compatible",
+        "integrations",
+        "system not listed"
       ],
       "trigger_questions": [
-        "How do I set up Mews PMS with Omniboost",
-        "What are the different Omniboost integration tiers for Mews",
-        "How much does Omniboost Mews integration cost",
-        "What is Omniboost's role with Mews",
-        "What support does Bronze tier Mews integration include"
+        "Is my accounting system supported by Omniboost?",
+        "Which POS systems does Omniboost support with Mews?",
+        "Does Omniboost work with Xero?",
+        "What accounting software can Omniboost connect to Mews?",
+        "My system is not on the list, can Omniboost still integrate it?"
       ],
-      "path": "knowledge/mews.md"
-    },
-    {
-      "id": "omniboost",
-      "title": "Omniboost Platform & Products",
-      "category": "omniboost.md",
-      "description": "Covers what Omniboost is, its five core products (Accounting, PMS, POS, Insights, Owners Portal), how it connects hospitality systems, and the industries and business types it serves.",
-      "keywords": [
-        "omniboost",
-        "platform",
-        "accounting",
-        "PMS",
-        "POS",
-        "insights",
-        "owners portal",
-        "hospitality",
-        "connectivity",
-        "integration",
-        "products",
-        "company"
-      ],
-      "trigger_questions": [
-        "What is Omniboost and what does it do",
-        "What products does Omniboost offer",
-        "How does Omniboost connect PMS and POS systems",
-        "What data can Omniboost integrate for hospitality businesses",
-        "What is the Omniboost Owners Portal"
-      ],
-      "path": "knowledge/omniboost.md"
+      "path": "knowledge/help-resources/supported-systems.md"
     },
     {
       "id": "mews-help-center/onboarding-guide-mews-to-accounting-omniboost-help-center",
@@ -2037,7 +1995,7 @@
       "id": "help-resources/omniboost",
       "title": "Help: What is Omniboost?",
       "category": "help-resources",
-      "description": "Help panel article explaining what Omniboost is, its five products, scale, and why it matters for hotel operations.",
+      "description": "Explains what Omniboost is, its five products, scale, industries served, and the 16 integration categories it connects.",
       "keywords": [
         "omniboost",
         "data unification",
@@ -2048,14 +2006,17 @@
         "insights",
         "owners portal",
         "automation",
-        "hotel"
+        "hotel",
+        "restaurant",
+        "management company",
+        "integration categories"
       ],
       "trigger_questions": [
         "What is Omniboost and how does it work",
         "What software systems does Omniboost connect",
         "What are the five Omniboost products",
-        "How many hotels use Omniboost",
-        "What data does Omniboost automatically sync between systems"
+        "What types of businesses use Omniboost",
+        "What categories of systems can Omniboost integrate?"
       ],
       "path": "knowledge/help-resources/omniboost.md"
     },
@@ -2063,7 +2024,7 @@
       "id": "help-resources/mews",
       "title": "Help: What is Mews?",
       "category": "help-resources",
-      "description": "Help panel article explaining Mews PMS, what it tracks for accounting, and how Omniboost connects to it.",
+      "description": "Explains Mews PMS, what it tracks for accounting, how Omniboost connects to it, and how POS systems integrate via Mews.",
       "keywords": [
         "mews",
         "PMS",
@@ -2074,14 +2035,16 @@
         "omniboost",
         "hotel",
         "integration",
-        "cloud"
+        "cloud",
+        "POS",
+        "room charge"
       ],
       "trigger_questions": [
         "What is Mews and how does it work",
         "How does Omniboost integrate with Mews",
         "What does Mews track for accounting",
         "How do I find an Omniboost integration in the Mews Marketplace",
-        "What is Receivable Tracking in Mews"
+        "How does a POS system connect to Mews through Omniboost"
       ],
       "path": "knowledge/help-resources/mews.md"
     },
