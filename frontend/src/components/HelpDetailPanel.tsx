@@ -1,5 +1,5 @@
 import React from 'react';
-import { helpTopicContent } from '../help';
+import { getHelpTopicContent } from '../help';
 
 // ── HelpDetailPanel ────────────────────────────────────────────────────────────
 // Shows the full content for a single help topic.
@@ -8,13 +8,14 @@ import { helpTopicContent } from '../help';
 interface HelpDetailPanelProps {
   show: boolean;
   topic: string | null;
+  selectedLanguage: string | null;
   onBack: () => void;
   onCloseAll: () => void;
   onAskMewsie: (message: string) => void;
 }
 
-export function HelpDetailPanel({ show, topic, onBack, onCloseAll, onAskMewsie }: HelpDetailPanelProps) {
-  const content = topic ? helpTopicContent[topic] : null;
+export function HelpDetailPanel({ show, topic, selectedLanguage, onBack, onCloseAll, onAskMewsie }: HelpDetailPanelProps) {
+  const content = topic ? getHelpTopicContent(topic, selectedLanguage) : null;
 
   return (
     <div id="help-detail-panel" className={show ? 'show' : ''}>

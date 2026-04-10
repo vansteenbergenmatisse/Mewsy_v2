@@ -44,7 +44,7 @@ const CHAT_TESTS: ChatTest[] = [
       // Acceptable: direct answer with tier content
       const hasAnswer = lower.includes('bronze') || lower.includes('silver') || lower.includes('gold');
       // Also acceptable: clarifying question (CLARIFY mode — broad query)
-      const hasClarify = reply.includes('[BUTTONS:]') || (reply.includes('?') && !lower.includes('capital'));
+      const hasClarify = reply.includes('[BUTTONS:') || (reply.includes('?') && !lower.includes('capital'));
       return hasAnswer || hasClarify;
     },
   },
@@ -62,7 +62,7 @@ const CHAT_TESTS: ChatTest[] = [
       // Acceptable: direct answer with Omniboost platform content
       const hasAnswer = lower.includes('omniboost') || lower.includes('accounting') || lower.includes('platform') || lower.includes('integration');
       // Also acceptable: clarifying question (CLARIFY mode — "omniboost" matches 30+ docs)
-      const hasClarify = reply.includes('[BUTTONS:]') || (reply.includes('?') && !lower.includes('capital'));
+      const hasClarify = reply.includes('[BUTTONS:') || (reply.includes('?') && !lower.includes('capital'));
       return hasAnswer || hasClarify;
     },
   },
@@ -80,10 +80,26 @@ const CHAT_TESTS: ChatTest[] = [
       // Acceptable: direct answer with GL/accounting content
       const hasAnswer = lower.includes('ledger') || lower.includes('accounting') || lower.includes('gl') || lower.includes('mapping');
       // Also acceptable: clarifying question (CLARIFY mode — broad query due to "mews" keyword)
-      const hasClarify = reply.includes('[BUTTONS:]') || (reply.includes('?') && !lower.includes('capital'));
+      const hasClarify = reply.includes('[BUTTONS:') || (reply.includes('?') && !lower.includes('capital'));
       // Also acceptable: BASIC carousel JSON
       const hasBasic = reply.trimStart().startsWith('{');
       return hasAnswer || hasClarify || hasBasic;
+    },
+  },
+  {
+    // City ledger is defined in city-ledger-omniboost-help-center.md.
+    // Stage 2A must now read full content — thin metadata previously caused Haiku to fail the doc.
+    description: 'City ledger question returns actual definition (Stage 2A reads full content)',
+    message:     'what is a city ledger?',
+    mustContain: [],
+    mustNotContain: [],
+    customCheck: (reply) => {
+      const lower = reply.toLowerCase();
+      // Acceptable: direct answer mentioning ledger/accounts concept
+      const hasContent = lower.includes('city ledger') || lower.includes('ledger') || lower.includes('non-registered') || lower.includes('accounts');
+      // Not acceptable: bare BASIC carousel with no ledger content
+      const isBareBASIC = reply.trimStart().startsWith('{') || (reply.includes('[BUTTONS:') && !lower.includes('ledger'));
+      return hasContent && !isBareBASIC;
     },
   },
   {

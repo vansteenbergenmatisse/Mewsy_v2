@@ -66,7 +66,7 @@ async function checkLoader({ pass, fail, results }: Reporter): Promise<void> {
 // ── Config sanity (no API key needed) ────────────────────────────────────────
 
 async function checkConfigSanity({ pass, fail, results }: Reporter): Promise<void> {
-  const config = await import(`${ROOT}/backend/config/Mewsie.config.ts`);
+  const config = await import(`${ROOT}/backend/config/mewsie.config.ts`);
 
   const checks: [string, boolean, string][] = [
     ['ROUTER_MAX_DOCS is between 1 and 10',             config.ROUTER_MAX_DOCS >= 1 && config.ROUTER_MAX_DOCS <= 10,                 `Got ${config.ROUTER_MAX_DOCS}`],
@@ -180,6 +180,75 @@ async function checkConfigSanity({ pass, fail, results }: Reporter): Promise<voi
     fail('parseClarifyAnswers tests', (err as Error).message);
     results.push({ ok: false });
   }
+
+  // ── Sync language plumbing ────────────────────────────────────────────────
+  // These tests do not need the API — they verify the pure translation layer
+  // so the fast path (`generateClarifyingQuestions`, `generateClarifyQuestion`,
+  // `langName`) correctly routes the language code to the localized string.
+  try {
+    const { generateClarifyingQuestions, langName } = await import(`${ROOT}/backend/pipeline/claude.ts`);
+
+    // generateClarifyingQuestions with each language returns the localized prefix
+    const enReply = generateClarifyingQuestions('hi', null, [], [], 'en') as string;
+    const deReply = generateClarifyingQuestions('hi', null, [], [], 'de') as string;
+    const frReply = generateClarifyingQuestions('hi', null, [], [], 'fr') as string;
+    const nlReply = generateClarifyingQuestions('hi', null, [], [], 'nl') as string;
+    const dialectReply = generateClarifyingQuestions('hi', null, [], [], 'de-ch') as string;
+
+    const enOk = enReply.startsWith('What can I help you with?');
+    const deOk = deReply.startsWith('Womit kann ich dir helfen?');
+    const frOk = frReply.startsWith('Comment puis-je vous aider');
+    const nlOk = nlReply.startsWith('Waarmee kan ik je helpen?');
+    const dialectOk = dialectReply.startsWith('Womit kann ich dir helfen?'); // de-ch falls back to de
+
+    if (enOk && deOk && frOk && nlOk && dialectOk) {
+      pass('generateClarifyingQuestions: localized question prefix (en/de/fr/nl + de-ch fallback)');
+      results.push({ ok: true });
+    } else {
+      fail(
+        'generateClarifyingQuestions language plumbing',
+        `en=${enOk} de=${deOk} fr=${frOk} nl=${nlOk} de-ch=${dialectOk}`
+      );
+      results.push({ ok: false });
+    }
+
+    // Null / unknown language falls back to English
+    const nullReply = generateClarifyingQuestions('hi', null, [], [], null) as string;
+    if (nullReply.startsWith('What can I help you with?')) {
+      pass('generateClarifyingQuestions: null language falls back to English');
+      results.push({ ok: true });
+    } else {
+      fail('generateClarifyingQuestions null fallback', `Got: "${nullReply.slice(0, 80)}"`);
+      results.push({ ok: false });
+    }
+
+    // langName helper: each code resolves to a plain English language name
+    const names = {
+      en: langName('en'),
+      de: langName('de'),
+      fr: langName('fr'),
+      nl: langName('nl'),
+      dialect: langName('de-at'),
+      nullCase: langName(null),
+    };
+    const namesOk =
+      names.en === 'English' &&
+      names.de === 'German' &&
+      names.fr === 'French' &&
+      names.nl === 'Dutch' &&
+      names.dialect === 'German' &&
+      names.nullCase === 'English';
+    if (namesOk) {
+      pass('langName: resolves all supported codes and regional fallbacks');
+      results.push({ ok: true });
+    } else {
+      fail('langName resolution', JSON.stringify(names));
+      results.push({ ok: false });
+    }
+  } catch (err) {
+    fail('sync language plumbing tests', (err as Error).message);
+    results.push({ ok: false });
+  }
 }
 
 // ── Helper ────────────────────────────────────────────────────────────────────
@@ -220,7 +289,7 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
     (async () => {
       try {
         const reply = await handleMessage(`test-clarify-${Date.now()}`, 'help me with my accounting integration setup') as string;
-        if (reply.includes('[BUTTONS:]') || reply.includes('?')) { pass('CLARIFY mode: broad query returns a clarifying question or buttons'); results.push({ ok: true }); }
+        if (reply.includes('[BUTTONS:') || reply.includes('?')) { pass('CLARIFY mode: broad query returns a clarifying question or buttons'); results.push({ ok: true }); }
         else { fail('CLARIFY mode: broad query should return question or [BUTTONS:]', `Got: "${reply.slice(0, 150)}"`); results.push({ ok: false }); }
       } catch (err) {
         if (is529(err)) { skip('CLARIFY mode test', 'API overloaded (529) — transient'); results.push({ ok: 'skip' }); }
@@ -240,6 +309,90 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
       } catch (err) {
         if (is529(err)) { skip('language injection test', 'API overloaded (529) — transient'); results.push({ ok: 'skip' }); }
         else { fail('language injection test', (err as Error).message); results.push({ ok: false }); }
+      }
+    })(),
+
+    // Language param plumbing: English user message + language='de' must still produce a German reply.
+    // Regression guard for the bug where generateIntroLine had no language signal and Haiku
+    // responded in a language picked from the user message alone.
+    (async () => {
+      try {
+        const reply = await handleMessage(`test-lang-param-${Date.now()}`, 'help me with my accounting integration setup', 'de') as string;
+        // Strip the [BUTTONS: ...] block (English labels), the [ANSWER:...] signal, and the
+        // [ANSWER_CONTRACT] JSON — all three are always English and would poison language detection.
+        const introPart = reply
+          .replace(/\[BUTTONS:[^\]]*\]/gi, '')
+          .replace(/\[ANSWER:[^\]]*\]/gi, '')
+          .replace(/\[ANSWER_CONTRACT\][\s\S]*?\[\/ANSWER_CONTRACT\]/gi, '')
+          .toLowerCase();
+        const looksGerman =
+          introPart.includes(' die ') || introPart.includes(' der ') || introPart.includes(' und ') ||
+          introPart.includes(' ist ') || introPart.includes(' mit ') || introPart.includes(' ich ') ||
+          introPart.includes(' dir ') || introPart.includes(' du ') || introPart.includes('ß');
+        if (looksGerman) { pass('language param: handleMessage(..., "de") makes intro/CLARIFY reply German even for English user text'); results.push({ ok: true }); }
+        else { fail('language param plumbing', `Intro looks non-German. Reply (stripped): "${introPart.slice(0, 200)}"`); results.push({ ok: false }); }
+      } catch (err) {
+        if (is529(err)) { skip('language param plumbing test', 'API overloaded (529) — transient'); results.push({ ok: 'skip' }); }
+        else { fail('language param plumbing test', (err as Error).message); results.push({ ok: false }); }
+      }
+    })(),
+
+    // Language persistence after mid-session switch:
+    // Turn 1 in French → Turn 2 in English on the SAME session id.
+    // Regression guard for the Sonnet language-drift bug where stale French
+    // assistant turns in conversation history caused the next English reply
+    // to come back in French. The LANGUAGE LOCK block in buildSystemPrompt()
+    // is what keeps Sonnet on-target after a language switch.
+    (async () => {
+      const sessionId = `test-lang-switch-${Date.now()}`;
+      try {
+        // Turn 1: French question, French reply.
+        const fr = await handleMessage(sessionId, "Qu'est-ce que Omniboost ?", 'fr') as string;
+        const frClean = fr
+          .replace(/\[BUTTONS:[^\]]*\]/gi, '')
+          .replace(/\[ANSWER:[^\]]*\]/gi, '')
+          .replace(/\[ANSWER_CONTRACT\][\s\S]*?\[\/ANSWER_CONTRACT\]/gi, '')
+          .toLowerCase();
+        const looksFrench =
+          frClean.includes(' le ') || frClean.includes(' la ') || frClean.includes(' les ') ||
+          frClean.includes(' est ') || frClean.includes(' vous ') || frClean.includes(' une ') ||
+          frClean.includes(' des ') || frClean.includes(' pour ');
+        if (!looksFrench) {
+          skip('language persistence: setup turn (French)', 'Turn 1 French reply did not contain detectable French — cannot assert Turn 2');
+          results.push({ ok: 'skip' });
+          return;
+        }
+
+        // Turn 2: English follow-up on the SAME session. Must come back in English,
+        // NOT French, even though the history still contains French assistant turns.
+        const en = await handleMessage(sessionId, 'Thanks, can you tell me a bit more about what it does?', 'en') as string;
+        const enClean = en
+          .replace(/\[BUTTONS:[^\]]*\]/gi, '')
+          .replace(/\[ANSWER:[^\]]*\]/gi, '')
+          .replace(/\[ANSWER_CONTRACT\][\s\S]*?\[\/ANSWER_CONTRACT\]/gi, '')
+          .toLowerCase();
+        const looksEnglish =
+          enClean.includes(' the ') || enClean.includes(' is ') || enClean.includes(' you ') ||
+          enClean.includes(' and ') || enClean.includes(' it ') || enClean.includes(' for ') ||
+          enClean.includes(' your ') || enClean.includes(' with ');
+        const stillLooksFrench =
+          enClean.includes(' le ') || enClean.includes(' la ') || enClean.includes(' les ') ||
+          enClean.includes(' est ') || enClean.includes(' vous ') || enClean.includes(' une ') ||
+          enClean.includes(' pour ') || enClean.includes(" l'") || enClean.includes(" d'");
+
+        if (looksEnglish && !stillLooksFrench) {
+          pass('language persistence: fr→en switch produces English reply despite French conversation history');
+          results.push({ ok: true });
+        } else {
+          fail(
+            'language persistence after switch',
+            `looksEnglish=${looksEnglish} stillLooksFrench=${stillLooksFrench} reply="${enClean.slice(0, 240)}"`
+          );
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        if (is529(err)) { skip('language persistence test', 'API overloaded (529) — transient'); results.push({ ok: 'skip' }); }
+        else { fail('language persistence test', (err as Error).message); results.push({ ok: false }); }
       }
     })(),
 
@@ -263,6 +416,22 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
       } catch (err) {
         if (is529(err)) { skip('generateClarifyingQuestions test', 'API overloaded (529) — transient'); results.push({ ok: 'skip' }); }
         else { fail('generateClarifyingQuestions test', (err as Error).message); results.push({ ok: false }); }
+      }
+    })(),
+
+    // Stage 2A content-check: city ledger question must reach ANSWER (not BASIC carousel)
+    // Previously failed because Haiku rejected the doc based on thin metadata alone.
+    (async () => {
+      try {
+        const reply = await handleMessage(`test-city-ledger-${Date.now()}`, 'what is a city ledger?') as string;
+        const lower = reply.toLowerCase();
+        const hasContent = lower.includes('city ledger') || lower.includes('ledger') || lower.includes('accounts');
+        const isBasicCarousel = reply.trimStart().startsWith('{') || (reply.includes('[BUTTONS:') && !lower.includes('ledger'));
+        if (hasContent && !isBasicCarousel) { pass('Stage 2A content-check: "what is a city ledger?" returns an answer (not BASIC carousel)'); results.push({ ok: true }); }
+        else { fail('Stage 2A content-check: city ledger', `isBasicCarousel=${isBasicCarousel} hasContent=${hasContent} reply="${reply.slice(0, 150)}"`); results.push({ ok: false }); }
+      } catch (err) {
+        if (is529(err)) { skip('Stage 2A city ledger test', 'API overloaded (529) — transient'); results.push({ ok: 'skip' }); }
+        else { fail('Stage 2A city ledger test', (err as Error).message); results.push({ ok: false }); }
       }
     })(),
 

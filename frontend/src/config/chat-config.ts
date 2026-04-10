@@ -54,6 +54,16 @@ export const UI_STRINGS: Record<string, Record<string, string>> = {
   qaTroubleshoot: { en: 'Troubleshoot issue',              de: 'Problem beheben',                       'de-ch': 'Problem beheben',                       'de-at': 'Problem beheben',                       fr: 'Résoudre un problème',                   nl: 'Probleem oplossen'                    },
   qaBilling:      { en: 'Billing & plans',                 de: 'Abrechnung & Pläne',                    'de-ch': 'Abrechnung & Pläne',                    'de-at': 'Abrechnung & Pläne',                    fr: 'Facturation & abonnements',              nl: 'Facturering & plannen'                },
 
+  // ── Quick action natural-language queries ─────────────────────────────────
+  // These are the actual questions sent to the backend when a user clicks a
+  // quick action pill. The short labels above stay on-screen, but clicks
+  // dispatch a full sentence (≥8 words) so the router has real context.
+  qaOnboardingQuery:       { en: 'I need help getting started with my Omniboost onboarding setup.',            de: 'Ich brauche Hilfe beim Einstieg und der Einrichtung meines Omniboost-Onboardings.',           'de-ch': 'Ich brauche Hilfe beim Einstieg und der Einrichtung meines Omniboost-Onboardings.',           'de-at': 'Ich brauche Hilfe beim Einstieg und der Einrichtung meines Omniboost-Onboardings.',           fr: "J'ai besoin d'aide pour commencer mon onboarding Omniboost et ma configuration.",               nl: 'Ik heb hulp nodig bij mijn Omniboost onboarding en het opstartproces.' },
+  qaSearchDocsQuery:       { en: 'Can you help me find information in the Omniboost documentation?',           de: 'Können Sie mir helfen, Informationen in der Omniboost-Dokumentation zu finden?',              'de-ch': 'Können Sie mir helfen, Informationen in der Omniboost-Dokumentation zu finden?',              'de-at': 'Können Sie mir helfen, Informationen in der Omniboost-Dokumentation zu finden?',              fr: "Pouvez-vous m'aider à trouver des informations dans la documentation Omniboost ?",              nl: 'Kunt u mij helpen informatie te vinden in de Omniboost documentatie?' },
+  qaConfigureMappingQuery: { en: 'How do I configure my GL account mapping for Omniboost properly?',           de: 'Wie konfiguriere ich mein GL-Konten-Mapping für Omniboost richtig und korrekt?',              'de-ch': 'Wie konfiguriere ich mein GL-Konten-Mapping für Omniboost richtig und korrekt?',              'de-at': 'Wie konfiguriere ich mein GL-Konten-Mapping für Omniboost richtig und korrekt?',              fr: 'Comment configurer correctement mon mapping des comptes du grand livre dans Omniboost ?',       nl: 'Hoe configureer ik mijn grootboek-mapping voor Omniboost op de juiste manier?' },
+  qaTroubleshootQuery:     { en: 'I am running into an issue and need help troubleshooting it.',               de: 'Ich habe ein Problem und brauche Hilfe bei der Fehlerbehebung dazu.',                         'de-ch': 'Ich habe ein Problem und brauche Hilfe bei der Fehlerbehebung dazu.',                         'de-at': 'Ich habe ein Problem und brauche Hilfe bei der Fehlerbehebung dazu.',                         fr: "Je rencontre un problème et j'ai besoin d'aide pour le résoudre.",                              nl: 'Ik heb een probleem en heb hulp nodig bij het oplossen ervan.' },
+  qaBillingQuery:          { en: 'Can you explain the Omniboost pricing tiers and billing options?',           de: 'Können Sie mir die Omniboost-Preisstufen und die Abrechnungsoptionen im Detail erklären?',     'de-ch': 'Können Sie mir die Omniboost-Preisstufen und die Abrechnungsoptionen im Detail erklären?',     'de-at': 'Können Sie mir die Omniboost-Preisstufen und die Abrechnungsoptionen im Detail erklären?',     fr: "Pouvez-vous m'expliquer les niveaux de tarification Omniboost et les options de facturation ?", nl: 'Kunt u de Omniboost prijsniveaus en de factureringsopties aan mij uitleggen?' },
+
   // ── Help panel ────────────────────────────────────────────────────────────
   helpSearchPlaceholder: { en: 'Search for help',          de: 'Nach Hilfe suchen',                     'de-ch': 'Nach Hilfe suchen',                     'de-at': 'Nach Hilfe suchen',                     fr: "Rechercher de l\u2019aide",              nl: 'Zoek naar hulp'                       },
 
@@ -81,6 +91,13 @@ export function uiStr(key: string, lang: string | null): string {
   const map = UI_STRINGS[key];
   if (!map) return '';
   return map[l] || map[l.split('-')[0]] || map['en'] || '';
+}
+
+// Returns the natural-language query sent to the backend when a quick action
+// button is clicked. Falls back to the short button label if the query key
+// is missing, so adding a new quick action without a query still works.
+export function getQuickActionQuery(key: string, lang: string | null): string {
+  return uiStr(key + 'Query', lang) || uiStr(key, lang);
 }
 
 // ── Welcome text ───────────────────────────────────────────────────────────────

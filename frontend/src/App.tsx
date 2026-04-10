@@ -160,8 +160,8 @@ export default function App() {
     if (detected) {
       detectedOptions = detected.options;
       detectedQuestion = detected.questionText ?? null;
-      bodyText = '';
-      skipBodyMessages = true;
+      bodyText = detected.bodyText ?? '';
+      skipBodyMessages = !bodyText;
     } else {
       bodyText = stripButtonSyntax(text);
     }
@@ -235,21 +235,25 @@ export default function App() {
   // ── Server communication ───────────────────────────────────────────────────
 
   const sendToServer = useCallback((message: string) => {
-    let chatInput = message;
-    const langEntry = LANGUAGES.find(l => l.code === selectedLanguage);
-    const langSystemName = langEntry ? langEntry.systemName : null;
-
-    if (langSystemName && (isFirstMessageRef.current || langChangedRef.current)) {
-      const verb = langChangedRef.current ? 'switched' : 'selected';
-      chatInput = `[System note: the user has ${verb} their language to ${langSystemName}. For the remainder of this conversation, always respond in ${langSystemName}.]\n\n${message}`;
-      isFirstMessageRef.current = false;
-      langChangedRef.current = false;
-    }
+    // Reset the legacy refs — they no longer control what gets sent, but
+    // other parts of the component still read them (placeholder sync).
+    isFirstMessageRef.current = false;
+    langChangedRef.current = false;
 
     fetch(BACKEND_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chatInput, sessionId: getSessionId() }),
+      // language is the single authoritative signal. Sent on every request,
+      // stored in session.context.language, and surfaced to Sonnet via the
+      // LANGUAGE LOCK block in buildSystemPrompt(). We no longer prepend an
+      // inline [System note:] directive to the user message — that pattern
+      // was a hack from before the language field existed and it leaked
+      // stale language directives into the stored conversation history.
+      body: JSON.stringify({
+        chatInput: message,
+        sessionId: getSessionId(),
+        language: selectedLanguage,
+      }),
     })
       .then(r => r.json())
       .then(data => {

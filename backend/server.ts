@@ -53,8 +53,8 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   try {
-    const body = await c.req.json<{ chatInput?: unknown; sessionId?: unknown }>();
-    const { chatInput, sessionId } = body;
+    const body = await c.req.json<{ chatInput?: unknown; sessionId?: unknown; language?: unknown }>();
+    const { chatInput, sessionId, language } = body;
 
     console.log(`\n${'─'.repeat(60)}`);
     console.log(`[REQUEST]  session=${String(sessionId ?? '?').slice(0, 12)}`);
@@ -71,8 +71,15 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
       return c.json({ output: 'sessionId is required.' }, 400);
     }
 
+    // Language is optional — frontend sends the current language on every
+    // request so Haiku-driven intro lines can respond in the correct language.
+    // Constrained to a short allowlist of codes; anything else is ignored.
+    const ALLOWED_LANGS = new Set(['en', 'de', 'de-ch', 'de-at', 'fr', 'nl']);
+    const lang =
+      typeof language === 'string' && ALLOWED_LANGS.has(language) ? language : null;
+
     // Hand off to agent.ts, which runs the full CAG pipeline and returns a reply
-    const outputPromise = handleMessage(sessionId, chatInput);
+    const outputPromise = handleMessage(sessionId, chatInput, lang);
 
     // Race between the pipeline and a 30-second timeout
     const timeoutPromise = new Promise<never>((_, reject) => {

@@ -6,7 +6,7 @@ import { ChatInput } from './ChatInput';
 import { HelpPanel } from './HelpPanel';
 import { HelpDetailPanel } from './HelpDetailPanel';
 import { AttachedFile } from './ChatInput';
-import { uiStr, QUICK_ACTION_KEYS } from '../config/chat-config';
+import { uiStr, QUICK_ACTION_KEYS, getQuickActionQuery } from '../config/chat-config';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -89,8 +89,9 @@ function HeroSection({ selectedLanguage, onQuickAction }: HeroSectionProps) {
       <div className="hero-actions">
         {QUICK_ACTION_KEYS.map((key, idx) => {
           const label = s(key);
+          const query = getQuickActionQuery(key, selectedLanguage);
           return (
-            <button key={key} className="quick-btn" onClick={() => onQuickAction(label)}>
+            <button key={key} className="quick-btn" onClick={() => onQuickAction(query)}>
               {QUICK_ACTION_ICONS[idx]}
               {label}
             </button>
@@ -223,8 +224,9 @@ function FullscreenHeroSection({
       <div className="hero-pills">
         {QUICK_ACTION_KEYS.map((key, idx) => {
           const label = s(key);
+          const query = getQuickActionQuery(key, selectedLanguage);
           return (
-            <button key={key} className="hero-pill-btn" onClick={() => onQuickAction(label)}>
+            <button key={key} className="hero-pill-btn" onClick={() => onQuickAction(query)}>
               {QUICK_ACTION_ICONS[idx]}
               {label}
             </button>
@@ -361,6 +363,7 @@ export function ChatWidget({
         <HelpDetailPanel
           show={showHelpDetail}
           topic={helpDetailTopic}
+          selectedLanguage={selectedLanguage}
           onBack={onCloseHelpDetail}
           onCloseAll={onCloseAllHelp}
           onAskMewsie={onAskMewsie}

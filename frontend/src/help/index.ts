@@ -11,4 +11,4 @@ export type { HelpItem } from './help-items';
 export { getHelpItems } from './help-items';
 
 export type { HelpSection, HelpCta, HelpTopic } from './help-content';
-export { helpTopicContent } from './help-content';
+export { helpTopicContent, getHelpTopicContent } from './help-content';

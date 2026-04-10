@@ -58,6 +58,7 @@ import {
   recoverRouting,
   generateClarifyQuestion,
   generateClarifyingQuestions,
+  generateIntroLine,
 } from './claude.ts';
 import type { QueryContext, Page, AnswerContract } from './claude.ts';
 import {
@@ -74,7 +75,7 @@ import {
   STAGE2A_SHORTLIST_MAX,
   POST_ANSWER_CLARIFY_BUDGET,
   FUZZY_MATCH_ENABLED,
-} from '../config/Mewsie.config.ts';
+} from '../config/mewsie.config.ts';
 import type { Manifest } from '../types/manifest.ts';
 import { migrateManifest } from '../scraper/pipeline/manifest.ts';
 
@@ -98,16 +99,37 @@ const SKIP_ROUTING_GREETINGS = new Set([
 
 // Static fallback used when generateClarifyQuestion fails (Haiku parse error).
 // This should be rare — Haiku is reliable at returning JSON.
-const STATIC_CLARIFY_REPLY = [
-  'Could you give me a bit more context about what you\'re looking for?',
-  '',
-  '[BUTTONS:]',
-  '- Onboarding / getting started',
-  '- Accounting integration setup',
-  '- GL mapping and reporting',
-  '- Troubleshooting an issue',
-  '- Something else',
-].join('\n');
+//
+// Button labels stay in English on purpose: Stage 1 keyword matching is
+// English-only and translated labels would break the click-to-route loop.
+// Only the question prefix is translated.
+const STATIC_CLARIFY_PREFIX: Record<string, string> = {
+  en: "Could you give me a bit more context about what you're looking for?",
+  de: 'Kannst du mir etwas mehr Kontext dazu geben, wonach du suchst?',
+  fr: 'Pouvez-vous me donner un peu plus de contexte sur ce que vous cherchez ?',
+  nl: 'Kun je me wat meer context geven over wat je zoekt?',
+};
+
+// Short-token clarify prefix (e.g. "qb" → "Did you mean QuickBooks?").
+const SHORT_TOKEN_CLARIFY_PREFIX: Record<string, string> = {
+  en: "Could you clarify what you're looking for?",
+  de: 'Kannst du kurz präzisieren, wonach du suchst?',
+  fr: 'Pouvez-vous préciser ce que vous cherchez ?',
+  nl: 'Kun je kort verduidelijken wat je zoekt?',
+};
+
+function translate(map: Record<string, string>, lang: string | null): string {
+  const l = lang || 'en';
+  return map[l] || map[l.split('-')[0]] || map.en;
+}
+
+function staticClarifyReply(lang: string | null): string {
+  return (
+    `${translate(STATIC_CLARIFY_PREFIX, lang)} ` +
+    `[BUTTONS: Onboarding / getting started | Accounting integration setup | ` +
+    `GL mapping and reporting | Troubleshooting an issue | Something else]`
+  );
+}
 
 // ── ManifestPage ─────────────────────────────────────────────────────────────
 //
@@ -245,6 +267,116 @@ export function findShortTokenCandidates(msgTokens: string[], pages: ManifestPag
     .map(c => c.keyword);
 }
 
+// ── CLARIFY button selection ────────────────────────────────────────────────────
+//
+// Picks up to 4 keyword labels from matched docs to show as CLARIFY buttons.
+// Uses manifest keywords directly — correctly capitalised, no stripping needed.
+//
+// For THEME_OVERFLOW (6+ docs, single theme): removes keywords shared by ALL matched
+// docs (non-discriminating like "QuickBooks" or "Mews") then picks from unique ones.
+// For other reasons: picks highest-frequency keywords across matched docs.
+//
+// Filters out keywords already present in previousAnswers to prevent repeat buttons.
+
+export function pickClarifyButtons(
+  matchedDocs: ManifestPage[],
+  triggerReason: string,
+  previousAnswers: string[],
+  allPages: ManifestPage[] = []
+): string[] {
+  const prevLower = new Set(previousAnswers.map(a => a.toLowerCase()));
+  const allKws = matchedDocs.flatMap(d => d.keywords ?? []);
+
+  const freq = new Map<string, number>();
+  for (const kw of allKws) freq.set(kw, (freq.get(kw) ?? 0) + 1);
+
+  // Build global keyword frequency to identify overly broad terms.
+  // Keywords present in >15% of ALL docs (e.g. "Omniboost", "MEWS") appear in so many
+  // docs that selecting them as a CLARIFY answer expands Stage 1 matches instead of
+  // narrowing them, causing an infinite CLARIFY loop.
+  const globalFreq = new Map<string, number>();
+  for (const page of allPages) {
+    const pageSeen = new Set<string>();
+    for (const kw of page.keywords ?? []) {
+      if (!pageSeen.has(kw)) { globalFreq.set(kw, (globalFreq.get(kw) ?? 0) + 1); pageSeen.add(kw); }
+    }
+  }
+  const globalCap = allPages.length > 0 ? Math.ceil(allPages.length * 0.15) : Infinity;
+
+  // THEME_OVERFLOW: also strip keywords shared by ALL matched docs (non-discriminating)
+  const n = matchedDocs.length;
+  const localPool: string[] = triggerReason === 'THEME_OVERFLOW'
+    ? [...freq.entries()].filter(([, c]) => c < n).map(([kw]) => kw)
+    : [...freq.keys()];
+
+  // Remove globally common keywords — only specific terms make useful buttons
+  const pool = localPool.filter(kw => (globalFreq.get(kw) ?? 0) <= globalCap);
+
+  const seen = new Set<string>();
+  const result: string[] = [];
+  // Three-tier sort:
+  //   Tier 0 — proper nouns (start with uppercase): integration names, system names, acronyms
+  //   Tier 1 — single-word generic terms
+  //   Tier 2 — multi-word all-lowercase phrases (e.g. "accounting software", "supported systems")
+  // Within each tier, sort by local freq ASC (fewer occurrences = more specific = preferred).
+  const isProper = (kw: string) => /^[A-Z]/.test(kw);
+  const isMultiWordGeneric = (kw: string) => /\s/.test(kw) && !/^[A-Z]/.test(kw);
+  pool.sort((a, b) => {
+    const tierA = isProper(a) ? 0 : isMultiWordGeneric(a) ? 2 : 1;
+    const tierB = isProper(b) ? 0 : isMultiWordGeneric(b) ? 2 : 1;
+    if (tierA !== tierB) return tierA - tierB;
+    return (freq.get(a) ?? 0) - (freq.get(b) ?? 0);
+  });
+  for (const kw of pool) {
+    const lower = kw.toLowerCase();
+    if (seen.has(lower) || prevLower.has(lower)) continue;
+    seen.add(lower);
+    result.push(kw);
+    if (result.length === 4) break;
+  }
+  return result;
+}
+
+// ── Context-aware BASIC button scan ────────────────────────────────────────────
+//
+// Before showing generic category buttons in BASIC mode, scans the user's message
+// for any recognizable manifest keyword (exact or 1-edit fuzzy). If found, those
+// keywords are prepended to the generic category buttons so the response is
+// relevant to what the user actually mentioned.
+//
+// Returns up to 3 specific keyword strings, or [] if nothing recognizable was found.
+
+export function basicContextButtons(
+  userMessage: string,
+  allPages: ManifestPage[]
+): string[] {
+  const msgTokens = userMessage.toLowerCase().split(/[\s,.()\-/]+/).filter(Boolean);
+  // Only single-word keywords — multi-word phrases don't scan cleanly against tokens
+  const allKeywords = [...new Set(
+    allPages.flatMap(p => (p.keywords ?? []).filter(kw => !/\s/.test(kw)))
+  )];
+
+  const matched: string[] = [];
+  const seen = new Set<string>();
+
+  for (const kw of allKeywords) {
+    const kwLower = kw.toLowerCase();
+    if (seen.has(kwLower) || kwLower.length < 3) continue;
+    const isMatch = msgTokens.some(t =>
+      // Substring: token must be ≥ 4 chars to avoid "in" matching "integrations" etc.
+      (t.length >= 4 && kwLower.includes(t)) ||
+      // Fuzzy: token must be ≥ 4 chars and keyword ≥ 5 chars, max 1 edit
+      (kwLower.length >= 5 && t.length >= 4 && damerauLevenshtein(t, kwLower) <= 1)
+    );
+    if (isMatch) {
+      matched.push(kw);
+      seen.add(kwLower);
+    }
+    if (matched.length === 3) break;
+  }
+  return matched;
+}
+
 // ── Keyword pre-filter ──────────────────────────────────────────────────────────
 
 // Zero-LLM pre-filter: scores each doc by how many of its unique keywords + synonyms
@@ -340,16 +472,16 @@ function hasTopicOverlap(userMessage: string, contract: AnswerContract): boolean
     .map(t => t.toLowerCase())
     .filter(t => t.length >= 4); // ignore short stop-words
 
-  return terms.some(t => lower.includes(t));
+  // Word-boundary match: "ledger" in topics must not match "ledgers" or "city ledger"
+  return terms.some(t => new RegExp(`\\b${t}\\b`).test(lower));
 }
 
 // ── Pass threshold ──────────────────────────────────────────────────────────────
 
 // Minimum number of docs that must pass Stage 2A for the result to proceed to ANSWER.
-function getPassThreshold(shortlistSize: number): number {
-  if (shortlistSize <= 2) return 1;
-  if (shortlistSize === 3) return 2;
-  return 3; // 4–5
+// Stage 2A now reads full doc content — a single confirmed pass is sufficient.
+function getPassThreshold(_shortlistSize: number): number {
+  return 1;
 }
 
 // ── Stage 2A + 2B runner ────────────────────────────────────────────────────────
@@ -380,10 +512,26 @@ async function runStage2(
   selectedPages: ManifestPage[];
   clarifyTriggerReason: 'STAGE2B_NEEDS_CONTEXT' | null;
   decisionB: boolean;
+  contentVerifiedFailure: boolean;
 }> {
-  // Stage 2A: per-doc verification
+  // Load full file contents for all shortlisted docs before Stage 2A.
+  // Stage 2A reads full .md content — not just manifest metadata.
+  const rawContents = await loadKnowledgeFiles(shortlist);
+  const fileContents: Record<string, string> = {};
+  let loadErrors = false;
+  shortlist.forEach((page, i) => {
+    const content = rawContents[i];
+    if (content !== null) {
+      fileContents[page.id] = content;
+    } else {
+      loadErrors = true;
+    }
+  });
+
+  // Stage 2A: per-doc verification against full document content
   const stage2aResult = await verifyDocuments(
     shortlist as unknown as Page[],
+    fileContents,
     userMessage,
     qaLog,
     history
@@ -400,15 +548,25 @@ async function runStage2(
 
   if (passingPages.length >= threshold) {
     console.log(`[STAGE 2A] ${passingPages.length}/${shortlist.length} docs passed verification → ANSWER`);
-    return { selectedPages: passingPages, clarifyTriggerReason: null, decisionB: false };
+    return { selectedPages: passingPages, clarifyTriggerReason: null, decisionB: false, contentVerifiedFailure: false };
   }
 
-  // Stage 2B: routing recovery
-  console.log(`[STAGE 2A] ${passingPages.length}/${shortlist.length} passed (threshold ${threshold}) → Stage 2B`);
+  // Threshold not met — distinguish clean "no content" failures from errors.
+  const hasAnyErrors = stage2aResult.hasErrors || loadErrors;
+
+  if (!hasAnyErrors) {
+    // Haiku read the full content and determined the answer isn't there.
+    // Asking for clarification can't change what's in the docs — go to BASIC with apology.
+    console.log(`[STAGE 2A] ${passingPages.length}/${shortlist.length} passed (threshold ${threshold}) — content verified, answer not found → BASIC`);
+    return { selectedPages: [], clarifyTriggerReason: null, decisionB: false, contentVerifiedFailure: true };
+  }
+
+  // Errors occurred (file load failures, API errors) → Stage 2B error-recovery path.
+  console.log(`[STAGE 2A] ${passingPages.length}/${shortlist.length} passed (threshold ${threshold}) — errors during verification → Stage 2B`);
 
   if (clarifyRoundCounter >= MAX_CLARIFY_ROUNDS) {
     console.log(`[STAGE 2B] clarifyRoundCounter=${clarifyRoundCounter} >= MAX_CLARIFY_ROUNDS=${MAX_CLARIFY_ROUNDS} → forced Decision B`);
-    return { selectedPages: [], clarifyTriggerReason: null, decisionB: true };
+    return { selectedPages: [], clarifyTriggerReason: null, decisionB: true, contentVerifiedFailure: false };
   }
 
   const stage2bResult = await recoverRouting(
@@ -422,18 +580,19 @@ async function runStage2(
 
   if (stage2bResult.decision === 'A') {
     console.log(`[STAGE 2B] Decision A — ${stage2bResult.reason}`);
-    return { selectedPages: [], clarifyTriggerReason: 'STAGE2B_NEEDS_CONTEXT', decisionB: false };
+    return { selectedPages: [], clarifyTriggerReason: 'STAGE2B_NEEDS_CONTEXT', decisionB: false, contentVerifiedFailure: false };
   } else {
     console.log(`[STAGE 2B] Decision B — ${stage2bResult.reason}`);
-    return { selectedPages: [], clarifyTriggerReason: null, decisionB: true };
+    return { selectedPages: [], clarifyTriggerReason: null, decisionB: true, contentVerifiedFailure: false };
   }
 }
 
 // ── File loading ───────────────────────────────────────────────────────────────
 
 // Given an array of page objects, reads each file and returns contents as strings.
-async function loadKnowledgeFiles(pages: ManifestPage[]): Promise<string[]> {
-  const results = await Promise.all(
+// Returns (string | null)[] preserving index — null means the file failed to load.
+async function loadKnowledgeFiles(pages: ManifestPage[]): Promise<(string | null)[]> {
+  return Promise.all(
     pages.map(async (page) => {
       try {
         return await readFile(join(ROOT, page.path), 'utf-8');
@@ -443,7 +602,6 @@ async function loadKnowledgeFiles(pages: ManifestPage[]): Promise<string[]> {
       }
     })
   );
-  return results.filter((r): r is string => r !== null);
 }
 
 // ── Skip-routing detection ──────────────────────────────────────────────────────
@@ -484,9 +642,18 @@ export function shouldSkipRouting(userMessage: string, sessionContext: SessionCo
 
   // Only skip if: Mewsie just asked a clarifying question AND the user gave a
   // very short reply (≤ 4 words) AND we have docs from the previous turn to reuse.
+  // Exclude messages that start with a question word — those are new questions,
+  // not short replies to a clarifying question (e.g. "what is city ledger" is 4
+  // words but is a new question, not a reply like "Xero" or "the consumed flow").
+  const QUESTION_STARTERS = new Set([
+    'what', 'why', 'how', 'when', 'where', 'which', 'who',
+    'is', 'are', 'does', 'do', 'can', 'could', 'would', 'should', 'will',
+  ]);
+  const firstWord = trimmed.split(/\s+/)[0];
+  const startsWithQuestion = QUESTION_STARTERS.has(firstWord);
   const prevQ = sessionContext.previousQuestion;
   const hasDocsToReuse = sessionContext.lastLoadedDocIds.length > 0;
-  if (prevQ && hasDocsToReuse && wordCount <= 4 && !userMessage.includes('?')) {
+  if (prevQ && hasDocsToReuse && wordCount <= 4 && !userMessage.includes('?') && !startsWithQuestion) {
     return true;
   }
 
@@ -584,13 +751,26 @@ export function parseClarifyAnswers(message: string): { q: string; a: string }[]
 
 // Called by server.ts for every incoming chat message.
 // Runs the full pipeline and returns the final reply string.
-export async function handleMessage(sessionId: string, userMessage: string): Promise<string> {
+export async function handleMessage(
+  sessionId: string,
+  userMessage: string,
+  language: string | null = null
+): Promise<string> {
   const session = getSession(sessionId);
   const context = session.context as unknown as SessionContext;
   const history = session.history;
   const isFirstMessage = history.length === 0;
 
-  console.log(`[SESSION]  history=${history.length} turns, isFirst=${isFirstMessage}`);
+  // Persist the language the frontend last reported. This is authoritative:
+  // every request carries the currently-selected language, so we simply
+  // overwrite whatever was stored before. This is what lets Haiku-driven
+  // intro lines, CLARIFY, and BASIC replies speak the user's language.
+  if (typeof language === 'string' && language.length > 0 && language !== context.language) {
+    updateContext(sessionId, { language });
+    context.language = language;
+  }
+
+  console.log(`[SESSION]  history=${history.length} turns, isFirst=${isFirstMessage}, lang=${context.language ?? 'null'}`);
 
   // Step 1: Load the manifest
   let manifest: Manifest = { categories: [], files: [] };
@@ -660,14 +840,14 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
       // Lane A clarify budget: if Sonnet responded with buttons, check whether
       // the budget allows it (POST_ANSWER_CLARIFY_BUDGET). On budget exhaustion,
       // replace with BASIC carousel and exit post-answer mode.
-      if (!isPartial && postReply.includes('[BUTTONS:]')) {
+      if (!isPartial && postReply.includes('[BUTTONS:')) {
         if (!context.postAnswerClarifyUsed) {
           console.log(`[POST-ANSWER] Lane A — clarify question used (budget: ${POST_ANSWER_CLARIFY_BUDGET})`);
           updateContext(sessionId, { postAnswerClarifyUsed: true });
         } else {
           console.log('[POST-ANSWER] Lane A — clarify budget exhausted → BASIC carousel');
           const qaForBasic = (context.qaLogSnapshot ?? []).map(e => ({ q: e.question, a: e.answer }));
-          postReply = await generateClarifyingQuestions(userMessage, null, qaForBasic);
+          postReply = generateClarifyingQuestions(userMessage, null, qaForBasic, basicContextButtons(userMessage, allPages), context.language);
           updateContext(sessionId, {
             postAnswerMode: false,
             postAnswerSignal: null,
@@ -720,16 +900,12 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
   // Parse Q&A answers before routing.
   const incomingQAPairs = parseClarifyAnswers(userMessage);
 
-  // Build the enriched query for Stage 1: user message + all accumulated Q&A answers.
-  // This gives Stage 1 richer signal on re-runs after BASIC or CLARIFY rounds.
-  // Include both the persisted qaLog AND the incoming pairs from this turn so that
-  // a button click's answer narrows the search immediately (not only on the next turn).
+  // Build answer lists for button deduplication and Stage 2A context.
   const currentQALog: QAEntry[] = context.qaLog ?? [];
   const allAnswers = [
     ...currentQALog.map(e => e.answer),
     ...incomingQAPairs.map(p => p.a),
   ].filter(Boolean);
-  const qaAnswerText = allAnswers.length > 0 ? ' ' + allAnswers.join(' ') : '';
 
   // When re-routing on a Q&A answer batch, use the stored original question
   // (not the "Q: ...\nA: ..." formatted string) as the base for Stage 1 scoring.
@@ -737,14 +913,27 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
     ? context.originalQuestion
     : userMessage;
 
-  // Stage 1 query = base message + all accumulated Q&A answers
-  const stage1Query = (routingBaseMessage + qaAnswerText).trim();
+  // Stage 1 query strategy:
+  //   Button click  → use ONLY the most recent answer as the search term.
+  //                   Stage 1 is OR-additive: appending all accumulated answers
+  //                   monotonically expands the match set and traps the session
+  //                   in CLARIFY forever. Using only the latest answer keeps the
+  //                   search narrow and convergent. The full QA log is still passed
+  //                   to Stage 2A, so earlier context is not lost.
+  //   Free-text     → use base message only (no accumulated answers appended).
+  //                   The user's own words are the best signal; the QA log is
+  //                   available to Stage 2A for disambiguation.
+  const lastIncomingAnswer = incomingQAPairs[incomingQAPairs.length - 1]?.a ?? '';
+  const stage1Query = incomingQAPairs.length > 0
+    ? lastIncomingAnswer
+    : routingBaseMessage;
 
   // Step 2: Routing
   let selectedPages: ManifestPage[] = [];
   let clarifyTriggerReason: 'DIVERSE_TOPICS' | 'THEME_OVERFLOW' | 'TOO_BROAD' | 'STAGE2B_NEEDS_CONTEXT' | null = null;
-  let clarifyMatchedMeta: { title: string; theme: string }[] = [];
+  let clarifyMatchedMeta: { title: string; theme: string; keywords: string[] }[] = [];
   let stage2bDecisionB = false;
+  let contentVerifiedFailure = false;
   let shortTokenCandidates: string[] = [];
 
   const skipRouting = shouldSkipRouting(userMessage, context, isFirstMessage);
@@ -795,6 +984,7 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
         selectedPages = stage2Result.selectedPages;
         clarifyTriggerReason = stage2Result.clarifyTriggerReason;
         stage2bDecisionB = stage2Result.decisionB;
+        contentVerifiedFailure = stage2Result.contentVerifiedFailure;
 
       } else {
         // 6+ docs matched
@@ -805,12 +995,12 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
           // Gate 4: 6+ matched, all one theme → CLARIFY(THEME_OVERFLOW)
           console.log(`[STAGE 1]  ${matchedDocCount}/${allPages.length} docs matched, all theme: "${dominantTheme}" → CLARIFY(THEME_OVERFLOW)`);
           clarifyTriggerReason = 'THEME_OVERFLOW';
-          clarifyMatchedMeta = allMatched.slice(0, 10).map(d => ({ title: d.label, theme: d.theme }));
+          clarifyMatchedMeta = allMatched.slice(0, 10).map(d => ({ title: d.label, theme: d.theme, keywords: d.keywords ?? [] }));
         } else {
           // Gate 5: 6+ matched, multiple themes → CLARIFY(TOO_BROAD)
           console.log(`[STAGE 1]  ${matchedDocCount}/${allPages.length} docs matched, themes: [${themes.join(', ')}] → CLARIFY(TOO_BROAD)`);
           clarifyTriggerReason = 'TOO_BROAD';
-          clarifyMatchedMeta = scored.slice(0, 10).map(s => ({ title: s.page.label, theme: s.page.theme }));
+          clarifyMatchedMeta = scored.slice(0, 10).map(s => ({ title: s.page.label, theme: s.page.theme, keywords: s.page.keywords ?? [] }));
         }
       }
     } catch (err) {
@@ -843,7 +1033,8 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
   if (finalMode === 'ANSWER') {
     // Load full content of passing docs only
     const capped = selectedPages.slice(0, ROUTER_MAX_DOCS);
-    const contents = await loadKnowledgeFiles(capped);
+    const rawContents = await loadKnowledgeFiles(capped);
+    const contents = rawContents.filter((c): c is string => c !== null);
 
     if (contents.length > 0) {
       knowledgeContent = contents.join('\n\n---\n\n');
@@ -871,23 +1062,34 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
     if (shortTokenCandidates.length > 0) {
       // Short-token path: we know what the user probably means — ask directly.
       // No Haiku call needed; surface the prefix-matched candidates as buttons.
-      const options = [...shortTokenCandidates, 'Something else'].map(c => `- ${c}`).join('\n');
-      reply = `Could you clarify what you're looking for?\n\n[BUTTONS:]\n${options}`;
+      const options = [...shortTokenCandidates, 'Something else'];
+      const shortTokenPrefix = translate(SHORT_TOKEN_CLARIFY_PREFIX, context.language);
+      const shortTokenButtons =
+        `${shortTokenPrefix} [BUTTONS: ${options.join(' | ')}]`;
+      const shortTokenIntro = await generateIntroLine(userMessage, 'SHORT_TOKEN', context.language);
+      reply = shortTokenIntro ? `${shortTokenIntro}\n\n${shortTokenButtons}` : shortTokenButtons;
       console.log(`[CLARIFY] Short-token candidates: [${shortTokenCandidates.join(', ')}]`);
     } else {
-      // Generate targeted question based on trigger reason
-      const clarifyResult = await generateClarifyQuestion(
+      // Generate targeted question based on trigger reason — sync, no Haiku
+      const clarifyResult = generateClarifyQuestion(
         userMessage,
         clarifyTriggerReason!,
         clarifyMatchedMeta,
         currentQALog,
-        { tools: context.tools, setupType: context.setupType }
+        { tools: context.tools, setupType: context.setupType },
+        allAnswers,
+        allPages.map(p => p.keywords ?? []),
+        context.language
       );
 
+      const introLine = await generateIntroLine(userMessage, clarifyTriggerReason ?? 'CLARIFY', context.language);
       if (clarifyResult) {
-        reply = `${clarifyResult.question}\n\n[BUTTONS:]\n${clarifyResult.options.map(o => `- ${o}`).join('\n')}`;
+        const questionBlock =
+          `${clarifyResult.question} [BUTTONS: ${clarifyResult.options.join(' | ')}]`;
+        reply = introLine ? `${introLine}\n\n${questionBlock}` : questionBlock;
       } else {
-        reply = STATIC_CLARIFY_REPLY;
+        const staticReply = staticClarifyReply(context.language);
+        reply = introLine ? `${introLine}\n\n${staticReply}` : staticReply;
         console.log('[CLARIFY]  Fell back to static reply (generateClarifyQuestion returned null)');
       }
     }
@@ -907,10 +1109,16 @@ export async function handleMessage(sessionId: string, userMessage: string): Pro
     }
 
   } else {
-    // BASIC mode — generate the 3-question card carousel via Haiku.
-    // Also fires when Stage 2B chose Decision B (redirect to a fresh carousel).
+    // BASIC mode — static category buttons with context-aware prepend.
+    // Also fires when Stage 2B chose Decision B (redirect to a fresh set of buttons).
     const clarifyingQA = currentQALog.map(e => ({ q: e.question, a: e.answer }));
-    reply = await generateClarifyingQuestions(userMessage, null, clarifyingQA);
+    const ctxButtons = basicContextButtons(userMessage, allPages);
+    const introReason = contentVerifiedFailure ? 'BASIC_NO_DOCS' : 'BASIC';
+    const [basicReply, basicIntro] = await Promise.all([
+      Promise.resolve(generateClarifyingQuestions(userMessage, null, clarifyingQA, ctxButtons, context.language)),
+      generateIntroLine(userMessage, introReason, context.language),
+    ]);
+    reply = basicIntro ? `${basicIntro}\n\n${basicReply}` : basicReply;
 
     addToHistory(sessionId, 'user', userMessage);
     addToHistory(sessionId, 'assistant', reply);

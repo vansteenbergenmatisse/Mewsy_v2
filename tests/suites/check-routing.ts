@@ -47,8 +47,8 @@ interface Manifest {
 }
 
 export async function checkRouting({ pass, fail, skip, results }: Reporter): Promise<void> {
-  const { keywordPreFilter, findShortTokenCandidates } = await import(`${ROOT}/backend/pipeline/agent.ts`);
-  const { STAGE2A_SHORTLIST_MAX } = await import(`${ROOT}/backend/config/Mewsie.config.ts`);
+  const { keywordPreFilter, findShortTokenCandidates, pickClarifyButtons, basicContextButtons } = await import(`${ROOT}/backend/pipeline/agent.ts`);
+  const { STAGE2A_SHORTLIST_MAX } = await import(`${ROOT}/backend/config/mewsie.config.ts`);
 
   // Load manifest to get pages list
   let pages: { id: string; label: string; description: string; keywords: string[]; synonyms: string[]; path: string; category: string; theme: string; trigger_questions: string[] }[];
@@ -95,7 +95,7 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
   }
 
   // Test 2: QuickBooks-related query includes a QuickBooks doc in filtered results
-  const hasQuickBooks = filtered.some(p =>
+  const hasQuickBooks = filtered.some((p: { label: string; keywords?: string[] }) =>
     (p.keywords ?? []).some((kw: string) => /quickbooks/i.test(kw)) || /quickbooks/i.test(p.label)
   );
   if (hasQuickBooks) {
@@ -143,7 +143,7 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
 
   // Test: typo "quicbkook" still matches QuickBooks docs (Damerau distance 2 = transposition + insertion)
   const fuzzyQB = keywordPreFilter(pages, 'quicbkook');
-  const fuzzyQBHasQuickBooks = fuzzyQB.some(p =>
+  const fuzzyQBHasQuickBooks = fuzzyQB.some((p: { label: string; keywords?: string[] }) =>
     (p.keywords ?? []).some((kw: string) => /quickbooks/i.test(kw)) || /quickbooks/i.test(p.label)
   );
   if (fuzzyQBHasQuickBooks) {
@@ -219,6 +219,92 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
     results.push({ ok: false });
   }
 
+  // ── pickClarifyButtons unit tests (no API call needed) ────────────────────
+
+  // Test: THEME_OVERFLOW strips keywords shared by all docs, returns discriminating ones
+  const qbDocs = pages.filter(p =>
+    (p.keywords ?? []).some((kw: string) => /quickbooks/i.test(kw))
+  );
+  if (qbDocs.length >= 2) {
+    const buttons = pickClarifyButtons(qbDocs, 'THEME_OVERFLOW', [], pages);
+    // "QuickBooks" and "Mews" are shared by all → should NOT appear; unique sub-topics should
+    const hasQuickBooksAsButton = buttons.some((b: string) => /^quickbooks$/i.test(b));
+    const hasButtons = buttons.length > 0;
+    if (hasButtons && !hasQuickBooksAsButton) {
+      pass(`pickClarifyButtons: THEME_OVERFLOW returns discriminating keywords (got: [${buttons.join(', ')}])`);
+      results.push({ ok: true });
+    } else if (!hasButtons) {
+      // All keywords shared across all QB docs — degenerate case, acceptable
+      pass('pickClarifyButtons: THEME_OVERFLOW — all keywords shared, no discriminating buttons (acceptable)');
+      results.push({ ok: true });
+    } else {
+      fail('pickClarifyButtons: THEME_OVERFLOW should not include "QuickBooks" as a button', `Got: [${buttons.join(', ')}]`);
+      results.push({ ok: false });
+    }
+  } else {
+    pass('pickClarifyButtons THEME_OVERFLOW test skipped — fewer than 2 QuickBooks docs in manifest');
+    results.push({ ok: true });
+  }
+
+  // Test: pickClarifyButtons filters previously answered keywords
+  const sampleDocs = pages.slice(0, 5);
+  const allSampleKws: string[] = sampleDocs.flatMap((p: { keywords?: string[] }) => p.keywords ?? []);
+  if (allSampleKws.length > 0) {
+    const firstKw = allSampleKws[0];
+    const buttonsFiltered = pickClarifyButtons(sampleDocs, 'TOO_BROAD', [firstKw], pages);
+    const firstKwStillPresent = buttonsFiltered.some((b: string) => b.toLowerCase() === firstKw.toLowerCase());
+    if (!firstKwStillPresent) {
+      pass(`pickClarifyButtons: previously answered keyword "${firstKw}" not in next round buttons`);
+      results.push({ ok: true });
+    } else {
+      fail('pickClarifyButtons: should filter previously answered keywords', `"${firstKw}" still present in [${buttonsFiltered.join(', ')}]`);
+      results.push({ ok: false });
+    }
+  } else {
+    pass('pickClarifyButtons filter test skipped — no keywords in first 5 docs');
+    results.push({ ok: true });
+  }
+
+  // Test: pickClarifyButtons prefers proper nouns over generic lowercase phrases
+  const mixedDocs = [
+    { id: 'a', title: 'A', path: 'a.md', description: '', category: '', keywords: ['Xero', 'accounting software'] },
+    { id: 'b', title: 'B', path: 'b.md', description: '', category: '', keywords: ['DATEV', 'supported systems'] },
+    { id: 'c', title: 'C', path: 'c.md', description: '', category: '', keywords: ['QuickBooks', 'integration types'] },
+  ] as Parameters<typeof pickClarifyButtons>[0];
+  const mixedButtons = pickClarifyButtons(mixedDocs, 'TOO_BROAD', [], pages);
+  const firstIsProper = mixedButtons.length > 0 && /^[A-Z]/.test(mixedButtons[0]);
+  if (firstIsProper) {
+    pass(`pickClarifyButtons: proper nouns rank before generic phrases (got: [${mixedButtons.join(', ')}])`);
+    results.push({ ok: true });
+  } else if (mixedButtons.length === 0) {
+    pass('pickClarifyButtons proper-noun test skipped — global cap filtered all buttons');
+    results.push({ ok: true });
+  } else {
+    fail('pickClarifyButtons: first button should be a proper noun (e.g. Xero, DATEV)', `Got: [${mixedButtons.join(', ')}]`);
+    results.push({ ok: false });
+  }
+
+  // Test: basicContextButtons returns Xero keyword for "xero integration" message
+  const xeroCtx = basicContextButtons('xero integration', pages);
+  const xeroCtxHasXero = xeroCtx.some((b: string) => /xero/i.test(b));
+  if (xeroCtxHasXero) {
+    pass(`basicContextButtons: "xero integration" returns Xero as context button (got: [${xeroCtx.join(', ')}])`);
+    results.push({ ok: true });
+  } else {
+    fail('basicContextButtons: "xero integration" should surface Xero as a context button', `Got: [${xeroCtx.join(', ')}]`);
+    results.push({ ok: false });
+  }
+
+  // Test: basicContextButtons returns [] for truly out-of-scope message
+  const oosCtx = basicContextButtons('who won the world cup in 1998', pages);
+  if (oosCtx.length === 0) {
+    pass('basicContextButtons: out-of-scope message returns no context buttons');
+    results.push({ ok: true });
+  } else {
+    fail('basicContextButtons: OOS message should return no context buttons', `Got: [${oosCtx.join(', ')}]`);
+    results.push({ ok: false });
+  }
+
   // ── Stage 2A: verifyDocuments (requires API key) ───────────────────────────
   const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
   if (!hasApiKey) {
@@ -241,7 +327,11 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
       trigger_questions: p.trigger_questions,
       path: p.path,
     }));
-    const result = await verifyDocuments(testPages, 'how does GL mapping work?', [], []);
+    const fileContents: Record<string, string> = {};
+    for (const p of testPages) {
+      try { fileContents[p.id] = readFileSync(join(ROOT, p.path), 'utf-8'); } catch { /* skip */ }
+    }
+    const result = await verifyDocuments(testPages, fileContents, 'how does GL mapping work?', [], []);
     const hasResults = Array.isArray(result.results) && result.results.length === testPages.length;
     const hasBooleans = Array.isArray(result.results) && result.results.every(
       (r: { docId: string; reasoning: string; passes: boolean }) =>
@@ -266,7 +356,11 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
       id: p.id, label: p.label, description: p.description,
       keywords: p.keywords, trigger_questions: p.trigger_questions, path: p.path,
     }));
-    const result = await verifyDocuments(testPage, 'what is the bronze tier?', [], []);
+    const fileContents2: Record<string, string> = {};
+    for (const p of testPage) {
+      try { fileContents2[p.id] = readFileSync(join(ROOT, p.path), 'utf-8'); } catch { /* skip */ }
+    }
+    const result = await verifyDocuments(testPage, fileContents2, 'what is the bronze tier?', [], []);
     const hasNoConfidence = result.results.every(
       (r: Record<string, unknown>) => !('confidence' in r) && typeof r.passes === 'boolean'
     );

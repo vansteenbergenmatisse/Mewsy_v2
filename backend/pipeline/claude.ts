@@ -22,15 +22,19 @@
  *      (admit no docs available). Forced to Decision B when clarifyRoundCount ≥ MAX.
  *
  *   4. generateClarifyQuestion() — CLARIFY mode
- *      Haiku generates one targeted question with 4 specific options + "Something else".
- *      Receives the trigger reason (DIVERSE_TOPICS, THEME_OVERFLOW, TOO_BROAD,
- *      STAGE2B_NEEDS_CONTEXT), matched doc metadata, the session qaLog, and session
- *      context. Returns null on failure (caller falls back to static buttons).
+ *      Sync (no Haiku). Picks button labels from manifest keywords of matched docs.
+ *      THEME_OVERFLOW: strips shared keywords, uses discriminating ones. All other
+ *      triggers: uses highest-frequency keywords. Filters previously answered options.
+ *      Returns null if no discriminating keywords found (caller uses static fallback).
  *
  *   5. generateClarifyingQuestions() — BASIC mode only
- *      Haiku generates exactly CLARIFY_QUESTIONS_PER_ROUND targeted questions
- *      as structured JSON. The frontend renders them as a card carousel — the
- *      user answers each without a round-trip, then all answers are sent together.
+ *      Sync (no Haiku). Returns static category buttons with optional context-aware
+ *      prepend (up to 3 keywords from the user's message prepended to generic categories).
+ *
+ *   6. generateIntroLine() — CLARIFY and BASIC mode
+ *      Async (Haiku, max_tokens: 40). Generates a single warm, context-aware sentence
+ *      acknowledging the user's question, prepended before the button block.
+ *      Returns "" on error — callers silently fall back to buttons-only format.
  *
  * ── Prompt Caching ────────────────────────────────────────────────────────────
  *
@@ -44,9 +48,6 @@ import type { TextBlockParam, MessageParam } from '@anthropic-ai/sdk/resources/m
 import { ANTHROPIC_API_KEY } from '../config.ts';
 import { baseSystemPrompt } from '../../prompts/system.ts';
 import { getHistory, addToHistory } from './session.ts';
-import {
-  CLARIFY_QUESTIONS_PER_ROUND,
-} from '../config/Mewsie.config.ts';
 import { callHaiku, haikuClient, HAIKU_MODEL } from '../utils/haiku.ts';
 
 // The beta header is required by Anthropic to enable prompt caching.
@@ -60,6 +61,57 @@ export const clientWithCaching = new Anthropic({
 
 // Matches the sentinel value set in agent.ts.
 const BASIC_MODE = '__BASIC_MODE__';
+
+// ── Language resolution for Haiku-driven responses ────────────────────────────
+//
+// Maps the frontend language code to a plain-English language name used in
+// Haiku prompts. Swiss German and Austrian German map to standard German —
+// Haiku rarely produces dialectal output anyway and standard German is the
+// safest target. Regional codes (e.g. "de-ch") fall back to the base language
+// via `l.split('-')[0]` inside `langName()`.
+const LANG_NAMES: Record<string, string> = {
+  en: 'English',
+  de: 'German',
+  fr: 'French',
+  nl: 'Dutch',
+};
+
+export function langName(lang: string | null): string {
+  const l = lang || 'en';
+  return LANG_NAMES[l] || LANG_NAMES[l.split('-')[0]] || 'English';
+}
+
+// Small internal i18n table used by the three sync generators below
+// (generateClarifyQuestion, generateClarifyingQuestions, short-token path).
+// Button labels stay in English on purpose — Stage 1 keyword matching is
+// English-only and localised button text would break the routing round-trip.
+const BACKEND_STRINGS: Record<string, Record<string, string>> = {
+  clarifyQuestion: {
+    en: 'Which of these best matches what you need?',
+    de: 'Welches dieser Themen passt am besten zu dem, was du brauchst?',
+    fr: 'Lequel de ces sujets correspond le mieux à ce que vous cherchez ?',
+    nl: 'Welk van deze onderwerpen past het beste bij wat je nodig hebt?',
+  },
+  basicQuestion: {
+    en: 'What can I help you with?',
+    de: 'Womit kann ich dir helfen?',
+    fr: 'Comment puis-je vous aider ?',
+    nl: 'Waarmee kan ik je helpen?',
+  },
+};
+
+export function tStr(map: Record<string, string>, lang: string | null): string {
+  const l = lang || 'en';
+  return map[l] || map[l.split('-')[0]] || map.en;
+}
+
+export function clarifyQuestionText(lang: string | null): string {
+  return tStr(BACKEND_STRINGS.clarifyQuestion, lang);
+}
+
+export function basicQuestionText(lang: string | null): string {
+  return tStr(BACKEND_STRINGS.basicQuestion, lang);
+}
 
 // ── Answer contract types ──────────────────────────────────────────────────────
 
@@ -144,6 +196,36 @@ export function buildSystemPrompt(
   // which files were loaded, and which sections are most likely relevant.
   const contentParts: string[] = [];
 
+  // LANGUAGE LOCK — the authoritative, non-negotiable language directive.
+  //
+  // Placed at the very top of Block 2 (above DOCUMENTS) so Sonnet processes
+  // it before anything else. This exists because the base system prompt's
+  // Language section alone is not strong enough to override the pull of
+  // conversation history: if the user had earlier turns in French and then
+  // switches to English, Sonnet was imitating the recent French assistant
+  // turns. The LANGUAGE LOCK tells it in no uncertain terms that the
+  // session language wins over history, user phrasing, and documents.
+  //
+  // Only emitted when a language is actually on the session context —
+  // first-turn requests where the frontend has not yet reported a language
+  // fall through to the base prompt's generic rules, which is fine because
+  // there's no history yet to override.
+  if (sessionContext?.language) {
+    const lockLangName = langName(sessionContext.language);
+    contentParts.push(
+      `LANGUAGE LOCK\n` +
+      `You MUST write your entire response in ${lockLangName}. ` +
+      `This is a hard lock and overrides everything else in this prompt, ` +
+      `everything in DOCUMENTS, the language of prior assistant turns in ` +
+      `the conversation history, and the language of the user's current ` +
+      `message. Do not switch languages under any circumstances. Product ` +
+      `names (Omniboost, Mews, Xero, QuickBooks, Datev, NetSuite, etc.) ` +
+      `stay in English regardless. This applies to every single sentence, ` +
+      `including any callouts, bullet lists, titles, and the [ANSWER:...] / ` +
+      `[ANSWER_CONTRACT] tail blocks' surrounding content.`
+    );
+  }
+
   if (queryContext) {
     const summaryLines = ['QUERY CONTEXT', `Original question: ${queryContext.originalQuestion}`];
 
@@ -215,11 +297,25 @@ export async function chat(
   // Get the conversation history for this session
   const history = getHistory(sessionId);
 
+  // Defensive strip of legacy inline language directives.
+  //
+  // Older frontend code prepended `[System note: the user has switched
+  // their language to X. ...]` to user messages on first send and on
+  // language change. That directive then sat in stored history forever,
+  // and after a subsequent language switch Sonnet would see contradictory
+  // "respond in French" / "respond in English" directives in different
+  // history turns. The LANGUAGE LOCK block now carries the authoritative
+  // signal, so these inline notes are noise at best and harmful at worst.
+  const cleanedHistory = history.map(entry => {
+    if (entry.role !== 'user' || typeof entry.content !== 'string') return entry;
+    return { ...entry, content: entry.content.replace(/^\[System note:[^\]]*\]\s*\n\n/, '') };
+  });
+
   // Build the full message list: everything said so far + the new message.
   // Cast history entries to MessageParam — history roles are always 'user' | 'assistant'
   // as enforced by addToHistory(), but TypeScript sees the broader string type.
   const messages: MessageParam[] = [
-    ...(history as MessageParam[]),
+    ...(cleanedHistory as MessageParam[]),
     { role: 'user', content: userMessage },
   ];
 
@@ -319,23 +415,25 @@ interface QAEntry {
 /**
  * Stage 2A — Verifies each shortlisted doc against the user's question.
  *
- * Haiku receives doc metadata (not full content) and returns one sentence of
- * reasoning + passes: boolean per doc. No confidence float.
+ * Each doc is checked in a separate parallel Haiku call using its full .md content
+ * (not just manifest metadata). This prevents false negatives caused by thin metadata.
  *
  * passes: true  = doc directly addresses the user's question
- * passes: false = tangential, too general, or clearly wrong (including "barely" relevant)
+ * passes: false = tangential, too general, or clearly wrong
+ * hasErrors: true = at least one doc had a file load failure or API/parse error
  *
- * On parse failure: returns all docs as passes: false (triggers Stage 2B).
+ * When hasErrors is false and threshold is not met, the caller skips Stage 2B and
+ * goes straight to BASIC — Haiku read the real content and the answer isn't there.
+ * When hasErrors is true, the caller falls to Stage 2B for error-recovery.
  */
 export async function verifyDocuments(
   pages: Page[],
+  fileContents: Record<string, string>,
   userMessage: string,
   qaLog: QAEntry[],
   history: HistoryEntry[]
-): Promise<{ results: { docId: string; reasoning: string; passes: boolean }[] }> {
-  if (pages.length === 0) return { results: [] };
-
-  const list = pages.map((p, i) => formatManifestEntry(p, i)).join('\n\n');
+): Promise<{ results: { docId: string; reasoning: string; passes: boolean }[]; hasErrors: boolean }> {
+  if (pages.length === 0) return { results: [], hasErrors: false };
 
   const qaSection = qaLog.length > 0
     ? `\nSession Q&A so far:\n${qaLog.map(e => `  Q: ${e.question}  →  A: ${e.answer}`).join('\n')}\n`
@@ -345,62 +443,58 @@ export async function verifyDocuments(
     ? `\nRecent conversation:\n${history.slice(-6).map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content.slice(0, 200)}`).join('\n')}\n`
     : '';
 
-  const prompt = `You are verifying whether knowledge base documents are relevant to a user's question.
+  let hasErrors = false;
 
-User question: "${userMessage}"${historySection}${qaSection}
-Documents to evaluate:
-${list}
+  const results = await Promise.all(pages.map(async (page) => {
+    const fileContent = fileContents[page.id];
 
-For each document, decide if it directly addresses the user's question based on its title, description, keywords, and trigger questions (you do not have the full content).
-
-Rules:
-- passes: true ONLY if the document directly addresses the question — not tangentially, not partially
-- passes: false if the document covers the right general area but not this specific question
-- passes: false if your reasoning is hedged or uncertain
-- A document with "barely relevant" metadata should always be passes: false
-
-Return ONLY valid JSON. No markdown. No preamble. No explanation outside the JSON.
-Format:
-{
-  "results": [
-    { "docId": "string", "reasoning": "one sentence", "passes": true or false }
-  ]
-}
-
-Return one entry per document, in the same order as the list above.`;
-
-  try {
-    const resp = await haikuClient.messages.create({
-      model: HAIKU_MODEL,
-      max_tokens: 600,
-      temperature: 0,
-      messages: [{ role: 'user', content: prompt }],
-    });
-    const raw = resp.content?.[0]?.type === 'text' ? resp.content[0].text.trim() : '';
-    console.log(`[Stage 2A] Haiku raw: ${raw.slice(0, 300)}`);
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-    const parsed = JSON.parse(cleaned) as { results?: { docId?: string; reasoning?: string; passes?: boolean }[] };
-
-    if (!Array.isArray(parsed.results)) {
-      throw new Error('results array missing');
+    if (!fileContent) {
+      console.warn(`[Stage 2A] No content for doc ${page.id} — marking as error`);
+      hasErrors = true;
+      return { docId: page.id, reasoning: 'file content unavailable', passes: false };
     }
 
-    const results = parsed.results.map((r, i) => ({
-      docId: r.docId ?? pages[i]?.id ?? String(i),
-      reasoning: r.reasoning ?? '',
-      passes: r.passes === true,
-    }));
+    const prompt = `You are checking whether a single knowledge base document answers a user's question.
 
-    const passing = results.filter(r => r.passes).length;
-    console.log(`[Stage 2A] ${passing}/${pages.length} docs passed: ${results.map(r => `${r.docId}:${r.passes}`).join(', ')}`);
-    return { results };
-  } catch (err) {
-    console.error(`[Stage 2A] verifyDocuments parse failed: ${(err as Error).message}`);
-    // All docs fail → triggers Stage 2B
-    return {
-      results: pages.map(p => ({ docId: p.id, reasoning: 'parse failure', passes: false })),
-    };
-  }
+User question: "${userMessage}"${historySection}${qaSection}
+Document content:
+---
+${fileContent.slice(0, 4000)}
+---
+
+Does this document contain information that directly answers the user's question?
+- passes: true ONLY if the document clearly addresses the question
+- passes: false if the document is on a related topic but does not answer this specific question
+- passes: false if uncertain
+
+Return ONLY valid JSON. No markdown. No preamble.
+{"docId": "${page.id}", "reasoning": "one sentence", "passes": true or false}`;
+
+    try {
+      const resp = await haikuClient.messages.create({
+        model: HAIKU_MODEL,
+        max_tokens: 120,
+        temperature: 0,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      const raw = resp.content?.[0]?.type === 'text' ? resp.content[0].text.trim() : '';
+      const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+      const parsed = JSON.parse(cleaned) as { docId?: string; reasoning?: string; passes?: boolean };
+      return {
+        docId: parsed.docId ?? page.id,
+        reasoning: parsed.reasoning ?? '',
+        passes: parsed.passes === true,
+      };
+    } catch (err) {
+      console.error(`[Stage 2A] verifyDocuments failed for ${page.id}: ${(err as Error).message}`);
+      hasErrors = true;
+      return { docId: page.id, reasoning: 'api or parse error', passes: false };
+    }
+  }));
+
+  const passing = results.filter(r => r.passes).length;
+  console.log(`[Stage 2A] ${passing}/${pages.length} docs passed: ${results.map(r => `${r.docId}:${r.passes}`).join(', ')}`);
+  return { results, hasErrors };
 }
 
 // ── Stage 2B: Routing recovery ─────────────────────────────────────────────────
@@ -480,186 +574,176 @@ Format:
 // ── CLARIFY question generator ─────────────────────────────────────────────────
 
 /**
- * Generates one targeted clarifying question with 4 specific options + "Something else".
+ * Generates one targeted clarifying question with up to 4 options + "Something else".
  *
- * Receives a trigger reason from Stage 1 gating or Stage 2B:
- *   DIVERSE_TOPICS     — 1–5 docs matched but span 3+ different themes
- *   THEME_OVERFLOW     — 6+ docs matched, all within one theme (too many to verify)
- *   TOO_BROAD          — 6+ docs matched across multiple themes
- *   STAGE2B_NEEDS_CONTEXT — Stage 2B chose Decision A (specific context gap identified)
+ * Options come exclusively from manifest keywords of the matched docs — no Haiku call,
+ * no hallucination. pickClarifyButtons (agent.ts) handles keyword selection and dedup.
  *
- * Returns { question, options } on success, or null on any failure (caller falls
- * back to the static CLARIFY reply).
+ * Returns { question, options } on success, or null if no discriminating keywords
+ * could be found (caller falls back to the static CLARIFY reply).
  */
-export async function generateClarifyQuestion(
-  userMessage: string,
+export function generateClarifyQuestion(
+  _userMessage: string,
   triggerReason: 'DIVERSE_TOPICS' | 'THEME_OVERFLOW' | 'TOO_BROAD' | 'STAGE2B_NEEDS_CONTEXT',
-  matchedDocMeta: { title: string; theme: string }[],
-  qaLog: QAEntry[],
-  sessionContext: { tools?: string[]; setupType?: string | null }
-): Promise<{ question: string; options: string[] } | null> {
-  const reasonInstructions: Record<string, string> = {
-    DIVERSE_TOPICS: 'The matched documents span several different topic areas. Ask which topic area the user needs help with. Derive the options from the distinct theme groups present in the matched documents.',
-    THEME_OVERFLOW: 'Too many documents matched within the same topic area to verify individually. Ask a narrowing question within that theme to identify the specific sub-topic (e.g. which accounting system, which workflow step, which error type).',
-    TOO_BROAD: 'The query matched too many documents across multiple unrelated topics. Ask the single most useful question to narrow down which topic area or integration the user actually needs.',
-    STAGE2B_NEEDS_CONTEXT: 'Stage 2A verified candidate documents but none passed. Ask the specific clarifying question that would most help identify the right document — focus on what was missing from the user\'s question.',
-  };
+  matchedDocMeta: { title: string; theme: string; keywords?: string[] }[],
+  _qaLog: QAEntry[],
+  _sessionContext: { tools?: string[]; setupType?: string | null },
+  previousAnswers: string[] = [],
+  allPageKeywords: string[][] = [],
+  language: string | null = null
+): { question: string; options: string[] } | null {
+  // Pick button labels from manifest keywords — no Haiku, no hallucination.
+  // Logic mirrors pickClarifyButtons in agent.ts (inlined to avoid circular import).
+  const prevLower = new Set(previousAnswers.map(a => a.toLowerCase()));
+  const allKws = matchedDocMeta.flatMap(d => d.keywords ?? []);
 
-  const docList = matchedDocMeta.slice(0, 10)
-    .map(d => `- ${d.title} (theme: ${d.theme})`)
-    .join('\n');
+  const freq = new Map<string, number>();
+  for (const kw of allKws) freq.set(kw, (freq.get(kw) ?? 0) + 1);
 
-  const qaSection = qaLog.length > 0
-    ? `\nSession Q&A so far:\n${qaLog.map(e => `  Q: ${e.question}  →  A: ${e.answer}`).join('\n')}\n`
-    : '';
-
-  const toolsLine = sessionContext.tools?.length
-    ? `Known integration: ${sessionContext.tools.join(', ')}`
-    : '';
-  const setupLine = sessionContext.setupType
-    ? `Known setup type: ${sessionContext.setupType}`
-    : '';
-
-  const prompt = `You are generating a clarifying question for a support chatbot called Mewsy.
-
-User message: "${userMessage}"
-Trigger reason: ${triggerReason}
-${toolsLine}
-${setupLine}${qaSection}
-Matched document candidates:
-${docList}
-
-Instruction: ${reasonInstructions[triggerReason]}
-
-Rules:
-- Return ONLY valid JSON. No markdown. No preamble. No explanation outside the JSON.
-- Format: { "question": "Short question (≤12 words)?", "options": ["Option 1", "Option 2", "Option 3", "Option 4", "Something else"] }
-- Exactly 4 specific options + "Something else" as the 5th and last option
-- Options must be concrete, not generic (e.g. use actual integration names, not "Option A")
-- Do not repeat questions already answered in the Q&A log above
-- Last option must always be "Something else"`;
-
-  try {
-    const resp = await haikuClient.messages.create({
-      model: HAIKU_MODEL,
-      max_tokens: 250,
-      temperature: 0,
-      messages: [{ role: 'user', content: prompt }],
-    });
-    const raw = resp.content?.[0]?.type === 'text' ? resp.content[0].text.trim() : '';
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-    const parsed = JSON.parse(cleaned) as { question?: string; options?: string[] };
-    if (!parsed.question || !Array.isArray(parsed.options) || parsed.options.length < 2) {
-      return null;
+  // Build global keyword frequency to filter out terms that are too broad.
+  // Keywords present in >15% of ALL docs (e.g. "Omniboost", "MEWS") cause Stage 1 to
+  // expand matches when selected as an answer, creating an infinite CLARIFY loop.
+  const globalFreq = new Map<string, number>();
+  for (const pageKws of allPageKeywords) {
+    const pageSeen = new Set<string>();
+    for (const kw of pageKws) {
+      if (!pageSeen.has(kw)) { globalFreq.set(kw, (globalFreq.get(kw) ?? 0) + 1); pageSeen.add(kw); }
     }
-    // Normalise: strip any "Something else" variants already present, then append one
-    const options = [
-      ...parsed.options.filter((o: string) => !/something else/i.test(o)).slice(0, 4),
-      'Something else',
-    ];
-    console.log(`[CLARIFY] Generated question (${triggerReason}): "${parsed.question}" | options: [${options.join(', ')}]`);
-    return { question: parsed.question, options };
-  } catch (err) {
-    console.error(`[CLARIFY] generateClarifyQuestion failed (${triggerReason}): ${(err as Error).message}`);
+  }
+  const globalCap = allPageKeywords.length > 0 ? Math.ceil(allPageKeywords.length * 0.15) : Infinity;
+
+  const n = matchedDocMeta.length;
+  const localPool: string[] = triggerReason === 'THEME_OVERFLOW'
+    ? [...freq.entries()].filter(([, c]) => c < n).map(([kw]) => kw)
+    : [...freq.keys()];
+
+  // Remove globally common keywords — only specific terms make useful buttons
+  const pool = allPageKeywords.length > 0
+    ? localPool.filter(kw => (globalFreq.get(kw) ?? 0) <= globalCap)
+    : localPool;
+
+  const seen = new Set<string>();
+  const buttons: string[] = [];
+  // Three-tier sort: proper nouns first, then single-word generic, then multi-word generic.
+  // Within each tier, sort by local freq ASC (more specific = fewer occurrences = preferred).
+  const isProperC = (kw: string) => /^[A-Z]/.test(kw);
+  const isMultiWordGenericC = (kw: string) => /\s/.test(kw) && !/^[A-Z]/.test(kw);
+  pool.sort((a, b) => {
+    const tierA = isProperC(a) ? 0 : isMultiWordGenericC(a) ? 2 : 1;
+    const tierB = isProperC(b) ? 0 : isMultiWordGenericC(b) ? 2 : 1;
+    if (tierA !== tierB) return tierA - tierB;
+    return (freq.get(a) ?? 0) - (freq.get(b) ?? 0);
+  });
+  for (const kw of pool) {
+    const lower = kw.toLowerCase();
+    if (seen.has(lower) || prevLower.has(lower)) continue;
+    seen.add(lower);
+    buttons.push(kw);
+    if (buttons.length === 4) break;
+  }
+
+  if (buttons.length === 0) {
+    console.log(`[CLARIFY] No discriminating keywords found (${triggerReason}) — falling back to static reply`);
     return null;
   }
+
+  const options = [...buttons, 'Something else'];
+  console.log(`[CLARIFY] Manifest-grounded question (${triggerReason}): options: [${options.join(', ')}]`);
+  return { question: clarifyQuestionText(language), options };
 }
 
 // ── Clarifying questions generator (BASIC mode) ────────────────────────────────
 
 /**
- * Generates CLARIFY_QUESTIONS_PER_ROUND targeted questions as structured JSON
- * for the frontend card carousel.
+ * Returns a single-question button reply for BASIC mode (0 docs matched).
  *
- * Each question has exactly 4 options plus "Something else".
- * Used when 0 docs matched Stage 1 (BASIC mode) — questions are broad topic-level.
- * Also used for Stage 2B Decision B (redirect to fresh BASIC carousel).
+ * No Haiku call. Options come from two sources:
+ *   1. contextButtons — up to 3 specific keywords found in the user's message
+ *      (detected by basicContextButtons in agent.ts). These are prepended so the
+ *      response is relevant to what the user actually said.
+ *   2. Generic fallback categories — hardcoded from the manifest category structure.
  *
- * Returns a JSON string with __type "clarify_questions" so the frontend can detect
- * and render it as a card carousel instead of a regular message.
- * Falls back to a plain text question string on any error.
+ * Returns a [BUTTONS:] string the frontend renders as clickable buttons.
  */
-export async function generateClarifyingQuestions(
-  userMessage: string,
-  candidateSummary: string | null,
-  clarifyingQA: { q: string; a: string }[] = []
-): Promise<string> {
-  const contextNote = clarifyingQA.length > 0
-    ? `\nPrevious clarifying answers already collected:\n${clarifyingQA.map(p => `  Q: ${p.q}  →  A: ${p.a}`).join('\n')}\nDo not repeat questions already answered.`
-    : '';
+export function generateClarifyingQuestions(
+  _userMessage: string,
+  _candidateSummary: string | null,
+  _clarifyingQA: { q: string; a: string }[] = [],
+  contextButtons: string[] = [],
+  language: string | null = null
+): string {
+  const specific = contextButtons.slice(0, 3);
+  const generic = [
+    'Onboarding / setup',
+    'Accounting configuration',
+    'A specific integration',
+    'GL mapping & ledgers',
+    'Troubleshooting',
+  ];
+  // Merge specific + generic, dedup by lowercase, cap at 6 before "Something else"
+  const seen = new Set(specific.map(s => s.toLowerCase()));
+  const merged = [
+    ...specific,
+    ...generic.filter(g => !seen.has(g.toLowerCase())),
+  ].slice(0, 6);
 
-  const modeInstruction = candidateSummary
-    ? `These knowledge base documents might be relevant to the question:\n${candidateSummary}\n\nGenerate ${CLARIFY_QUESTIONS_PER_ROUND} targeted questions that will help identify exactly which document and section the user needs. Each question should narrow down a different dimension (e.g. which accounting system, which setup stage, which specific problem).`
-    : `No matching documentation was found yet. Generate ${CLARIFY_QUESTIONS_PER_ROUND} broad questions that help identify what area the user needs help with (e.g. onboarding, accounting setup, a specific accounting system, troubleshooting).`;
-
-  const prompt = `You are a support assistant helping to clarify a user's question before searching the knowledge base.
-
-User question: "${userMessage}"${contextNote}
-
-${modeInstruction}
-
-Rules for each question:
-- Short and direct (≤ 12 words)
-- Provide exactly 4 answer options (not counting "Something else")
-- Options must be specific — not generic placeholders
-- Options must be ≤ 40 characters each
-- Always include "Something else" as a 5th option
-- Questions must be genuinely useful for routing — avoid redundant questions
-
-Return a JSON object in exactly this format:
-{
-  "__type": "clarify_questions",
-  "questions": [
-    {
-      "text": "Question text?",
-      "options": ["Option 1", "Option 2", "Option 3", "Option 4", "Something else"]
-    }
-  ]
+  const options = [...merged, 'Something else'];
+  console.log(`[BASIC] Static category buttons${specific.length ? ` (context: [${specific.join(', ')}])` : ''}`);
+  return `${basicQuestionText(language)} [BUTTONS: ${options.join(' | ')}]`;
 }
 
-Return ONLY valid JSON. No markdown fences. No explanation. Exactly ${CLARIFY_QUESTIONS_PER_ROUND} questions.`;
+// ── Dynamic intro line (CLARIFY and BASIC mode) ────────────────────────────────
 
+/**
+ * Generates a warm, context-rich 2-3 sentence lead-in acknowledging the user's question.
+ * Prepended before the button block in CLARIFY and BASIC responses to make the
+ * experience feel conversational rather than purely menu-driven.
+ *
+ * Uses Haiku with max_tokens:200 and temperature:0.7 so each response varies naturally.
+ * Returns "" on any error — callers silently fall back to buttons-only format.
+ */
+export async function generateIntroLine(
+  userMessage: string,
+  triggerReason: string,
+  language: string | null = null
+): Promise<string> {
   try {
-    // Use haikuClient directly — callHaiku caps at 120 tokens which is far too small
-    // for 3 questions with 5 options each (~350-400 tokens of JSON).
-    const haikuResponse = await haikuClient.messages.create({
+    const targetLang = langName(language);
+    const langLine = `CRITICAL: Your entire response MUST be written in ${targetLang}. Do not use any other language under any circumstances, even if the user's message appears to be in a different language.`;
+
+    const userContent = triggerReason === 'BASIC_NO_DOCS'
+      ? `You are Mewsie, Omniboost's support assistant for hotel accounting integrations.
+${langLine}
+Write a warm, honest apology of 2-3 natural sentences (minimum 40 words, maximum 50 words) explaining that you could not find an answer to the user's question in your knowledge base.
+Your job: briefly acknowledge what they were asking about, be upfront that you could not find coverage for it, and reassure them you're happy to help with other accounting integration topics. Keep it tight.
+Do NOT make up an answer. Do NOT ask a follow-up question yourself. End with . or !
+Do NOT use em-dashes (—) or dashes in your response.
+Reply with only the 2-3 sentences, nothing else.
+
+User said: "${userMessage}"`
+      : `You are Mewsie, Omniboost's support assistant for hotel accounting integrations.
+${langLine}
+Write a warm, context-rich lead-in of 2-3 natural sentences (minimum 40 words, maximum 50 words) before presenting options to the user.
+Your job: show the user you understood their question, paraphrase what they're asking about in your own words, and set up the choice they're about to make. Sound like a knowledgeable human colleague, not a template. Keep it tight.
+If the question is clearly unrelated to accounting software, Omniboost, or hotel integrations, briefly acknowledge you can't help with that topic and warmly redirect them toward what you CAN help with (accounting integrations, Mews setup, GL mapping, troubleshooting).
+Do NOT answer or solve the question. Do NOT ask a follow-up question yourself (the buttons will do that). End with . or !
+Do NOT use em-dashes (—) or dashes in your response.
+Reply with only the 2-3 sentences, nothing else.
+
+User said: "${userMessage}"`;
+
+    const response = await haikuClient.messages.create({
       model: HAIKU_MODEL,
-      max_tokens: 700,
-      temperature: 0,
-      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 200,
+      temperature: 0.7,
+      messages: [{ role: 'user', content: userContent }],
     });
-    const rawText = haikuResponse.content?.[0]?.type === 'text' ? haikuResponse.content[0].text.trim() : '';
-    const cleaned = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-    const parsed = JSON.parse(cleaned) as {
-      __type?: string;
-      questions?: { text: string; options: string[] }[];
-    };
-
-    if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) {
-      throw new Error('questions array missing or empty');
-    }
-
-    // Normalise: ensure exactly CLARIFY_QUESTIONS_PER_ROUND questions, each with "Something else"
-    const normalised = parsed.questions.slice(0, CLARIFY_QUESTIONS_PER_ROUND).map(q => ({
-      text: q.text,
-      options: [
-        ...q.options.filter((o: string) => !/something else/i.test(o)).slice(0, 4),
-        'Something else',
-      ],
-    }));
-
-    // Guard: if Haiku returned fewer questions than requested, throw so the fallback
-    // plain-text path handles it — a partial carousel would be confusing.
-    if (normalised.length < CLARIFY_QUESTIONS_PER_ROUND) {
-      throw new Error(`only ${normalised.length} question(s) generated, expected ${CLARIFY_QUESTIONS_PER_ROUND}`);
-    }
-
-    console.log(`[Clarify] Generated ${normalised.length} questions for: "${userMessage.slice(0, 60)}"`);
-    return JSON.stringify({ __type: 'clarify_questions', questions: normalised });
+    const text = response.content?.[0]?.type === 'text' ? response.content[0].text.trim() : '';
+    console.log(`[generateIntroLine] raw="${text.slice(0, 200)}" len=${text.length}`);
+    if (!text || text.length > 600 || text.includes('[BUTTONS:')) return '';
+    return text;
   } catch (err) {
-    console.error(`[Clarify] generateClarifyingQuestions failed: ${(err as Error).message}`);
-    // Fallback to a single plain-text question so the user is never stuck
-    // [BUTTONS:] prefix ensures the frontend renders as clickable buttons, not plain bullets
-    return 'Could you give me a bit more detail about what you\'re looking for?\n\n[BUTTONS:]\n- Onboarding / setup\n- Accounting configuration\n- A specific accounting system\n- Something else';
+    console.warn('[generateIntroLine] silently failed:', err);
+    return '';
   }
 }
