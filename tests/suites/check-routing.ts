@@ -77,6 +77,25 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
     return;
   }
 
+  // ── Regression: help-resources must never leak into the router pool ─────────
+  // knowledge/help-resources/ is a frontend-only UI asset tree consumed by
+  // the Help & Resources panel via Vite ?raw imports. It must NEVER appear
+  // in the router's candidate pool. If it does, the manifest has drifted —
+  // most likely from a manual edit that re-registered one of those files.
+  const leakedHelpResources = pages.filter(p =>
+    (p.path ?? '').startsWith('knowledge/help-resources/')
+  );
+  if (leakedHelpResources.length === 0) {
+    pass('[routing] help-resources entries excluded from router pool');
+    results.push({ ok: true });
+  } else {
+    fail(
+      '[routing] help-resources leaked into router pool',
+      leakedHelpResources.map(p => p.path).join(', ')
+    );
+    results.push({ ok: false });
+  }
+
   // ── keywordPreFilter unit tests (no API call needed) ─────────────────────────
 
   // Test 1: specific QuickBooks query returns matched docs ≤ STAGE2A_SHORTLIST_MAX

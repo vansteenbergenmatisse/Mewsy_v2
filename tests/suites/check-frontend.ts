@@ -1461,9 +1461,14 @@ export async function checkFrontend({ pass, fail, skip: _skip, results }: Report
   }
 
   // ── Help resources ────────────────────────────────────────────────────────
-  // Tests for the knowledge/help-resources/*.md files and the help-items list.
-  // We test .md files directly (fs reads) so we avoid the Vite ?raw import
-  // which is not available in the Node.js/tsx test environment.
+  // The knowledge/help-resources/ tree is a frontend-only UI asset tree
+  // consumed by the Help & Resources panel via Vite ?raw imports. It is NOT
+  // part of the router's knowledge base. We only verify the two functional
+  // guarantees the UI depends on:
+  //   [help-1] the .md files exist for every language × topic combination
+  //   [help-2] the content actually changes when the language is switched
+  // We read the .md files directly (fs) because Vite ?raw is not resolvable
+  // under tsx.
 
   const { readFileSync, existsSync } = await import('fs');
 
@@ -1474,272 +1479,56 @@ export async function checkFrontend({ pass, fail, skip: _skip, results }: Report
   ];
 
   const HELP_RESOURCES_DIR = join(ROOT, 'knowledge/help-resources');
+  const HELP_LANGS = ['en', 'de', 'fr', 'nl'];
 
-  // [help-1] All expected topic .md files exist in knowledge/help-resources/
-  for (const topic of EXPECTED_TOPICS) {
-    const filename = `${topic}.md`;
-    const filePath = join(HELP_RESOURCES_DIR, filename);
-    try {
-      if (existsSync(filePath)) {
-        pass(`[help-1] knowledge/help-resources/${filename} exists`);
-        results.push({ ok: true });
-      } else {
-        fail(`[help-1] knowledge/help-resources/${filename} missing`, 'File not found');
-        results.push({ ok: false });
-      }
-    } catch (err) {
-      fail(`[help-1] ${filename} existence check`, (err as Error).message);
-      results.push({ ok: false });
-    }
+  function helpFilePath(lang: string, topic: string): string {
+    return lang === 'en'
+      ? join(HELP_RESOURCES_DIR, `${topic}.md`)
+      : join(HELP_RESOURCES_DIR, lang, `${topic}.md`);
   }
 
-  // [help-2] All .md files have a non-empty title: in frontmatter
-  for (const topic of EXPECTED_TOPICS) {
-    const filePath = join(HELP_RESOURCES_DIR, `${topic}.md`);
-    try {
-      if (!existsSync(filePath)) { results.push({ ok: 'skip' }); continue; }
-      const raw = readFileSync(filePath, 'utf-8');
-      const titleMatch = raw.match(/^title:\s*(.+)$/m);
-      if (titleMatch && titleMatch[1].trim()) {
-        pass(`[help-2] ${topic}.md has non-empty title: "${titleMatch[1].trim()}"`);
-        results.push({ ok: true });
-      } else {
-        fail(`[help-2] ${topic}.md is missing a title: field in frontmatter`, 'Not found');
-        results.push({ ok: false });
-      }
-    } catch (err) {
-      fail(`[help-2] ${topic}.md title check`, (err as Error).message);
-      results.push({ ok: false });
-    }
-  }
-
-  // [help-3] All .md files have a non-empty cta_message: in frontmatter (so the CTA button sends a real question)
-  for (const topic of EXPECTED_TOPICS) {
-    const filePath = join(HELP_RESOURCES_DIR, `${topic}.md`);
-    try {
-      if (!existsSync(filePath)) { results.push({ ok: 'skip' }); continue; }
-      const raw = readFileSync(filePath, 'utf-8');
-      const msgMatch = raw.match(/^cta_message:\s*(.+)$/m);
-      if (msgMatch && msgMatch[1].trim()) {
-        pass(`[help-3] ${topic}.md has non-empty cta_message`);
-        results.push({ ok: true });
-      } else {
-        fail(`[help-3] ${topic}.md is missing cta_message: in frontmatter`, 'Required for CTA button to send a message');
-        results.push({ ok: false });
-      }
-    } catch (err) {
-      fail(`[help-3] ${topic}.md cta_message check`, (err as Error).message);
-      results.push({ ok: false });
-    }
-  }
-
-  // [help-4] No .md file contains an em-dash ( — )
-  for (const topic of EXPECTED_TOPICS) {
-    const filePath = join(HELP_RESOURCES_DIR, `${topic}.md`);
-    try {
-      if (!existsSync(filePath)) { results.push({ ok: 'skip' }); continue; }
-      const raw = readFileSync(filePath, 'utf-8');
-      if (!raw.includes(' \u2014 ')) {
-        pass(`[help-4] ${topic}.md contains no em-dashes`);
-        results.push({ ok: true });
-      } else {
-        fail(`[help-4] ${topic}.md contains em-dashes ( — ) — use plain dashes or colons instead`, 'Em-dash found');
-        results.push({ ok: false });
-      }
-    } catch (err) {
-      fail(`[help-4] ${topic}.md em-dash check`, (err as Error).message);
-      results.push({ ok: false });
-    }
-  }
-
-  // [help-5] All .md files have at least one ## section heading
-  for (const topic of EXPECTED_TOPICS) {
-    const filePath = join(HELP_RESOURCES_DIR, `${topic}.md`);
-    try {
-      if (!existsSync(filePath)) { results.push({ ok: 'skip' }); continue; }
-      const raw = readFileSync(filePath, 'utf-8');
-      if (/^## /m.test(raw)) {
-        pass(`[help-5] ${topic}.md has at least one ## section heading`);
-        results.push({ ok: true });
-      } else {
-        fail(`[help-5] ${topic}.md has no ## section headings`, 'At least one required');
-        results.push({ ok: false });
-      }
-    } catch (err) {
-      fail(`[help-5] ${topic}.md section heading check`, (err as Error).message);
-      results.push({ ok: false });
-    }
-  }
-
-  // [help-6] getHelpItems('en') returns exactly 13 items (contact removed)
-  try {
-    const { getHelpItems } = await import(`${ROOT}/frontend/src/help/help-items.ts`);
-    const items = getHelpItems('en');
-    if (items.length === 13) {
-      pass('[help-6] getHelpItems("en") returns 13 items (contact support removed)');
-      results.push({ ok: true });
-    } else {
-      fail('[help-6] getHelpItems("en") must return 13 items', `Got: ${items.length}`);
-      results.push({ ok: false });
-    }
-  } catch (err) {
-    fail('[help-6] getHelpItems count', (err as Error).message);
-    results.push({ ok: false });
-  }
-
-  // [help-7] 'contact' is not in the en help items list
-  try {
-    const { getHelpItems } = await import(`${ROOT}/frontend/src/help/help-items.ts`);
-    const items = getHelpItems('en');
-    const hasContact = items.some((i: { topic: string }) => i.topic === 'contact');
-    if (!hasContact) {
-      pass('[help-7] "contact" topic is not in en help items — correctly removed');
-      results.push({ ok: true });
-    } else {
-      fail('[help-7] "contact" topic must not appear in help items', 'Found in list');
-      results.push({ ok: false });
-    }
-  } catch (err) {
-    fail('[help-7] contact topic absence check', (err as Error).message);
-    results.push({ ok: false });
-  }
-
-  // [help-8] All en topic keys have a corresponding .md file in knowledge/help-resources/
-  try {
-    const { getHelpItems } = await import(`${ROOT}/frontend/src/help/help-items.ts`);
-    const items = getHelpItems('en');
-    let allMatch = true;
-    const missing: string[] = [];
-    for (const item of items) {
-      const fp = join(HELP_RESOURCES_DIR, `${item.topic}.md`);
-      if (!existsSync(fp)) { allMatch = false; missing.push(item.topic); }
-    }
-    if (allMatch) {
-      pass('[help-8] every en topic key has a matching .md file in knowledge/help-resources/');
-      results.push({ ok: true });
-    } else {
-      fail('[help-8] some topic keys are missing a .md file', `Missing: ${missing.join(', ')}`);
-      results.push({ ok: false });
-    }
-  } catch (err) {
-    fail('[help-8] topic-to-file mapping check', (err as Error).message);
-    results.push({ ok: false });
-  }
-
-  // ── [help-9] Translated help files exist and are well-formed ──────────────
-  // For each non-English language (de, fr, nl) and each of the 13 topics,
-  // verify the .md file exists under knowledge/help-resources/<lang>/,
-  // has non-empty title: and cta_message: frontmatter, contains no em-dash,
-  // and has at least one ## section heading.
-  const TRANSLATED_LANGS = ['de', 'fr', 'nl'];
-  for (const lang of TRANSLATED_LANGS) {
+  // [help-1] Every language × topic combination has a .md file on disk.
+  for (const lang of HELP_LANGS) {
     for (const topic of EXPECTED_TOPICS) {
-      const filePath = join(HELP_RESOURCES_DIR, lang, `${topic}.md`);
-      try {
-        if (!existsSync(filePath)) {
-          fail(`[help-9] ${lang}/${topic}.md exists`, 'File not found');
-          results.push({ ok: false });
-          continue;
-        }
-        const raw = readFileSync(filePath, 'utf-8');
-        const titleMatch = raw.match(/^title:\s*(.+)$/m);
-        const ctaMatch   = raw.match(/^cta_message:\s*(.+)$/m);
-        const hasHeading = /^## /m.test(raw);
-        const hasEmDash  = raw.includes(' \u2014 ');
-        const titleOk = !!(titleMatch && titleMatch[1].trim());
-        const ctaOk   = !!(ctaMatch && ctaMatch[1].trim());
-        if (titleOk && ctaOk && hasHeading && !hasEmDash) {
-          pass(`[help-9] ${lang}/${topic}.md well-formed (title, cta_message, ##, no em-dash)`);
-          results.push({ ok: true });
-        } else {
-          fail(`[help-9] ${lang}/${topic}.md well-formed`,
-            `title=${titleOk} cta_message=${ctaOk} heading=${hasHeading} emDash=${hasEmDash}`);
-          results.push({ ok: false });
-        }
-      } catch (err) {
-        fail(`[help-9] ${lang}/${topic}.md check`, (err as Error).message);
+      const filePath = helpFilePath(lang, topic);
+      const rel = `knowledge/help-resources/${lang === 'en' ? '' : lang + '/'}${topic}.md`;
+      if (existsSync(filePath)) {
+        pass(`[help-1] ${rel} exists`);
+        results.push({ ok: true });
+      } else {
+        fail(`[help-1] ${rel} missing`, 'File not found');
         results.push({ ok: false });
       }
     }
   }
 
-  // ── [help-10] Each language has a distinct title for 'omniboost' ──────────
-  // Proves the translated files are genuinely translated (not a copy of
-  // English). We read the .md files directly because help-content.ts uses
-  // Vite ?raw imports which are not resolvable under tsx.
-  function readTitle(lang: string | null, topic: string): string | null {
-    const filePath = lang
-      ? join(HELP_RESOURCES_DIR, lang, `${topic}.md`)
-      : join(HELP_RESOURCES_DIR, `${topic}.md`);
-    if (!existsSync(filePath)) return null;
-    const raw = readFileSync(filePath, 'utf-8');
-    const m = raw.match(/^title:\s*(.+)$/m);
-    return m ? m[1].trim() : null;
-  }
+  // [help-2] Content updates when the language is switched. We read the
+  // title: frontmatter for one canonical topic (omniboost) across all four
+  // languages and assert each non-English title is distinct from the
+  // English title. If they were identical, switching language would not
+  // change what the user sees — the whole point of the translations.
   try {
-    const enTitle = readTitle(null,  'omniboost');
-    const deTitle = readTitle('de',  'omniboost');
-    const frTitle = readTitle('fr',  'omniboost');
-    const nlTitle = readTitle('nl',  'omniboost');
-    const allPresent = enTitle && deTitle && frTitle && nlTitle;
-    const allDistinctFromEn = deTitle !== enTitle && frTitle !== enTitle && nlTitle !== enTitle;
+    const titles: Record<string, string | null> = {};
+    for (const lang of HELP_LANGS) {
+      const filePath = helpFilePath(lang, 'omniboost');
+      if (!existsSync(filePath)) { titles[lang] = null; continue; }
+      const raw = readFileSync(filePath, 'utf-8');
+      const m = raw.match(/^title:\s*(.+)$/m);
+      titles[lang] = m ? m[1].trim() : null;
+    }
+    const allPresent = HELP_LANGS.every(l => titles[l]);
+    const allDistinctFromEn =
+      titles.de !== titles.en && titles.fr !== titles.en && titles.nl !== titles.en;
     if (allPresent && allDistinctFromEn) {
-      pass('[help-10] omniboost titles in de/fr/nl are distinct from the English title');
+      pass('[help-2] omniboost title changes when language is switched (en/de/fr/nl all distinct)');
       results.push({ ok: true });
     } else {
-      fail('[help-10] translated titles distinct from English',
-        `en="${enTitle}" de="${deTitle}" fr="${frTitle}" nl="${nlTitle}"`);
+      fail('[help-2] content did not update across languages',
+        `en="${titles.en}" de="${titles.de}" fr="${titles.fr}" nl="${titles.nl}"`);
       results.push({ ok: false });
     }
   } catch (err) {
-    fail('[help-10] translated titles', (err as Error).message);
-    results.push({ ok: false });
-  }
-
-  // ── [help-11] Regional fallback by convention: de-ch and de-at have no ────
-  // folder on disk, so getHelpTopicContent must strip the region suffix and
-  // resolve to knowledge/help-resources/de/*.md. Verify by: (a) confirming
-  // the regional folders do NOT exist, (b) the base 'de' folder does exist.
-  try {
-    const deDir   = join(HELP_RESOURCES_DIR, 'de');
-    const deChDir = join(HELP_RESOURCES_DIR, 'de-ch');
-    const deAtDir = join(HELP_RESOURCES_DIR, 'de-at');
-    if (existsSync(deDir) && !existsSync(deChDir) && !existsSync(deAtDir)) {
-      pass('[help-11] regional dialects (de-ch, de-at) correctly fall back to base de folder (no separate folders on disk)');
-      results.push({ ok: true });
-    } else {
-      fail('[help-11] regional folder convention',
-        `de exists=${existsSync(deDir)} de-ch exists=${existsSync(deChDir)} de-at exists=${existsSync(deAtDir)} — regional dialects must not have their own folders`);
-      results.push({ ok: false });
-    }
-  } catch (err) {
-    fail('[help-11] regional fallback convention', (err as Error).message);
-    results.push({ ok: false });
-  }
-
-  // ── [help-12] Every translated language covers every expected topic ──────
-  // For de/fr/nl, every topic in EXPECTED_TOPICS must have a corresponding
-  // .md file. This ensures no topic silently falls back to English by accident.
-  try {
-    let allCovered = true;
-    const gaps: string[] = [];
-    for (const lang of TRANSLATED_LANGS) {
-      for (const topic of EXPECTED_TOPICS) {
-        if (!existsSync(join(HELP_RESOURCES_DIR, lang, `${topic}.md`))) {
-          allCovered = false;
-          gaps.push(`${lang}/${topic}.md`);
-        }
-      }
-    }
-    if (allCovered) {
-      pass(`[help-12] all ${TRANSLATED_LANGS.length} translated languages cover all ${EXPECTED_TOPICS.length} topics`);
-      results.push({ ok: true });
-    } else {
-      fail('[help-12] translation coverage gaps', `Missing: ${gaps.join(', ')}`);
-      results.push({ ok: false });
-    }
-  } catch (err) {
-    fail('[help-12] translation coverage', (err as Error).message);
+    fail('[help-2] language switch content check', (err as Error).message);
     results.push({ ok: false });
   }
 

@@ -175,11 +175,12 @@ export async function checkManifest({ pass, fail, skip, results }: Reporter): Pr
 
   // 8. Orphan file detection — .md files on disk that have no manifest entry
   //
-  // Language subfolders under knowledge/help-resources/ (e.g. de/, fr/, nl/)
-  // are frontend-only UI assets. The router does not index them — only the
-  // canonical English files at help-resources/ root are in the manifest.
-  // Skip these subfolders during orphan detection.
-  const HELP_RESOURCES_LANG_RE = /knowledge\/help-resources\/(de|fr|nl|de-ch|de-at)$/;
+  // knowledge/help-resources/ is a frontend-only UI asset tree consumed by
+  // the Help & Resources panel via Vite ?raw imports. It is NOT part of the
+  // router's knowledge base and is not registered in the manifest. Skip the
+  // entire subtree (root English files AND language subfolders) during
+  // orphan detection.
+  const HELP_RESOURCES_DIR_RE = /knowledge\/help-resources(\/|$)/;
   function walkMd(dir: string): string[] {
     const results: string[] = [];
     let entries: string[];
@@ -188,9 +189,10 @@ export async function checkManifest({ pass, fail, skip, results }: Reporter): Pr
       const full = join(dir, name);
       try {
         if (statSync(full).isDirectory()) {
-          if (HELP_RESOURCES_LANG_RE.test(full)) continue;
+          if (HELP_RESOURCES_DIR_RE.test(full)) continue;
           results.push(...walkMd(full));
         } else if (name.endsWith('.md') && name !== 'README.md') {
+          if (HELP_RESOURCES_DIR_RE.test(full)) continue;
           results.push(full);
         }
       } catch { /* skip unreadable entries */ }
