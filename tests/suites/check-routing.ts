@@ -40,6 +40,7 @@ interface ManifestFile {
   path: string;
   keywords?: string[];
   category?: string;
+  trigger_questions?: string[];
 }
 
 interface Manifest {
@@ -47,7 +48,7 @@ interface Manifest {
 }
 
 export async function checkRouting({ pass, fail, skip, results }: Reporter): Promise<void> {
-  const { keywordPreFilter, findShortTokenCandidates, pickClarifyButtons, basicContextButtons } = await import(`${ROOT}/backend/pipeline/agent.ts`);
+  const { keywordPreFilter, keywordPreFilterScored, findShortTokenCandidates, pickClarifyButtons, basicContextButtons } = await import(`${ROOT}/backend/pipeline/agent.ts`);
   const { STAGE2A_SHORTLIST_MAX } = await import(`${ROOT}/backend/config/mewsie.config.ts`);
 
   // Load manifest to get pages list
@@ -63,7 +64,7 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
       path:             file.path,
       category:         file.category ?? '',
       theme:            file.category ?? '',
-      trigger_questions: [] as string[],
+      trigger_questions: (file.trigger_questions ?? []) as string[],
     }));
   } catch (err) {
     fail('load manifest for routing tests', (err as Error).message);
@@ -201,6 +202,75 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
   } else {
     fail('fuzzy match: out-of-scope query should still return 0 docs', `Got ${fuzzyOOS.length}`);
     results.push({ ok: false });
+  }
+
+  // ── Score-gap routing tests (no API call needed) ──────────────────────────
+
+  // Test: pricing/tier query produces a clear score gap — mews/mews doc
+  // scores ≥ 2× the noise tier, which the pipeline uses to route to Stage 2A
+  // instead of falling to CLARIFY(TOO_BROAD).
+  const tierScored = keywordPreFilterScored(pages, 'Can you explain the Omniboost pricing tiers and billing options');
+  if (tierScored.length > 0) {
+    const topHits = tierScored[0].hits;
+    const topTier = tierScored.filter((s: { hits: number }) => s.hits === topHits);
+    const nextTierHits = tierScored.find((s: { hits: number }) => s.hits < topHits)?.hits ?? 0;
+    const hasMews = topTier.some((s: { page: { id: string } }) => s.page.id === 'mews/mews');
+    const hasScoreGap = topHits >= 2 * nextTierHits;
+
+    if (hasMews && hasScoreGap && topTier.length <= STAGE2A_SHORTLIST_MAX) {
+      pass(`score-gap: pricing query → mews/mews in top tier (${topHits} hits vs ${nextTierHits}), ${topTier.length} doc(s) → Stage 2A`);
+      results.push({ ok: true });
+    } else {
+      fail('score-gap: pricing query should produce mews/mews in top tier with ≥2× score gap',
+        `topHits=${topHits} nextTierHits=${nextTierHits} topTier=${topTier.length} hasMews=${hasMews}`);
+      results.push({ ok: false });
+    }
+  } else {
+    fail('score-gap: pricing query should match at least 1 doc', 'Got 0');
+    results.push({ ok: false });
+  }
+
+  // Test: trigger-question scoring — "what is omniboost" should boost
+  // omniboost/omniboost via trigger_questions match, creating a score gap.
+  const omniScored = keywordPreFilterScored(pages, 'what is omniboost');
+  if (omniScored.length > 0) {
+    const omniTopHits = omniScored[0].hits;
+    const omniTopTier = omniScored.filter((s: { hits: number }) => s.hits === omniTopHits);
+    const omniNextHits = omniScored.find((s: { hits: number }) => s.hits < omniTopHits)?.hits ?? 0;
+    const hasOmniboost = omniTopTier.some((s: { page: { id: string } }) => s.page.id === 'omniboost/omniboost');
+    const omniHasGap = omniTopHits >= 2 * omniNextHits;
+
+    if (hasOmniboost && omniHasGap && omniTopTier.length <= STAGE2A_SHORTLIST_MAX) {
+      pass(`trigger-question: "what is omniboost" → omniboost/omniboost in top tier (${omniTopHits} hits vs ${omniNextHits}), ${omniTopTier.length} doc(s) → Stage 2A`);
+      results.push({ ok: true });
+    } else {
+      fail('trigger-question: "what is omniboost" should boost omniboost/omniboost with score gap',
+        `topHits=${omniTopHits} nextHits=${omniNextHits} topTier=${omniTopTier.length} hasOmniboost=${hasOmniboost}`);
+      results.push({ ok: false });
+    }
+  } else {
+    fail('trigger-question: "what is omniboost" should match at least 1 doc', 'Got 0');
+    results.push({ ok: false });
+  }
+
+  // Test: uniform-score query (no trigger match) does NOT trigger score-gap.
+  // Uses "mews" — many docs have it as a keyword but no single doc's
+  // trigger_questions reduce to just ["mews"] after stop-word removal.
+  const uniformScored = keywordPreFilterScored(pages, 'mews');
+  if (uniformScored.length > STAGE2A_SHORTLIST_MAX) {
+    const uTopHits = uniformScored[0].hits;
+    const uNextHits = uniformScored.find((s: { hits: number }) => s.hits < uTopHits)?.hits ?? uTopHits;
+    const uniformNoGap = uTopHits < 2 * uNextHits || uTopHits === uNextHits;
+    if (uniformNoGap) {
+      pass(`score-gap: uniform "mews" query has no gap (all ${uTopHits} hits) → falls to CLARIFY`);
+      results.push({ ok: true });
+    } else {
+      fail('score-gap: uniform query should not produce a score gap', `top=${uTopHits} next=${uNextHits}`);
+      results.push({ ok: false });
+    }
+  } else {
+    pass(`score-gap: "mews" matched ≤ ${STAGE2A_SHORTLIST_MAX} docs — no score-gap check needed`);
+    results.push({ ok: true });
   }
 
   // ── Short-token candidate detection tests (no API call needed) ────────────

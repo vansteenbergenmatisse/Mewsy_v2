@@ -377,6 +377,22 @@ export function basicContextButtons(
   return matched;
 }
 
+// ── Trigger-question scoring helpers ────────────────────────────────────────────
+
+const STOP_WORDS = new Set([
+  'a','an','the','is','are','was','were','be','been','being',
+  'have','has','had','do','does','did','will','would','could','should',
+  'can','shall','to','of','in','for','on','with','at','by','from','as',
+  'about','what','which','who','how','when','where','why','that','this',
+  'it','i','you','he','she','we','they','me','my','your','and','or',
+  'but','not','no','if','so','than','too','very','just','also',
+]);
+
+function contentTokens(text: string): string[] {
+  return text.toLowerCase().split(/[\s,.()\-/'"?!]+/)
+    .filter(t => t.length >= 2 && !STOP_WORDS.has(t));
+}
+
 // ── Keyword pre-filter ──────────────────────────────────────────────────────────
 
 // Zero-LLM pre-filter: scores each doc by how many of its unique keywords + synonyms
@@ -387,8 +403,8 @@ export function keywordPreFilter(pages: ManifestPage[], userMessage: string): Ma
   return keywordPreFilterScored(pages, userMessage).map(s => s.page);
 }
 
-// Internal scored version — returns hit counts needed for gate logic.
-function keywordPreFilterScored(
+// Scored version — returns hit counts needed for gate logic. Exported for testing.
+export function keywordPreFilterScored(
   pages: ManifestPage[],
   userMessage: string
 ): { page: ManifestPage; hits: number }[] {
@@ -416,7 +432,36 @@ function keywordPreFilterScored(
         const maxEdits = k.length <= 6 ? 1 : 2;
         return msgTokens.some(w => damerauLevenshtein(w, k) <= maxEdits);
       }).length;
-      return { page, hits };
+
+      // Trigger-question bonus: bidirectional content-word overlap between the
+      // user message and each trigger_question. Both directions must pass:
+      //   trigger→user: ≥75% of trigger's content words appear in user message
+      //   user→trigger: ≥50% of user's content words appear in trigger
+      // The bidirectional check prevents short triggers (e.g. 1 content word)
+      // from matching long unrelated queries just because they share one term.
+      const TRIGGER_THRESHOLD_TU = 0.75;  // trigger→user direction
+      const TRIGGER_THRESHOLD_UT = 0.50;  // user→trigger direction
+      let triggerBonus = 0;
+      if (page.trigger_questions?.length) {
+        const userTokens = contentTokens(userMessage);
+        for (const tq of page.trigger_questions) {
+          const tqTokens = contentTokens(tq);
+          if (tqTokens.length === 0) continue;
+          // trigger→user: how much of the trigger appears in the user message
+          const tuOverlap = tqTokens.filter(t => msgLower.includes(t)).length;
+          if (tuOverlap / tqTokens.length < TRIGGER_THRESHOLD_TU) continue;
+          // user→trigger: how much of the user message appears in the trigger
+          if (userTokens.length === 0) continue;
+          const tqLower = tq.toLowerCase();
+          const utOverlap = userTokens.filter(t => tqLower.includes(t)).length;
+          if (utOverlap / userTokens.length >= TRIGGER_THRESHOLD_UT) {
+            triggerBonus = 2;
+            break;
+          }
+        }
+      }
+
+      return { page, hits: hits + triggerBonus };
     })
     .filter(s => s.hits > 0)
     .sort((a, b) => b.hits - a.hits);
@@ -987,20 +1032,57 @@ export async function handleMessage(
         contentVerifiedFailure = stage2Result.contentVerifiedFailure;
 
       } else {
-        // 6+ docs matched
-        const allMatched = scored.map(s => s.page);
-        const { themes, dominantTheme } = computeThematicCoherence(allMatched);
+        // 6+ docs matched — check for a score gap before falling to CLARIFY.
+        // If the top-scored docs clearly separate from the pack (top hit count
+        // is ≥ 2× the next tier's hit count), those top docs are specific enough
+        // to route to Stage 2A. This prevents a single noise keyword like
+        // "Omniboost" from dragging 30 irrelevant docs into the pool.
+        const topHits = scored[0].hits;
+        const topTier = scored.filter(s => s.hits === topHits);
+        const nextTierHits = scored.find(s => s.hits < topHits)?.hits ?? 0;
 
-        if (themes.length === 1) {
-          // Gate 4: 6+ matched, all one theme → CLARIFY(THEME_OVERFLOW)
-          console.log(`[STAGE 1]  ${matchedDocCount}/${allPages.length} docs matched, all theme: "${dominantTheme}" → CLARIFY(THEME_OVERFLOW)`);
-          clarifyTriggerReason = 'THEME_OVERFLOW';
-          clarifyMatchedMeta = allMatched.slice(0, 10).map(d => ({ title: d.label, theme: d.theme, keywords: d.keywords ?? [] }));
+        if (topHits >= 2 * nextTierHits && topTier.length <= STAGE2A_SHORTLIST_MAX) {
+          // Clear score gap — top docs are meaningfully more relevant
+          const shortlist = topTier.map(s => s.page);
+          console.log(`[STAGE 1]  ${matchedDocCount} docs matched, score gap ${topHits}→${nextTierHits} — top ${topTier.length} to Stage 2A`);
+
+          let conversationHistory: HistoryEntry[] = [];
+          if (ROUTER_HISTORY_ENABLED && history.length > 0) {
+            conversationHistory = history.slice(-(ROUTER_HISTORY_PAIRS * 2)) as HistoryEntry[];
+          }
+
+          const stage2Result = await runStage2(
+            shortlist,
+            routingBaseMessage,
+            conversationHistory,
+            currentQALog,
+            context.clarifyRoundCounter ?? 0
+          );
+
+          selectedPages = stage2Result.selectedPages;
+          clarifyTriggerReason = stage2Result.clarifyTriggerReason;
+          stage2bDecisionB = stage2Result.decisionB;
+          contentVerifiedFailure = stage2Result.contentVerifiedFailure;
+
         } else {
-          // Gate 5: 6+ matched, multiple themes → CLARIFY(TOO_BROAD)
-          console.log(`[STAGE 1]  ${matchedDocCount}/${allPages.length} docs matched, themes: [${themes.join(', ')}] → CLARIFY(TOO_BROAD)`);
-          clarifyTriggerReason = 'TOO_BROAD';
-          clarifyMatchedMeta = scored.slice(0, 10).map(s => ({ title: s.page.label, theme: s.page.theme, keywords: s.page.keywords ?? [] }));
+          // No clear score gap — fall through to Gate 4/5 CLARIFY logic.
+          // Use top-scored docs for button generation so buttons reflect
+          // the user's actual query terms, not random noise matches.
+          const allMatched = scored.map(s => s.page);
+          const { themes, dominantTheme } = computeThematicCoherence(allMatched);
+          const topForButtons = scored.slice(0, 10).map(s => s.page);
+
+          if (themes.length === 1) {
+            // Gate 4: 6+ matched, all one theme → CLARIFY(THEME_OVERFLOW)
+            console.log(`[STAGE 1]  ${matchedDocCount}/${allPages.length} docs matched, all theme: "${dominantTheme}" → CLARIFY(THEME_OVERFLOW)`);
+            clarifyTriggerReason = 'THEME_OVERFLOW';
+            clarifyMatchedMeta = topForButtons.map(d => ({ title: d.label, theme: d.theme, keywords: d.keywords ?? [] }));
+          } else {
+            // Gate 5: 6+ matched, multiple themes → CLARIFY(TOO_BROAD)
+            console.log(`[STAGE 1]  ${matchedDocCount}/${allPages.length} docs matched, themes: [${themes.join(', ')}] → CLARIFY(TOO_BROAD)`);
+            clarifyTriggerReason = 'TOO_BROAD';
+            clarifyMatchedMeta = topForButtons.map(d => ({ title: d.label, theme: d.theme, keywords: d.keywords ?? [] }));
+          }
         }
       }
     } catch (err) {

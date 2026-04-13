@@ -19,6 +19,16 @@
       "id": "website/mews-features",
       "label": "Mews features",
       "description": "Mews PMS product features, accounting integration capabilities per system, and detailed configuration options"
+    },
+    {
+      "id": "website/mews",
+      "label": "Mews",
+      "description": "Mews PMS overview, Omniboost integration tiers (Bronze/Silver/Gold), pricing, accounting flows, GL mapping, onboarding, supported systems"
+    },
+    {
+      "id": "website/omniboost",
+      "label": "Omniboost",
+      "description": "What Omniboost is, its five core products, how the platform works, industries served, and company scale"
     }
   ],
   "files": [
@@ -1957,6 +1967,74 @@
       "source_type": "website_split",
       "source_parent_id": "mews-features",
       "content_hash": "03d050585dc95b8ac307a886c60c3887a13ea1a8e70580e42be73cb204a75b1d"
+    },
+    {
+      "id": "mews/mews",
+      "title": "Mews PMS & Omniboost Integration",
+      "category": "website/mews",
+      "description": "Covers everything about Mews and the Omniboost integration: Bronze/Silver/Gold tiers, accounting flows (Consumed, Closed, Hybrid), GL mapping, onboarding steps, POS connections, receivable tracking, and all supported systems.",
+      "keywords": [
+        "mews",
+        "bronze",
+        "silver",
+        "gold",
+        "tiers",
+        "pricing",
+        "billing",
+        "accounting flow",
+        "consumed",
+        "closed",
+        "hybrid",
+        "GL mapping",
+        "ledger",
+        "POS",
+        "receivable tracking",
+        "onboarding",
+        "supported systems"
+      ],
+      "trigger_questions": [
+        "How do I set up Mews PMS with Omniboost",
+        "What are the different Omniboost integration tiers for Mews",
+        "How much does Omniboost Mews integration cost",
+        "What is Omniboost's role with Mews",
+        "What support does Bronze tier Mews integration include",
+        "Can you explain the Omniboost pricing tiers and billing options"
+      ],
+      "path": "knowledge/website/mews/mews.md",
+      "source_url": "https://omniboost.io/mews-integration-tiers",
+      "source_type": "website_single",
+      "source_parent_id": "mews"
+    },
+    {
+      "id": "omniboost/omniboost",
+      "title": "Omniboost Platform & Products",
+      "category": "website/omniboost",
+      "description": "Covers what Omniboost is, its five core products (Accounting, PMS, POS, Insights, Owners Portal), how it connects hospitality systems, and the industries and business types it serves.",
+      "keywords": [
+        "omniboost",
+        "platform",
+        "accounting",
+        "PMS",
+        "POS",
+        "insights",
+        "owners portal",
+        "hospitality",
+        "connectivity",
+        "integration",
+        "products",
+        "company"
+      ],
+      "trigger_questions": [
+        "What is Omniboost and what does it do",
+        "What products does Omniboost offer",
+        "How does Omniboost connect PMS and POS systems",
+        "What data can Omniboost integrate for hospitality businesses",
+        "What is the Omniboost Owners Portal"
+      ],
+      "path": "knowledge/website/omniboost/omniboost.md",
+      "source_url": "https://omniboost.io/",
+      "source_type": "website_single",
+      "source_parent_id": "omniboost"
     }
   ]
 }

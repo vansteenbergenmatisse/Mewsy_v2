@@ -435,9 +435,14 @@ export async function verifyDocuments(
 ): Promise<{ results: { docId: string; reasoning: string; passes: boolean }[]; hasErrors: boolean }> {
   if (pages.length === 0) return { results: [], hasErrors: false };
 
-  const qaSection = qaLog.length > 0
-    ? `\nSession Q&A so far:\n${qaLog.map(e => `  Q: ${e.question}  →  A: ${e.answer}`).join('\n')}\n`
-    : '';
+  // Build a combined question that includes clarifying Q&A context.
+  // When the user went through CLARIFY, the original question alone is too
+  // vague for Haiku to judge relevance. Inlining the Q&A makes the full
+  // intent explicit: "onboarding" + "Which integration? → Xero" becomes
+  // clear enough for Haiku to match the onboarding guide.
+  const combinedQuestion = qaLog.length > 0
+    ? `${userMessage}\nContext from clarifying questions:\n${qaLog.map(e => `- ${e.question} → ${e.answer}`).join('\n')}`
+    : userMessage;
 
   const historySection = history.length > 0
     ? `\nRecent conversation:\n${history.slice(-6).map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content.slice(0, 200)}`).join('\n')}\n`
@@ -456,15 +461,16 @@ export async function verifyDocuments(
 
     const prompt = `You are checking whether a single knowledge base document answers a user's question.
 
-User question: "${userMessage}"${historySection}${qaSection}
+User question: "${combinedQuestion}"${historySection}
 Document content:
 ---
 ${fileContent.slice(0, 4000)}
 ---
 
-Does this document contain information that directly answers the user's question?
-- passes: true ONLY if the document clearly addresses the question
-- passes: false if the document is on a related topic but does not answer this specific question
+Does this document contain useful information for answering the user's question?
+- passes: true if the document covers the topic the user is asking about, even if it doesn't answer every detail
+- passes: true if the document would help the user with their request
+- passes: false if the document is about a completely different topic
 - passes: false if uncertain
 
 Return ONLY valid JSON. No markdown. No preamble.

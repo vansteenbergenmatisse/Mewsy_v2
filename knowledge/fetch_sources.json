@@ -29,6 +29,18 @@
         "label": "Mews Features — All Accounting Integrations",
         "type": "static-split",
         "url": "https://omniboost.io/system-features/mews"
+      },
+      {
+        "id": "mews",
+        "label": "Mews PMS & Omniboost Integration",
+        "type": "static",
+        "url": "https://omniboost.io/mews-integration-tiers"
+      },
+      {
+        "id": "omniboost",
+        "label": "Omniboost Platform & Products",
+        "type": "static",
+        "url": "https://omniboost.io/"
       }
     ]
   }
