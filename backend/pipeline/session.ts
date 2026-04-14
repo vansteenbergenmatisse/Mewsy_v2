@@ -56,6 +56,7 @@ interface SessionContext {
   language: string | null;
   tools: string[];
   setupType: string | null;
+  tier: 'bronze' | 'silver' | 'gold' | null;
   lastLoadedDocIds: string[];
   frustrationCounter: number;
   // Tracks how many times Stage 2B has chosen Decision A in this session.
@@ -107,6 +108,7 @@ function createSession(): Session {
       language: null,
       tools: [],
       setupType: null,
+      tier: null,
       lastLoadedDocIds: [],
       frustrationCounter: 0,
       clarifyRoundCounter: 0,

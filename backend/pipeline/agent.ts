@@ -656,6 +656,7 @@ export interface SessionContext {
   language: string | null;
   tools: string[];
   setupType: string | null;
+  tier: 'bronze' | 'silver' | 'gold' | null;
   lastLoadedDocIds: string[];
   frustrationCounter: number;
   clarifyRoundCounter: number;
@@ -757,6 +758,51 @@ function detectSetupType(text: string): string | null {
     }
   }
   return null;
+}
+
+// ── Tier detection from user message ───────────────────────────────────────────
+// Belt-and-suspenders: catches tier mentions even in CLARIFY/BASIC flows where
+// Sonnet's [TIER:X] signal is not emitted. Only used when context.tier is null.
+const TIER_PATTERNS: [RegExp, 'bronze' | 'silver' | 'gold'][] = [
+  [/\b(bronze|free tier|free subscription|basic tier|included tier)\b/i, 'bronze'],
+  [/\bsilver\b/i, 'silver'],
+  [/\bgold\b/i, 'gold'],
+];
+
+export function detectTier(message: string): 'bronze' | 'silver' | 'gold' | null {
+  for (const [pattern, tier] of TIER_PATTERNS) {
+    if (pattern.test(message)) return tier;
+  }
+  return null;
+}
+
+// ── Tier-based doc content filtering ───────────────────────────────────────────
+// Strips doc sections that require a higher tier than the user has.
+// Markers: <!-- tier:silver+ -->...<!-- /tier --> and <!-- tier:gold -->...<!-- /tier -->
+const TIER_LEVELS: Record<string, number> = { bronze: 1, silver: 2, gold: 3 };
+
+export function stripTierContent(
+  docContent: string,
+  userTier: 'bronze' | 'silver' | 'gold' | null,
+): string {
+  // When tier is unknown, pass docs unfiltered — Sonnet will mention tier-specific parts
+  if (!userTier) return docContent;
+
+  const userLevel = TIER_LEVELS[userTier];
+
+  return docContent.replace(
+    /<!-- tier:(bronze|silver|gold)\+? -->([\s\S]*?)<!-- \/tier -->/gi,
+    (_match, markerTier: string, _content: string) => {
+      const requiredLevel = TIER_LEVELS[markerTier.toLowerCase()];
+      if (userLevel >= requiredLevel) {
+        // User has access — keep the content, strip only the markers
+        return _content;
+      }
+      // User does not have access — replace with upgrade note
+      const tierName = markerTier.charAt(0).toUpperCase() + markerTier.slice(1).toLowerCase();
+      return `\n[This section requires ${tierName} tier or higher. Explore upgrade options at https://omniboost.io/mews-integration-tiers]\n`;
+    },
+  );
 }
 
 // ── Clarify answer parser ──────────────────────────────────────────────────────
@@ -861,7 +907,10 @@ export async function handleMessage(
 
       const cachedPages = allPages.filter(p => context.lastLoadedDocIds.includes(p.id));
       const cachedContents = await loadKnowledgeFiles(cachedPages);
-      const cachedKnowledge = cachedContents.length > 0 ? cachedContents.join('\n\n---\n\n') : null;
+      const filteredCachedContents = cachedContents
+        .filter((c): c is string => c !== null)
+        .map(c => stripTierContent(c, context.tier));
+      const cachedKnowledge = filteredCachedContents.length > 0 ? filteredCachedContents.join('\n\n---\n\n') : null;
 
       const cachedQA = (context.qaLogSnapshot ?? []).map(e => ({ q: e.question, a: e.answer }));
       const postAnswerQueryContext: QueryContext = {
@@ -881,6 +930,13 @@ export async function handleMessage(
       let postReply = postChatResult.reply;
       const postSignal = postChatResult.signal;
       const postContract = postChatResult.contract;
+
+      // Persist tier if Sonnet detected it in post-answer mode
+      if (postChatResult.tier && postChatResult.tier !== context.tier) {
+        updateContext(sessionId, { tier: postChatResult.tier });
+        context.tier = postChatResult.tier;
+        console.log(`[TIER] Tier set to: ${postChatResult.tier} (post-answer)`);
+      }
 
       // Lane A clarify budget: if Sonnet responded with buttons, check whether
       // the budget allows it (POST_ANSWER_CLARIFY_BUDGET). On budget exhaustion,
@@ -935,6 +991,13 @@ export async function handleMessage(
         const st = detectSetupType(userMessage) || detectSetupType(postReply);
         if (st) updateContext(sessionId, { setupType: st });
       }
+      if (!context.tier) {
+        const detectedTier = detectTier(userMessage);
+        if (detectedTier) {
+          updateContext(sessionId, { tier: detectedTier });
+          console.log(`[TIER] Tier auto-detected from message: ${detectedTier} (post-answer)`);
+        }
+      }
 
       console.log(`[REPLY]    ${postReply.split(/\s+/).filter(Boolean).length} words sent to user (post-answer)`);
       return postReply;
@@ -946,7 +1009,14 @@ export async function handleMessage(
   const incomingQAPairs = parseClarifyAnswers(userMessage);
 
   // Build answer lists for button deduplication and Stage 2A context.
-  const currentQALog: QAEntry[] = context.qaLog ?? [];
+  // Merge incoming Q&A pairs into the log immediately so Stage 2A sees
+  // the full refined intent (e.g. "onboarding" + "Xero"), not just the
+  // original question. Without this, the qaLog passed to verifyDocuments
+  // is empty on the first button click, and Haiku rejects relevant docs.
+  const currentQALog: QAEntry[] = [
+    ...(context.qaLog ?? []),
+    ...incomingQAPairs.map(p => ({ question: p.q, answer: p.a, source: 'CLARIFY' as const })),
+  ];
   const allAnswers = [
     ...currentQALog.map(e => e.answer),
     ...incomingQAPairs.map(p => p.a),
@@ -1117,9 +1187,10 @@ export async function handleMessage(
     const capped = selectedPages.slice(0, ROUTER_MAX_DOCS);
     const rawContents = await loadKnowledgeFiles(capped);
     const contents = rawContents.filter((c): c is string => c !== null);
+    const filteredContents = contents.map(c => stripTierContent(c, context.tier));
 
-    if (contents.length > 0) {
-      knowledgeContent = contents.join('\n\n---\n\n');
+    if (filteredContents.length > 0) {
+      knowledgeContent = filteredContents.join('\n\n---\n\n');
     } else {
       // Docs exist but couldn't be read — answer from base knowledge
       knowledgeContent = null;
@@ -1139,6 +1210,13 @@ export async function handleMessage(
     reply = chatResult.reply;
     answerSignal = chatResult.signal;
     answerContract = chatResult.contract;
+
+    // Persist tier if Sonnet detected it from the user's message
+    if (chatResult.tier && chatResult.tier !== context.tier) {
+      updateContext(sessionId, { tier: chatResult.tier });
+      context.tier = chatResult.tier;
+      console.log(`[TIER] Tier set to: ${chatResult.tier}`);
+    }
 
   } else if (finalMode === 'CLARIFY') {
     if (shortTokenCandidates.length > 0) {
@@ -1238,15 +1316,10 @@ export async function handleMessage(
       postAnswerClarifyUsed: false,
     });
   } else {
-    // CLARIFY or BASIC — append incoming Q&A to qaLog for future Stage 1 re-runs.
+    // CLARIFY or BASIC — persist the qaLog (already includes incoming pairs
+    // merged at the top of the pipeline, so no need to append again).
     if (incomingQAPairs.length > 0) {
-      const source = (finalMode === 'CLARIFY' ? 'CLARIFY' : 'BASIC') as 'BASIC' | 'CLARIFY';
-      const newEntries: QAEntry[] = incomingQAPairs.map(p => ({
-        question: p.q,
-        answer: p.a,
-        source,
-      }));
-      updateContext(sessionId, { qaLog: [...currentQALog, ...newEntries] });
+      updateContext(sessionId, { qaLog: currentQALog });
     }
   }
 
@@ -1271,6 +1344,15 @@ export async function handleMessage(
     const setupType = detectSetupType(userMessage) || detectSetupType(reply);
     if (setupType) {
       updateContext(sessionId, { setupType });
+    }
+  }
+
+  // Belt-and-suspenders tier detection from user message
+  if (!context.tier) {
+    const detectedTier = detectTier(userMessage);
+    if (detectedTier) {
+      updateContext(sessionId, { tier: detectedTier });
+      console.log(`[TIER] Tier auto-detected from message: ${detectedTier}`);
     }
   }
 

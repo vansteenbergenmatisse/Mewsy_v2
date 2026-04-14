@@ -344,7 +344,16 @@ export default function App() {
     const contextMessage = question ? `${question} → ${label}` : label;
     setPendingQuestion(null);
     setHeroActive(false);
-    addUserMessage(label);
+    const NEUTRAL_PREFIXES = [
+      "I'd like to continue with",
+      "Let's go ahead with",
+      "I'd like to go with",
+    ];
+    const prefix = NEUTRAL_PREFIXES[label.length % NEUTRAL_PREFIXES.length];
+    const displayMessage = label.split(/\s+/).length <= 6
+      ? `${prefix} ${label}`
+      : label;
+    addUserMessage(displayMessage);
     setInputValue('');
     setInputPlaceholder(uiStr('typeMsg', selectedLanguage));
     setIsRequestInProgress(true);

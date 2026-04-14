@@ -2,7 +2,7 @@ import axios from 'axios';
 import { writeFileSync, mkdirSync, existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import config from '../config.ts';
-import { cleanContent, generateMetadata } from '../pipeline/cleanup.ts';
+import { cleanContent, generateMetadata, injectTierMarkers } from '../pipeline/cleanup.ts';
 import { upsertEntry, deleteEntry, getScraperEntries } from '../pipeline/manifest.ts';
 import { sha256 } from '../utils/hash.ts';
 import { slugify } from '../utils/slugify.ts';
@@ -94,10 +94,11 @@ export async function scrapeStaticSplit(page: FetchPage, forceSync: boolean, exi
       logger.info(`Unchanged: ${fallbackRelPath} — skipping`);
       return;
     }
-    const { description, keywords } = await generateMetadata(cleanedPage);
+    const markedPage = injectTierMarkers(cleanedPage);
+    const { description, keywords } = await generateMetadata(markedPage);
     try {
       mkdirSync(outDir, { recursive: true });
-      writeFileSync(fallbackPath, cleanedPage);
+      writeFileSync(fallbackPath, markedPage);
       logger.info(`Scraped (fallback): ${fallbackRelPath}`);
       upsertEntry(fallbackSectionSlug, {
         title: label,
@@ -133,11 +134,12 @@ export async function scrapeStaticSplit(page: FetchPage, forceSync: boolean, exi
       continue;
     }
 
-    const { description, keywords } = await generateMetadata(sectionContent);
+    const markedContent = injectTierMarkers(sectionContent);
+    const { description, keywords } = await generateMetadata(markedContent);
 
     try {
       mkdirSync(outDir, { recursive: true });
-      writeFileSync(outPath, sectionContent);
+      writeFileSync(outPath, markedContent);
       logger.info(`Scraped: ${relPath}`);
 
       upsertEntry(sectionSlug, {

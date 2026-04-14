@@ -70,6 +70,14 @@ export async function checkSession({ pass, fail, skip: _skip, results }: Reporte
     results.push({ ok: false });
   }
 
+  if (session.context.tier === null) {
+    pass('new session has null tier');
+    results.push({ ok: true });
+  } else {
+    fail('new session has null tier', `Got: ${session.context.tier}`);
+    results.push({ ok: false });
+  }
+
   if (Array.isArray(session.context?.qaLog) && session.context.qaLog.length === 0) {
     pass('new session has empty qaLog array');
     results.push({ ok: true });

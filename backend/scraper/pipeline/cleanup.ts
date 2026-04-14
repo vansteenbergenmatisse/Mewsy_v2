@@ -117,3 +117,93 @@ ${cleanedContent.slice(0, 3000)}`,
     return { description: 'No description available.', keywords: [] };
   }
 }
+
+// ── Tier marker injection ────────────────────────────────────────────────────
+// Scans cleaned content for Bronze/Silver/Gold feature keywords and wraps
+// matching paragraphs with tier markers. Pure string matching, no LLM call.
+
+const GOLD_ONLY_FEATURES = [
+  'statistics entries',
+  'market segmentation',
+  'advanced mapping logic',
+  'advanced mapping',
+  'custom journal descriptions',
+  'customized journal descriptions',
+  'custom line descriptions',
+  'customized revenue and payment line descriptions',
+  'documentation on demand',
+  'quarterly optimization reviews',
+];
+
+const SILVER_PLUS_FEATURES = [
+  'credit card fee splitting',
+  'credit card fee split',
+  'detailed revenue entries',
+  'detailed payment entries',
+  'detailed entries',
+  'skip categories',
+  'skip logic',
+  'skip (exclude) specific revenue',
+  'skip (exclude) specific payment',
+  'direct omniboost support',
+  'bi-weekly onboarding meetings',
+  'introduction meeting',
+];
+
+const PRICING_EXCLUSIONS = ['€', '£', '$', 'annually', 'per property'];
+
+const TIER_NAMES = ['bronze', 'silver', 'gold'];
+
+/**
+ * Scans cleaned markdown content for tier-specific feature keywords and injects
+ * HTML comment tier markers around matching paragraphs.
+ *
+ * Skips paragraphs that:
+ * - Already have tier markers
+ * - Contain pricing terms (comparison sections)
+ * - Mention 2+ tier names (comparative overview paragraphs)
+ */
+export function injectTierMarkers(content: string): string {
+  // Split into paragraphs by double newline
+  const paragraphs = content.split(/\n\n+/);
+  const result: string[] = [];
+
+  for (const para of paragraphs) {
+    const lower = para.toLowerCase();
+
+    // Skip if already has tier markers
+    if (lower.includes('<!-- tier:')) {
+      result.push(para);
+      continue;
+    }
+
+    // Skip if contains pricing terms
+    if (PRICING_EXCLUSIONS.some(term => lower.includes(term.toLowerCase()))) {
+      result.push(para);
+      continue;
+    }
+
+    // Skip if comparative paragraph (mentions 2+ tier names)
+    const tierMentions = TIER_NAMES.filter(t => lower.includes(t));
+    if (tierMentions.length >= 2) {
+      result.push(para);
+      continue;
+    }
+
+    // Check for Gold-only features
+    if (GOLD_ONLY_FEATURES.some(feat => lower.includes(feat))) {
+      result.push(`<!-- tier:gold -->\n${para}\n<!-- /tier -->`);
+      continue;
+    }
+
+    // Check for Silver+ features
+    if (SILVER_PLUS_FEATURES.some(feat => lower.includes(feat))) {
+      result.push(`<!-- tier:silver+ -->\n${para}\n<!-- /tier -->`);
+      continue;
+    }
+
+    result.push(para);
+  }
+
+  return result.join('\n\n');
+}

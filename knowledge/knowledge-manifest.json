@@ -1992,6 +1992,17 @@
         "onboarding",
         "supported systems"
       ],
+      "synonyms": [
+        "free",
+        "free subscription",
+        "free tier",
+        "free plan",
+        "included in mews",
+        "no extra cost",
+        "cost",
+        "price",
+        "subscription"
+      ],
       "trigger_questions": [
         "How do I set up Mews PMS with Omniboost",
         "What are the different Omniboost integration tiers for Mews",

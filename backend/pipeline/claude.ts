@@ -126,12 +126,15 @@ export interface AnswerContract {
 
 export type AnswerSignal = 'COMPLETE' | 'PARTIAL';
 
+export type TierSignal = 'bronze' | 'silver' | 'gold';
+
 // Return type of chat() — includes the visible reply plus the parsed signal
 // and contract that the pipeline stores on the session for post-answer routing.
 export interface ChatResult {
   reply: string;
   signal: AnswerSignal | null;
   contract: AnswerContract | null;
+  tier: TierSignal | null;
 }
 
 // Routing uses Haiku — fast, cheap, deterministic classification task.
@@ -151,6 +154,7 @@ interface SessionContext {
   language: string | null;
   tools: string[];
   setupType: string | null;
+  tier: 'bronze' | 'silver' | 'gold' | null;
   lastLoadedDocIds: string[];
   frustrationCounter: number;
   clarifyRoundCounter: number;
@@ -271,6 +275,7 @@ export function buildSystemPrompt(
       `Language: ${sessionContext.language || 'not specified'}`,
       `Known tools: ${sessionContext.tools && sessionContext.tools.length > 0 ? sessionContext.tools.join(', ') : 'none mentioned'}`,
       `Setup type: ${sessionContext.setupType || 'not confirmed'}`,
+      `Tier: ${sessionContext.tier || 'not confirmed'}`,
       `Clarification rounds so far: ${sessionContext.clarifyRoundCounter ?? 0}`,
       `Frustration level: ${sessionContext.frustrationCounter ?? 0}/3`,
     ].join('\n');
@@ -344,6 +349,15 @@ export async function chat(
     replyNoSignal = replyWithCutshort.replace(/\s*\[ANSWER:(COMPLETE|PARTIAL)\]\s*/g, '').trimEnd();
   }
 
+  // ── Parse and strip tier signal ────────────────────────────────────────────
+  // Sonnet emits [TIER:bronze|silver|gold] when the user reveals their tier.
+  let tier: TierSignal | null = null;
+  const tierMatch = replyNoSignal.match(/\[TIER:(bronze|silver|gold)\]/i);
+  if (tierMatch) {
+    tier = tierMatch[1].toLowerCase() as TierSignal;
+    replyNoSignal = replyNoSignal.replace(/\s*\[TIER:(bronze|silver|gold)\]\s*/gi, '').trimEnd();
+  }
+
   // ── Parse and strip answer contract ────────────────────────────────────────
   // Sonnet appends [ANSWER_CONTRACT]{...}[/ANSWER_CONTRACT] after the signal.
   let contract: AnswerContract | null = null;
@@ -366,14 +380,17 @@ export async function chat(
 
   const reply = replyFinal;
   if (signal) {
-    console.log(`[chat] signal=${signal} contract=${contract ? 'present' : 'null'}`);
+    console.log(`[chat] signal=${signal} contract=${contract ? 'present' : 'null'}${tier ? ` tier=${tier}` : ''}`);
+  }
+  if (tier) {
+    console.log(`[chat] tier signal detected: ${tier}`);
   }
 
-  // Save this message pair to the session history (stripped of signal/contract blocks)
+  // Save this message pair to the session history (stripped of signal/contract/tier blocks)
   addToHistory(sessionId, 'user', userMessage);
   addToHistory(sessionId, 'assistant', reply);
 
-  return { reply, signal, contract };
+  return { reply, signal, contract, tier };
 }
 
 // ── Stage 2A: Document verification ───────────────────────────────────────────

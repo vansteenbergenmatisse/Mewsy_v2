@@ -2,7 +2,7 @@ import axios from 'axios';
 import { writeFileSync, mkdirSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import config from '../config.ts';
-import { cleanContent, generateMetadata } from '../pipeline/cleanup.ts';
+import { cleanContent, generateMetadata, injectTierMarkers } from '../pipeline/cleanup.ts';
 import { upsertEntry } from '../pipeline/manifest.ts';
 import { sha256 } from '../utils/hash.ts';
 import { logger } from '../utils/logger.ts';
@@ -79,8 +79,9 @@ export async function scrapeStatic(page: FetchPage, forceSync: boolean, existing
     return { skipped: true };
   }
 
-  const { content, failed } = await cleanContent(rawMarkdown);
+  const { content: cleanedContent, failed } = await cleanContent(rawMarkdown);
   if (failed) logger.warn(`Cleanup failed for ${url} — saved raw content`);
+  const content = injectTierMarkers(cleanedContent);
 
   const { description, keywords } = await generateMetadata(content);
 

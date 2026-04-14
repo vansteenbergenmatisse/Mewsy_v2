@@ -24,7 +24,7 @@ Omniboost is the **primary integration partner** for Mews. Most accounting integ
 
 ## Integration Tiers
 
-Omniboost offers 3 tiers for the Mews accounting integration: **Bronze**, **Silver**, and **Gold**. The right tier depends on the property's complexity, reporting needs, and desired level of support. Full details at: omniboost.io/mews-integration-tiers.
+Omniboost offers 3 tiers for the Mews accounting integration: **Bronze**, **Silver**, and **Gold**. The right tier depends on the property's complexity, reporting needs, and desired level of support. The full breakdown of each tier is documented below. For the official pricing page, see: omniboost.io/mews-integration-tiers.
 
 > Note: Not all features are available for every integration due to technical limitations of different accounting systems. Contact Omniboost to confirm exact inclusions for a specific setup.
 
@@ -78,11 +78,13 @@ Omniboost offers 3 tiers for the Mews accounting integration: **Bronze**, **Silv
 
 **Data transfers included:**
 - All Bronze data transfers (Revenues, Payments, VAT/Tax, A/R)
+<!-- tier:silver+ -->
 - Detailed Revenue entries (granular breakdown beyond Accounting Category level, if supported by the accounting connection)
 - Detailed Payment entries (granular breakdown beyond Accounting Category level, if supported by the accounting connection)
 - Ability to skip (exclude) specific Revenue categories from being sent to accounting
 - Ability to skip (exclude) specific Payment categories from being sent to accounting
 - Credit card fee split: gross payment amounts are split into net payment + estimated credit card commission, posted to a separate ledger account code
+<!-- /tier -->
 
 **What Silver does NOT include (compared to Gold):**
 - Statistics entries (Arrivals, Departures, Rooms out of order, etc.)
@@ -97,17 +99,21 @@ Omniboost offers 3 tiers for the Mews accounting integration: **Bronze**, **Silv
 
 **Onboarding:**
 - Mews Accounting Setup Check included
+<!-- tier:silver+ -->
 - Introduction meeting (30 min)
 - Bi-weekly onboarding meetings available on request
 - 21 days of test journals sent to the accounting system
 - Omniboost assists with test journal validation
+<!-- /tier -->
 
+<!-- tier:silver+ -->
 **Post go-live:**
 - Historical journal re-send: up to 90 days back (from go-live date and at any point once live)
 - Reconciliation assistance available for the past 30 days
 - EOD adjustments without additional fees
 - Priority support SLA: within 3 business days
 - Quarterly meeting availability
+<!-- /tier -->
 
 ---
 
@@ -121,6 +127,7 @@ Omniboost offers 3 tiers for the Mews accounting integration: **Bronze**, **Silv
 
 **Data transfers included:**
 - All Silver data transfers (Revenues, Payments, VAT/Tax, A/R, Detailed entries, Skip logic, Credit card fee split)
+<!-- tier:gold -->
 - Statistics entries: statistical data such as Arrivals, Departures, Rooms out of order, Number of guests, and more — if supported by the accounting connection
 - Market segmentation for Accommodation revenues: daily room revenues broken down by market segment (e.g. OTA, Leisure, Business, Transient, Government) instead of one aggregated line
 - Advanced mapping logic: covers cases where the standard Mews Accounting Category mapping is insufficient — Omniboost can handle additional mapping of ledger accounts, cost centers, and other journal entry elements within the integration itself
@@ -128,6 +135,7 @@ Omniboost offers 3 tiers for the Mews accounting integration: **Bronze**, **Silv
 **Customization options (Gold only):**
 - Customized journal descriptions: default is "MEWS + Business date"; Gold allows further customization
 - Customized revenue and payment line descriptions: default uses the Mews Accounting Category name (e.g. "Breakfast"); Gold allows these to be renamed in the accounting platform
+<!-- /tier -->
 
 **Onboarding:**
 - Mews Accounting Setup Check included
@@ -136,6 +144,7 @@ Omniboost offers 3 tiers for the Mews accounting integration: **Bronze**, **Silv
 - One month of test journals sent to the accounting system
 - Omniboost assists with test journal validation
 
+<!-- tier:gold -->
 **Post go-live:**
 - Historical journal re-send: up to 365 days back (from go-live date and at any point once live)
 - Reconciliation assistance available for the past 90 days
@@ -145,6 +154,7 @@ Omniboost offers 3 tiers for the Mews accounting integration: **Bronze**, **Silv
 - Monthly meeting availability
 - Quarterly optimization reviews
 - Documentation on demand
+<!-- /tier -->
 
 ---
 

@@ -3,7 +3,7 @@ import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import Anthropic from '@anthropic-ai/sdk';
 import config from '../config.ts';
-import { cleanContent, generateMetadata } from '../pipeline/cleanup.ts';
+import { cleanContent, generateMetadata, injectTierMarkers } from '../pipeline/cleanup.ts';
 import { upsertEntry } from '../pipeline/manifest.ts';
 import { sha256 } from '../utils/hash.ts';
 import { slugify } from '../utils/slugify.ts';
@@ -150,8 +150,9 @@ export async function scrapeMulti(page: FetchPage, forceSync: boolean, existingE
       continue;
     }
 
-    const { content, failed } = await cleanContent(rawMarkdown);
+    const { content: cleanedContent, failed } = await cleanContent(rawMarkdown);
     if (failed) logger.warn(`Cleanup failed for ${articleUrl} — saved raw content`);
+    const content = injectTierMarkers(cleanedContent);
 
     const { description, keywords } = await generateMetadata(content);
 

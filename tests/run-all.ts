@@ -19,6 +19,7 @@
  *   7. check-server    — HTTP routes, input validation (real Hono server)
  *   8. check-chat      — end-to-end with real Claude API calls (requires ANTHROPIC_API_KEY)
  *   9. check-frontend  — frontend utility functions (pure functions, no browser)
+ *  10. check-tier      — tier awareness (signal parsing, doc filtering, scraper markers)
  *   [new suites append here]
  *
  * MAINTENANCE RULES — apply to every task, no exceptions:
@@ -42,6 +43,7 @@ import { checkSession }  from './suites/check-session.ts';
 import { checkServer }   from './suites/check-server.ts';
 import { checkChat }     from './suites/check-chat.ts';
 import { checkFrontend } from './suites/check-frontend.ts';
+import { checkTier }     from './suites/check-tier.ts';
 
 // ── Suite toggles ─────────────────────────────────────────────────────────────
 // Set `enabled: false` to skip a suite without deleting it.
@@ -55,6 +57,7 @@ const SUITES = {
   server:   { enabled: true },
   chat:     { enabled: true },
   frontend: { enabled: true },
+  tier:     { enabled: true },
 };
 
 // ── Colours ───────────────────────────────────────────────────────────────────
@@ -158,6 +161,10 @@ async function runSuite(name: string, fn: (r: Reporter) => Promise<void>): Promi
   // 9. frontend utilities
   if (SUITES.frontend.enabled)
     allResults.push(...(await runSuite('9. Frontend utilities', checkFrontend)));
+
+  // 10. tier awareness
+  if (SUITES.tier.enabled)
+    allResults.push(...(await runSuite('10. Tier awareness', checkTier)));
 
   // ── Summary ───────────────────────────────────────────────────────────────
   const total   = allResults.length;
