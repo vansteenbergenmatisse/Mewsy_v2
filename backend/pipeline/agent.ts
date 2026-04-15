@@ -57,6 +57,7 @@ import {
   verifyDocuments,
   recoverRouting,
   generateSmartClarifyQuestion,
+  generateSmartBasicQuestion,
   generateClarifyingQuestions,
   generateIntroLine,
 } from './claude.ts';
@@ -489,6 +490,15 @@ function computeThematicCoherence(docs: ManifestPage[]): {
 // Returns true when the user's follow-up message shares vocabulary with the topics
 // or open threads from the previous answer contract. Used to detect continuation
 // (Lane A) vs. a genuinely new question (Lane B) — no API call needed.
+// Words too generic to signal real topic overlap — they appear in nearly every
+// contract and in many user questions. Excluded from overlap scoring so that
+// "Can you help me find information about Omniboost?" doesn't falsely match.
+const OVERLAP_STOPWORDS = new Set([
+  'omniboost', 'mews', 'integration', 'accounting', 'information',
+  'help', 'setup', 'configuration', 'documentation', 'system',
+  'hotel', 'property', 'support', 'guide', 'overview', 'connection',
+]);
+
 function hasTopicOverlap(userMessage: string, contract: AnswerContract): boolean {
   const lower = userMessage.toLowerCase();
 
@@ -517,8 +527,13 @@ function hasTopicOverlap(userMessage: string, contract: AnswerContract): boolean
     .map(t => t.toLowerCase())
     .filter(t => t.length >= 4); // ignore short stop-words
 
-  // Word-boundary match: "ledger" in topics must not match "ledgers" or "city ledger"
-  return terms.some(t => new RegExp(`\\b${t}\\b`).test(lower));
+  // Require at least 2 non-stopword matching terms to signal genuine overlap.
+  // This prevents generic questions ("Can you help me find information?") from
+  // falsely triggering Lane A due to common words like "information" or "integration".
+  const matchingTerms = terms.filter(t =>
+    !OVERLAP_STOPWORDS.has(t) && new RegExp(`\\b${t}\\b`).test(lower)
+  );
+  return matchingTerms.length >= 2;
 }
 
 // ── Pass threshold ──────────────────────────────────────────────────────────────
@@ -1272,13 +1287,25 @@ export async function handleMessage(
     // BASIC mode — static category buttons with context-aware prepend.
     // Also fires when Stage 2B chose Decision B (redirect to a fresh set of buttons).
     const clarifyingQA = currentQALog.map(e => ({ q: e.question, a: e.answer }));
-    const ctxButtons = basicContextButtons(userMessage, allPages);
     const introReason = contentVerifiedFailure ? 'BASIC_NO_DOCS' : 'BASIC';
-    const [basicReply, basicIntro] = await Promise.all([
-      Promise.resolve(generateClarifyingQuestions(userMessage, null, clarifyingQA, ctxButtons, context.language)),
+
+    // Try AI-driven question first, fall back to static buttons
+    const [smartBasicResult, basicIntro] = await Promise.all([
+      generateSmartBasicQuestion(userMessage, clarifyingQA, manifest.categories, context.language),
       generateIntroLine(userMessage, introReason, context.language),
     ]);
-    reply = basicIntro ? `${basicIntro}\n\n${basicReply}` : basicReply;
+
+    if (smartBasicResult) {
+      const questionBlock =
+        `${smartBasicResult.question} [BUTTONS: ${smartBasicResult.options.join(' | ')}]`;
+      reply = basicIntro ? `${basicIntro}\n\n${questionBlock}` : questionBlock;
+    } else {
+      // Fallback to static category buttons
+      const ctxButtons = basicContextButtons(userMessage, allPages);
+      const staticReply = generateClarifyingQuestions(userMessage, null, clarifyingQA, ctxButtons, context.language);
+      reply = basicIntro ? `${basicIntro}\n\n${staticReply}` : staticReply;
+      console.log('[BASIC] AI question failed — fell back to static category buttons');
+    }
 
     addToHistory(sessionId, 'user', userMessage);
     addToHistory(sessionId, 'assistant', reply);
@@ -1286,6 +1313,10 @@ export async function handleMessage(
     if (!context.originalQuestion) {
       updateContext(sessionId, { originalQuestion: userMessage });
     }
+
+    // Increment clarifyRoundCounter in BASIC mode too — enables progressive questioning
+    // with the existing MAX_CLARIFY_ROUNDS safeguard (forces escalation after N rounds).
+    updateContext(sessionId, { clarifyRoundCounter: (context.clarifyRoundCounter ?? 0) + 1 });
   }
 
   console.log(`[REPLY]    ${reply.split(/\s+/).filter(Boolean).length} words sent to user`);

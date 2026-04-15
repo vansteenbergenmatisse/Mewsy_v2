@@ -194,6 +194,7 @@ async function runSync(type: 'website' | 'confluence'): Promise<void> {
     } catch (err) {
       logger.warn(`Manifest enrichment failed: ${(err as Error).message}`);
     }
+
   }
 }
 

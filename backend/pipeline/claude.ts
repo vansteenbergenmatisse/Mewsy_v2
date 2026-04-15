@@ -633,6 +633,11 @@ ${docList}
 
 Your job: generate ONE short clarifying question with exactly 4 options that would help narrow down which document(s) the user actually needs. The options must be distinct, non-overlapping, and based on what distinguishes these documents from each other.
 
+CRITICAL: Each option MUST use terms that appear in the document titles or categories listed above. Do NOT invent new topic names. If documents are onboarding guides for specific integrations, use the exact integration names from the titles (e.g., "Xero", "DATEV", "QuickBooks"). If documents span categories, use the exact category names. Every option must lead to at least one of the listed documents.
+
+The user's latest selection was: "${userMessage}"
+Generate options that go DEEPER into this specific topic. Do not re-present the same breadth of options the user already saw.
+
 Rules:
 - Options must help FILTER the documents. Each option should map to a different subset of the matched docs.
 - Do NOT use UI element names like "Mews Marketplace", "Connect Integration", or "Marketplace" as options.
@@ -663,13 +668,23 @@ Respond with ONLY a JSON object, no explanation:
       return null;
     }
 
+    // Validate: each option must substring-match at least one doc title or keyword
+    const allTitlesLower = matchedDocMeta.map(d => d.title.toLowerCase());
+    const allKwsLower = matchedDocMeta.flatMap(d => (d.keywords ?? []).map(k => k.toLowerCase()));
+    const groundedPool = [...allTitlesLower, ...allKwsLower];
+
+    const grounded = parsed.options.filter((opt: string) => {
+      const optLower = opt.toLowerCase();
+      return groundedPool.some(term => term.includes(optLower) || optLower.includes(term));
+    });
+
     // Filter out previously answered options
-    const filtered = parsed.options.filter(
+    const filtered = (grounded.length >= 2 ? grounded : parsed.options).filter(
       (opt: string) => !prevLower.has(opt.toLowerCase())
     );
 
     if (filtered.length < 2) {
-      console.warn('[CLARIFY] Too few options after filtering previous answers — falling back');
+      console.warn('[CLARIFY] Too few options after filtering — falling back');
       return null;
     }
 
@@ -720,6 +735,75 @@ export function generateClarifyingQuestions(
   const options = [...merged, 'Something else'];
   console.log(`[BASIC] Static category buttons${specific.length ? ` (context: [${specific.join(', ')}])` : ''}`);
   return `${basicQuestionText(language)} [BUTTONS: ${options.join(' | ')}]`;
+}
+
+// ── AI-driven BASIC question generator ──────────────────────────────────────────
+
+/**
+ * Generates a targeted clarifying question for BASIC mode (0 docs matched).
+ *
+ * Uses Haiku to analyze the user's message, prior Q&A, and the knowledge base
+ * categories to ask a question that guides the user toward real topics.
+ *
+ * Returns { question, options } on success, or null (caller falls back to static buttons).
+ */
+export async function generateSmartBasicQuestion(
+  userMessage: string,
+  qaLog: { q: string; a: string }[],
+  categories: { id: string; label: string; description: string }[],
+  language: string | null
+): Promise<{ question: string; options: string[] } | null> {
+  const targetLang = langName(language);
+
+  const qaSection = qaLog.length > 0
+    ? `\nPrevious exchanges in this session:\n${qaLog.map(e => `Q: ${e.q}\nA: ${e.a}`).join('\n')}\n\nAsk a DIFFERENT question that digs deeper based on what you already know. Do NOT repeat previous questions.`
+    : '';
+
+  const categoryList = categories
+    .map(c => `- ${c.label}: ${c.description}`)
+    .join('\n');
+
+  const prompt = `You are a routing assistant for a customer support chatbot about Omniboost hotel accounting integrations.
+
+The user asked: "${userMessage}"
+No documents matched their query directly. You need to ask a clarifying question to understand what they need.
+${qaSection}
+
+Here are the topics this knowledge base actually covers:
+${categoryList}
+
+Generate ONE clarifying question with exactly 4 options to narrow down what the user needs.
+CRITICAL: Options must correspond to real topics from the list above. Do NOT invent topics that aren't covered in the knowledge base. Use the exact category names or descriptions as inspiration for options.
+
+Keep options short (1-4 words each). Write in ${targetLang}.
+Respond with ONLY a JSON object, no explanation:
+{"question": "your question", "options": ["opt1", "opt2", "opt3", "opt4"]}`;
+
+  try {
+    const resp = await haikuClient.messages.create({
+      model: HAIKU_MODEL,
+      max_tokens: 200,
+      temperature: 0.3,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const raw = resp.content?.[0]?.type === 'text' ? resp.content[0].text.trim() : '';
+    console.log(`[BASIC] Haiku raw: ${raw.slice(0, 300)}`);
+
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    const parsed = JSON.parse(cleaned) as { question?: string; options?: string[] };
+
+    if (!parsed.question || !Array.isArray(parsed.options) || parsed.options.length < 2) {
+      console.warn('[BASIC] Haiku returned invalid structure — falling back to static');
+      return null;
+    }
+
+    const options = [...parsed.options.slice(0, 4), 'Something else'];
+    console.log(`[BASIC] AI-generated question: options: [${options.join(', ')}]`);
+    return { question: parsed.question, options };
+  } catch (err) {
+    console.warn(`[BASIC] Haiku call failed: ${(err as Error).message} — falling back to static`);
+    return null;
+  }
 }
 
 // ── Dynamic intro line (CLARIFY and BASIC mode) ────────────────────────────────
