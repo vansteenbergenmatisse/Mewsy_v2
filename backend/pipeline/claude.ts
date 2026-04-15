@@ -594,85 +594,92 @@ Format:
   }
 }
 
-// ── CLARIFY question generator ─────────────────────────────────────────────────
+// ── CLARIFY question generator (AI-driven) ───────────────────────────────────
 
 /**
  * Generates one targeted clarifying question with up to 4 options + "Something else".
  *
- * Options come exclusively from manifest keywords of the matched docs — no Haiku call,
- * no hallucination. pickClarifyButtons (agent.ts) handles keyword selection and dedup.
+ * Uses Haiku to analyze the matched doc metadata (titles, categories) and generate
+ * a disambiguating question with options that actually split the doc set into useful
+ * groups. Falls back to keyword-based selection if Haiku fails.
  *
- * Returns { question, options } on success, or null if no discriminating keywords
- * could be found (caller falls back to the static CLARIFY reply).
+ * Returns { question, options } on success, or null if no useful question could be
+ * generated (caller falls back to the static CLARIFY reply).
  */
-export function generateClarifyQuestion(
-  _userMessage: string,
-  triggerReason: 'DIVERSE_TOPICS' | 'THEME_OVERFLOW' | 'TOO_BROAD' | 'STAGE2B_NEEDS_CONTEXT',
+export async function generateSmartClarifyQuestion(
+  userMessage: string,
+  triggerReason: string,
   matchedDocMeta: { title: string; theme: string; keywords?: string[] }[],
-  _qaLog: QAEntry[],
-  _sessionContext: { tools?: string[]; setupType?: string | null },
   previousAnswers: string[] = [],
-  allPageKeywords: string[][] = [],
   language: string | null = null
-): { question: string; options: string[] } | null {
-  // Pick button labels from manifest keywords — no Haiku, no hallucination.
-  // Logic mirrors pickClarifyButtons in agent.ts (inlined to avoid circular import).
+): Promise<{ question: string; options: string[] } | null> {
   const prevLower = new Set(previousAnswers.map(a => a.toLowerCase()));
-  const allKws = matchedDocMeta.flatMap(d => d.keywords ?? []);
+  const targetLang = langName(language);
 
-  const freq = new Map<string, number>();
-  for (const kw of allKws) freq.set(kw, (freq.get(kw) ?? 0) + 1);
+  const docList = matchedDocMeta
+    .map(d => `- "${d.title}" (category: ${d.theme})`)
+    .join('\n');
 
-  // Build global keyword frequency to filter out terms that are too broad.
-  // Keywords present in >15% of ALL docs (e.g. "Omniboost", "MEWS") cause Stage 1 to
-  // expand matches when selected as an answer, creating an infinite CLARIFY loop.
-  const globalFreq = new Map<string, number>();
-  for (const pageKws of allPageKeywords) {
-    const pageSeen = new Set<string>();
-    for (const kw of pageKws) {
-      if (!pageSeen.has(kw)) { globalFreq.set(kw, (globalFreq.get(kw) ?? 0) + 1); pageSeen.add(kw); }
+  const prevAnswerLine = previousAnswers.length > 0
+    ? `\nThe user already answered: [${previousAnswers.join(', ')}]. Do NOT repeat these as options.`
+    : '';
+
+  const prompt = `You are a routing assistant for a customer support chatbot about Omniboost hotel accounting integrations.
+
+The user asked: "${userMessage}"
+
+This matched ${matchedDocMeta.length} documents. Here are their titles and categories:
+${docList}
+
+Your job: generate ONE short clarifying question with exactly 4 options that would help narrow down which document(s) the user actually needs. The options must be distinct, non-overlapping, and based on what distinguishes these documents from each other.
+
+Rules:
+- Options must help FILTER the documents. Each option should map to a different subset of the matched docs.
+- Do NOT use UI element names like "Mews Marketplace", "Connect Integration", or "Marketplace" as options.
+- Do NOT use generic phrases like "General information", "Other topics", or "Getting started".
+- If documents are mostly onboarding guides for different integrations, the options should be the integration names (Xero, DATEV, QuickBooks, etc.)
+- If documents span different categories (onboarding vs troubleshooting vs configuration), the options should be the category types.
+- Keep options short (1-4 words each).${prevAnswerLine}
+
+Write the question and options in ${targetLang}.
+Respond with ONLY a JSON object, no explanation:
+{"question": "your clarifying question", "options": ["option1", "option2", "option3", "option4"]}`;
+
+  try {
+    const resp = await haikuClient.messages.create({
+      model: HAIKU_MODEL,
+      max_tokens: 200,
+      temperature: 0.3,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const raw = resp.content?.[0]?.type === 'text' ? resp.content[0].text.trim() : '';
+    console.log(`[CLARIFY] Haiku raw: ${raw.slice(0, 300)}`);
+
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    const parsed = JSON.parse(cleaned) as { question?: string; options?: string[] };
+
+    if (!parsed.question || !Array.isArray(parsed.options) || parsed.options.length < 2) {
+      console.warn('[CLARIFY] Haiku returned invalid structure — falling back to keywords');
+      return null;
     }
-  }
-  const globalCap = allPageKeywords.length > 0 ? Math.ceil(allPageKeywords.length * 0.15) : Infinity;
 
-  const n = matchedDocMeta.length;
-  const localPool: string[] = triggerReason === 'THEME_OVERFLOW'
-    ? [...freq.entries()].filter(([, c]) => c < n).map(([kw]) => kw)
-    : [...freq.keys()];
+    // Filter out previously answered options
+    const filtered = parsed.options.filter(
+      (opt: string) => !prevLower.has(opt.toLowerCase())
+    );
 
-  // Remove globally common keywords — only specific terms make useful buttons
-  const pool = allPageKeywords.length > 0
-    ? localPool.filter(kw => (globalFreq.get(kw) ?? 0) <= globalCap)
-    : localPool;
+    if (filtered.length < 2) {
+      console.warn('[CLARIFY] Too few options after filtering previous answers — falling back');
+      return null;
+    }
 
-  const seen = new Set<string>();
-  const buttons: string[] = [];
-  // Three-tier sort: proper nouns first, then single-word generic, then multi-word generic.
-  // Within each tier, sort by local freq ASC (more specific = fewer occurrences = preferred).
-  const isProperC = (kw: string) => /^[A-Z]/.test(kw);
-  const isMultiWordGenericC = (kw: string) => /\s/.test(kw) && !/^[A-Z]/.test(kw);
-  pool.sort((a, b) => {
-    const tierA = isProperC(a) ? 0 : isMultiWordGenericC(a) ? 2 : 1;
-    const tierB = isProperC(b) ? 0 : isMultiWordGenericC(b) ? 2 : 1;
-    if (tierA !== tierB) return tierA - tierB;
-    return (freq.get(a) ?? 0) - (freq.get(b) ?? 0);
-  });
-  for (const kw of pool) {
-    const lower = kw.toLowerCase();
-    if (seen.has(lower) || prevLower.has(lower)) continue;
-    seen.add(lower);
-    buttons.push(kw);
-    if (buttons.length === 4) break;
-  }
-
-  if (buttons.length === 0) {
-    console.log(`[CLARIFY] No discriminating keywords found (${triggerReason}) — falling back to static reply`);
+    const options = [...filtered.slice(0, 4), 'Something else'];
+    console.log(`[CLARIFY] AI-generated question (${triggerReason}): options: [${options.join(', ')}]`);
+    return { question: parsed.question, options };
+  } catch (err) {
+    console.warn(`[CLARIFY] Haiku call failed: ${(err as Error).message} — falling back to keywords`);
     return null;
   }
-
-  const options = [...buttons, 'Something else'];
-  console.log(`[CLARIFY] Manifest-grounded question (${triggerReason}): options: [${options.join(', ')}]`);
-  return { question: clarifyQuestionText(language), options };
 }
 
 // ── Clarifying questions generator (BASIC mode) ────────────────────────────────
@@ -741,6 +748,7 @@ Write a warm, honest apology of 2-3 natural sentences (minimum 40 words, maximum
 Your job: briefly acknowledge what they were asking about, be upfront that you could not find coverage for it, and reassure them you're happy to help with other accounting integration topics. Keep it tight.
 Do NOT make up an answer. Do NOT ask a follow-up question yourself. End with . or !
 Do NOT use em-dashes (—) or dashes in your response.
+Do NOT open with sycophantic phrases like "Great question!", "Certainly!", "I'd be happy to help!", "Absolutely!", "Of course!", "Sure!", "I'd love to help!", "I'd be happy to point you". Start directly with substance.
 Reply with only the 2-3 sentences, nothing else.
 
 User said: "${userMessage}"`
@@ -751,6 +759,7 @@ Your job: show the user you understood their question, paraphrase what they're a
 If the question is clearly unrelated to accounting software, Omniboost, or hotel integrations, briefly acknowledge you can't help with that topic and warmly redirect them toward what you CAN help with (accounting integrations, Mews setup, GL mapping, troubleshooting).
 Do NOT answer or solve the question. Do NOT ask a follow-up question yourself (the buttons will do that). End with . or !
 Do NOT use em-dashes (—) or dashes in your response.
+Do NOT open with sycophantic phrases like "Great question!", "Certainly!", "I'd be happy to help!", "Absolutely!", "Of course!", "Sure!", "I'd love to help!", "I'd be happy to point you". Start directly with substance.
 Reply with only the 2-3 sentences, nothing else.
 
 User said: "${userMessage}"`;

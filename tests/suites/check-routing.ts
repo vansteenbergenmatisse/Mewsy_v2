@@ -464,4 +464,87 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
     fail('verifyDocuments no-confidence test', (err as Error).message);
     results.push({ ok: false });
   }
+
+  // ── Smart CLARIFY button quality (requires API key) ─────────────────────────
+  const { generateSmartClarifyQuestion } = await import(`${ROOT}/backend/pipeline/claude.ts`);
+
+  // Test: "onboarding" query with onboarding guide docs → buttons should be integration names
+  try {
+    const onboardingMeta = pages
+      .filter(p => /onboarding/i.test(p.label) && p.theme === 'website/mews-help-center')
+      .slice(0, 10)
+      .map(p => ({ title: p.label, theme: p.theme, keywords: p.keywords }));
+
+    if (onboardingMeta.length >= 3) {
+      const result = await generateSmartClarifyQuestion(
+        'I need help with onboarding',
+        'THEME_OVERFLOW',
+        onboardingMeta,
+        [],
+        'en'
+      );
+      if (result && result.options.length >= 2) {
+        const hasMarketplace = result.options.some((o: string) => /mews marketplace/i.test(o));
+        const hasConnectIntegration = result.options.some((o: string) => /connect integration/i.test(o));
+        if (!hasMarketplace && !hasConnectIntegration) {
+          pass(`generateSmartClarifyQuestion: "onboarding" buttons do not contain UI element names (got: [${result.options.join(', ')}])`);
+          results.push({ ok: true });
+        } else {
+          fail('generateSmartClarifyQuestion: "onboarding" should not produce Mews Marketplace or Connect Integration', `Got: [${result.options.join(', ')}]`);
+          results.push({ ok: false });
+        }
+
+        // Verify no duplicate buttons
+        const lowerOpts = result.options.map((o: string) => o.toLowerCase());
+        const uniqueOpts = new Set(lowerOpts);
+        if (uniqueOpts.size === lowerOpts.length) {
+          pass('generateSmartClarifyQuestion: no duplicate buttons');
+          results.push({ ok: true });
+        } else {
+          fail('generateSmartClarifyQuestion: duplicate buttons found', `Got: [${result.options.join(', ')}]`);
+          results.push({ ok: false });
+        }
+      } else {
+        skip('generateSmartClarifyQuestion onboarding test', 'Haiku returned null or too few options');
+        results.push({ ok: 'skip' });
+      }
+    } else {
+      skip('generateSmartClarifyQuestion onboarding test', `Only ${onboardingMeta.length} onboarding docs found`);
+      results.push({ ok: 'skip' });
+    }
+  } catch (err) {
+    fail('generateSmartClarifyQuestion onboarding test', (err as Error).message);
+    results.push({ ok: false });
+  }
+
+  // Test: multi-theme query → buttons should reflect category diversity
+  try {
+    const multiThemeMeta = pages
+      .slice(0, 12)
+      .map(p => ({ title: p.label, theme: p.theme, keywords: p.keywords }));
+
+    const themes = new Set(multiThemeMeta.map(d => d.theme));
+    if (themes.size >= 2) {
+      const result = await generateSmartClarifyQuestion(
+        'accounting setup',
+        'TOO_BROAD',
+        multiThemeMeta,
+        [],
+        'en'
+      );
+      if (result && result.options.length >= 2) {
+        pass(`generateSmartClarifyQuestion: multi-theme query returns options (got: [${result.options.join(', ')}])`);
+        results.push({ ok: true });
+      } else {
+        skip('generateSmartClarifyQuestion multi-theme test', 'Haiku returned null');
+        results.push({ ok: 'skip' });
+      }
+    } else {
+      skip('generateSmartClarifyQuestion multi-theme test', `Only ${themes.size} themes in top 12 docs`);
+      results.push({ ok: 'skip' });
+    }
+  } catch (err) {
+    fail('generateSmartClarifyQuestion multi-theme test', (err as Error).message);
+    results.push({ ok: false });
+  }
 }

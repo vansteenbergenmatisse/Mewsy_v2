@@ -56,7 +56,7 @@ import {
   chat,
   verifyDocuments,
   recoverRouting,
-  generateClarifyQuestion,
+  generateSmartClarifyQuestion,
   generateClarifyingQuestions,
   generateIntroLine,
 } from './claude.ts';
@@ -1230,19 +1230,19 @@ export async function handleMessage(
       reply = shortTokenIntro ? `${shortTokenIntro}\n\n${shortTokenButtons}` : shortTokenButtons;
       console.log(`[CLARIFY] Short-token candidates: [${shortTokenCandidates.join(', ')}]`);
     } else {
-      // Generate targeted question based on trigger reason — sync, no Haiku
-      const clarifyResult = generateClarifyQuestion(
-        userMessage,
-        clarifyTriggerReason!,
-        clarifyMatchedMeta,
-        currentQALog,
-        { tools: context.tools, setupType: context.setupType },
-        allAnswers,
-        allPages.map(p => p.keywords ?? []),
-        context.language
-      );
+      // Generate targeted question via Haiku — analyzes matched doc metadata
+      // to produce options that actually split the doc set into useful groups.
+      const [clarifyResult, introLine] = await Promise.all([
+        generateSmartClarifyQuestion(
+          userMessage,
+          clarifyTriggerReason!,
+          clarifyMatchedMeta,
+          allAnswers,
+          context.language
+        ),
+        generateIntroLine(userMessage, clarifyTriggerReason ?? 'CLARIFY', context.language),
+      ]);
 
-      const introLine = await generateIntroLine(userMessage, clarifyTriggerReason ?? 'CLARIFY', context.language);
       if (clarifyResult) {
         const questionBlock =
           `${clarifyResult.question} [BUTTONS: ${clarifyResult.options.join(' | ')}]`;
@@ -1250,7 +1250,7 @@ export async function handleMessage(
       } else {
         const staticReply = staticClarifyReply(context.language);
         reply = introLine ? `${introLine}\n\n${staticReply}` : staticReply;
-        console.log('[CLARIFY]  Fell back to static reply (generateClarifyQuestion returned null)');
+        console.log('[CLARIFY]  Fell back to static reply (generateSmartClarifyQuestion returned null)');
       }
     }
 
