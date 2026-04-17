@@ -12,7 +12,7 @@ import {
   getThinkingMessages,
   uiStr,
 } from './config/chat-config';
-import { BACKEND_URL, getSessionId } from './utils/session';
+import { BACKEND_URL, getSessionId, getBrowserToken } from './utils/session';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -150,7 +150,7 @@ export default function App() {
     ]);
   }
 
-  function addBotMessage(text: string, messageId: string) {
+  function addBotMessage(text: string, messageId: string, bundleId?: string) {
     const detected = detectOptionButtons(text);
     let detectedOptions: string[] | null = null;
     let detectedQuestion: string | null = null;
@@ -185,6 +185,7 @@ export default function App() {
               msgId: messageId,
               isNewGroup,
               clarifying: !!detected,
+              bundleId,
             } as ChatMessage,
           ];
         });
@@ -253,6 +254,7 @@ export default function App() {
         chatInput: message,
         sessionId: getSessionId(),
         language: selectedLanguage,
+        browserToken: getBrowserToken(),
       }),
     })
       .then(r => r.json())
@@ -260,6 +262,7 @@ export default function App() {
         removeThinking();
         setIsRequestInProgress(false);
         const reply = data.output || "I didn't catch that — could you rephrase?";
+        const responseBundleId: string | undefined = data.bundleId;
 
         // Detect clarify_questions JSON from the backend
         try {
@@ -283,7 +286,7 @@ export default function App() {
         }
 
         const id = makeMsgId();
-        addBotMessage(reply, id);
+        addBotMessage(reply, id, responseBundleId);
       })
       .catch(() => {
         removeThinking();

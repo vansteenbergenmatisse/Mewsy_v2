@@ -31,6 +31,7 @@ npm test
 | 8 | [check-chat.ts](suites/check-chat.ts) | Full `handleMessage()` E2E: tiers (direct answer or CLARIFY — both valid), omniboost overview, GL mapping (CLARIFY or direct answer — both valid due to broad keyword match), out-of-scope (no hallucination), hello, multi-turn silver follow-up, em-dash absent from responses, `postAnswerMode: true` set after every ANSWER turn, Lane A (topic-overlap follow-up reuses docs without Stage 2B), Lane B (unrelated follow-up triggers full reset) | yes | yes |
 | 9 | [check-frontend.ts](suites/check-frontend.ts) | `formatBotText` (bold, italic, links, H2/H3→bold, lists, callout variants warn/tip/dont, code block, table, cut-short notice), `splitResponseIntoMessages` (empty, single, multi-paragraph→1 bubble), `detectOptionButtons` (`[BUTTONS:]` syntax, no-question guard, plain text), `uiStr` (en/de/fallback/unknown key/null), `getThinkingMessages` (en/de/null/de-at subtag), `getSessionId` (create + stable), CSS: `.clarify-free-text` and `.clarify-free-text-input` classes exist in styles.css | — | — |
 | 10 | [check-tier.ts](suites/check-tier.ts) | `stripTierContent` (Bronze loses Silver+/Gold blocks, Silver loses Gold, Gold keeps all, null keeps all, no-marker unchanged, upgrade notes injected), `detectTier` (free tier→bronze, silver→silver, gold→gold, unrelated→null), `injectTierMarkers` (Silver+ feature→silver+ marker, Gold feature→gold marker, comparative paragraph skipped, pricing skipped, no double-wrapping, no-feature unchanged), session `tier` field (null default, updateContext sets it, partial update preserves it) | — | — |
+| 11 | [check-db.ts](suites/check-db.ts) | `scrubPII` (email, phone, credit card, IBAN redaction, clean text unchanged), `TurnBuffer` (openBundle returns ID, currentBundleId tracking, addMessage accepts roles, log does not throw, flush no-op when ENABLE_DB_WRITES=false), `ENABLE_DB_WRITES` flag is boolean | — | — |
 
 ---
 
@@ -50,6 +51,7 @@ const SUITES = {
   chat:     { enabled: false }, // ← skip chat
   frontend: { enabled: true  },
   tier:     { enabled: true  },
+  db:       { enabled: true  },
 };
 ```
 

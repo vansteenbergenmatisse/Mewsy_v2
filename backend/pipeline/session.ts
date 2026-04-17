@@ -19,7 +19,9 @@ import {
   SESSION_MAX_PAIRS,
   SESSION_TTL_MINUTES,
   LANGUAGE_PERSISTS_ON_TIMEOUT,
+  ENABLE_DB_WRITES,
 } from '../config/mewsie.config.ts';
+import { closeAbandonedBundles } from '../db/turn-buffer.ts';
 
 // How long a session can be inactive before it is deleted (in milliseconds)
 const INACTIVITY_TTL_MS = SESSION_TTL_MINUTES * 60 * 1000;
@@ -179,6 +181,12 @@ export function cleanSessions(): void {
       if (LANGUAGE_PERSISTS_ON_TIMEOUT && session.context.language) {
         console.log(
           `[session] Expiring session ${id} — language was: ${session.context.language}`
+        );
+      }
+      // Close any open bundles in Supabase for this session
+      if (ENABLE_DB_WRITES) {
+        closeAbandonedBundles(id).catch(err =>
+          console.error(`[session] closeAbandonedBundles failed for ${id}:`, err.message)
         );
       }
       sessions.delete(id);

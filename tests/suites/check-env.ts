@@ -21,6 +21,9 @@ const REQUIRED: { key: string; critical: boolean }[] = [
   { key: 'CONFLUENCE_TOKEN',  critical: false },
   { key: 'CONFLUENCE_BASE_URL', critical: false },
   { key: 'FIRECRAWL_API_KEY', critical: false },
+  { key: 'SUPABASE_URL',       critical: false },
+  { key: 'SUPABASE_SERVICE_KEY', critical: false },
+  { key: 'ENABLE_DB_WRITES',   critical: false },
 ];
 
 export async function checkEnv({ pass, fail, skip, results }: Reporter): Promise<void> {

@@ -1,127 +1,110 @@
-# Mewsie — Claude Code Instructions
+# CLAUDE.md — Mewsie
 
-You are building **Mewsie**, a cache-augmented generation (CAG) chatbot that answers FAQ questions from curated markdown documents. Read this file fully before doing anything. Follow it every session.
+## Project in 30 seconds
+
+Mewsie is a Cache-Augmented Generation (CAG) support chatbot for the Mews × Omniboost hotel accounting integration. It answers **only** from curated markdown in `knowledge/` — no hallucinations, no outside knowledge. Stack: Hono backend (Node/TS), React/Vite frontend, Anthropic SDK (Sonnet 4.6 for answers, Haiku 4.5 for routing). For full architecture detail, read `docs/architecture.md`.
 
 ## The Mewsie Architecture
 
-**Layer 1: Docs (The Knowledge)**
+**Layer 1: Knowledge (The Source of Truth)**
 
-- Markdown files stored in `knowledge/`
-- Each file covers one topic and contains everything Mewsie is allowed to answer about that topic
-- Written in plain language — if it's not in the doc, Mewsie won't answer it
+- Markdown in `knowledge/website/<group>/<topic>.md`, indexed by `knowledge-manifest.json`
+- One file per topic — everything Mewsie can say about it
+- `knowledge/help-resources/` is frontend-only, not indexed
+- If it's not in the knowledge base, Mewsie won't answer it
 
-**Layer 2: Pipeline (The Logic)**
+**Layer 2: Pipeline (The Brain)**
 
-- Three steps run in sequence on every user message: Router → Loader → Answer
-- The Router classifies the question and selects the right doc(s)
-- The Loader reads those docs from disk and builds the context block
-- The Answer step responds using only what the Loader provided
-- No step skips ahead, loops back, or makes decisions outside its role
+- `backend/pipeline/agent.ts` routes each message: scores, gates, verifies with Haiku, dispatches to ANSWER/CLARIFY/BASIC
+- `backend/pipeline/claude.ts` — every Anthropic call. Sonnet answers, Haiku routes and generates buttons
+- `backend/pipeline/session.ts` — in-memory session state, clears on restart
 
-**Layer 3: Scraper (The Updater)**
+**Layer 3: Persistence (The Memory)**
 
-- A cron job that runs separately from the pipeline on a 24h schedule
-- Fetches external pages and rewrites the relevant files in `docs/`
-- Keeps the knowledge base current without manual intervention
-- Fails safely — if a scrape returns bad data, the existing file is preserved
+- `backend/db/` holds anything that must survive a restart
+- `client.ts` — single DB connection/pool, exported once
+- `schema.ts` — table definitions and typed row shapes
+- `migrations/NNNN_<description>.sql` — versioned; never edit an applied one, add a new one
+- `repositories/<entity>.ts` — one file per table. Read/write only, no business logic
+- **All SQL lives inside repositories.** Never inline queries in routes or services
+- **Layering:** routes → services → repositories → client. Routes never import `db/` directly
+- Transactions live in services, passing a shared client across multiple repository calls
 
-**Why this matters:** Mewsie's quality is entirely determined by what's in `docs/`. The pipeline is just plumbing. If the docs are clean, current, and well-structured, Mewsie answers well. If they're not, no amount of prompt engineering fixes it. Keep the docs as the priority.
+**Layer 4: Interface (The Surface)**
+
+- `backend/server.ts` sets up Hono; `backend/routes/<endpoint>.ts` — handlers; `backend/services/<domain>.ts` — business logic
+- `frontend/src/` is a React SPA, all widget state in `App.tsx`
+- Frontend has no business logic, credentials, or Anthropic calls — build a backend service instead
+
+**Layer 5: Scraper (The Updater)**
+
+- Cron job under `backend/scraper/`, runs outside the pipeline
+- Ingests `knowledge/fetch_sources.json`, writes to `knowledge/website/`
+- Source types (`static`, `static-split`, `multi`, `confluence`) in `scrapers/`; new types go there
+
+**Why this matters:** Mewsie's quality is determined by `knowledge/`. The pipeline is plumbing. Clean, current docs make Mewsie answer well; prompt engineering can't rescue bad docs.
 
 ## File Structure
 
 ```
 Mewsie/
-├── knowledge/           # Markdown knowledge base — one file per topic, source of truth for all answers
-├── backend/        # Node.js pipeline — router, loader, and answer logic
-├── scraper/        # Cron job that fetches external pages and updates docs/
-├── frontend/       # Vanilla JS/HTML/CSS chat interface
-├── CLAUDE.md       # This file
+├── knowledge/              # Markdown KB — source of truth
+│   ├── website/<group>/    # Indexed content, one topic per file
+│   ├── help-resources/     # Frontend-only, NOT indexed
+│   ├── knowledge-manifest.json
+│   └── fetch_sources.json
+├── backend/
+│   ├── server.ts           # Hono setup + route registration
+│   ├── config/             # Env + tunable constants
+│   ├── pipeline/           # Routing, AI calls, sessions
+│   ├── db/                 # Persistence (client, schema, migrations, repositories)
+│   ├── routes/             # HTTP handlers
+│   ├── services/           # Business logic
+│   ├── scraper/            # Cron refresher for knowledge/
+│   └── types/              # Shared TypeScript types
+├── frontend/               # React SPA, thin chat widget
+├── prompts/system.ts       # Sonnet system prompt
+├── tests/                  # Custom runner + 10 suites
+├── docs/architecture.md
+├── CLAUDE.md
 └── .env
 ```
 
-## The Self-Improvement Loop
+## Naming and knowledge rules — MUST follow
 
-```
-Every failure is a chance to make the system stronger:
-
-1. Identify what broke
-2. Fix the tool
-3. Verify the fix works
-4. Update the workflow with the new approach
-5. Move on with a more robust system
-```
-
-## File Structure and naming
-
-- All file and folder names are lowercase with hyphens between words, no spaces, no underscores, no numbers
-- Names describe exactly what the file does or contains, a 5 year old should understand it
-- Markdown files in `knowledge/` are named after their topic, `pricing.md`, `getting-started.md`, not `doc1.md` or `faq-v2.md`
-- No version numbers, timestamps, or suffixes in filenames, if a file changes, its content changes, not its name
-- One clear purpose per file — if a name needs "and" in it, split it into two files
-
-## Knowledge organisation rules — MUST follow every time
-
-When adding pages to the knowledge base (manually or via scraper), always apply these rules without exception:
-
-**One topic = one file, always split**
-- Never put multiple distinct topics, integrations, or sections into a single `.md` file
-- If a page covers N integrations/features/topics, create N files — one per topic
-- Example: a Mews features page covering Datev, Xero, NetSuite → `mews-features/mews-to-datev.md`, `mews-features/mews-to-xero.md`, etc. NOT one combined `mews-features.md`
-
-**Always use a folder**
-- Scraped or manually added files always live inside a named folder under `knowledge/website/<group>/`
-- Never drop a `.md` file directly into `knowledge/website/` at the top level
-- The folder groups related files together (e.g. `mews-features/`, `omniboost-help-center/`)
-
-**Every file must be in knowledge-manifest.json**
-- After writing any `.md` file, immediately add or update its entry in `knowledge/knowledge-manifest.json`
-- Required fields: `title`, `description` (one sentence, ≤30 words), `keywords` (8–12 terms), `path`
-- Scraper-managed files also need: `source_url`, `source_type`, `source_parent_id`
-- Never leave a `.md` file without a manifest entry — the router cannot find it otherwise
-
-**Scraper types to use**
-- `static` — one URL, renders to one file (use for truly standalone pages)
-- `static-split` — one URL, splits by `##` headings into multiple files (use for pages with multiple distinct sections like feature comparison tabs)
-- `multi` — index page that links to many article pages, each scraped separately
-- `confluence` — Confluence REST API, folder-based
+- All file/folder names are lowercase-with-hyphens. No spaces, underscores, numbers, versions, or timestamps
+- Filenames describe what the file contains (`pricing.md`, not `doc1.md`). One purpose per file — if the name needs "and", split it
+- One topic = one file. A page covering N integrations becomes N files, never combined
+- Every `.md` sits inside a named folder under `knowledge/website/<group>/` — never at the top level
+- Every `.md` has a matching `knowledge-manifest.json` entry: `title`, `description` (≤30 words), `keywords` (8–12), `path`; scraped files also carry `source_url`, `source_type`, `source_parent_id`
+- Missing manifest entry = router can't find it
 
 ## Testing
 
-Test suite lives in `tests/`. Run with `tsx tests/run-all.ts` or `npm test`.
-Runs automatically on `npm run dev` (predev hook) — failures block the dev server.
+Run with `npm test` (or `tsx tests/run-all.ts`). Predev hook on `npm run dev` blocks the dev server on failure.
 
-**Non-negotiable architecture rules:**
-- No mocking. No external test frameworks (Jest, Vitest, Mocha — never).
-- Custom Reporter pattern: `{ pass(label), fail(label, err), skip(label, reason), results: {ok: boolean|'skip'}[] }`
-- Every suite exports exactly one function: `export async function check<Scope>(reporter: Reporter)`
-- Suite files: `tests/suites/check-*.ts`
-- Canonical order: env → manifest → scraper → routing → pipeline → session → server → chat → frontend
-- Real API calls. Real server. No mocks.
-- Toggle individual suites on/off via the `SUITES` config object at the top of `tests/run-all.ts`.
+- No mocks. No Jest/Vitest/Mocha. Real API calls, real server
+- Suites at `tests/suites/check-*.ts`, each exports one `check<Scope>(reporter)` function
+- **Every task, no exceptions:** new feature → add tests; changed feature → update tests; deleted feature → remove tests; new env var → update `check-env.ts`
+- If a user describes expected behavior during planning, it becomes a test case
+- A task is **not done** until `npm test` exits 0
 
-**Per-task rules — every task, no exceptions:**
-- New feature → add tests in the same task → run suite → update `tests/README.md` → mark done
-- Changed feature → update tests in the same task
-- Deleted feature → remove test cases in the same task
-- New required env variable → update `check-env.ts` in the same task
-- Suite added, removed, or changed → update `tests/README.md` in the same task
-- A task is **not done** until `npx tsx tests/run-all.ts` exits 0
+## Stability
+- **Stable — change deliberately:** 3-block Sonnet prompt structure, answer-signal grammar, tier marker syntax, Sonnet/Haiku split, manifest schema, pipeline flow.
+- **Evolving — change freely:** values in `mewsie.config.ts`, docs under `knowledge/website/`, UI copy, CSS, test coverage.
 
-**Trigger map — which test file to update for each change:**
-| Change | Update |
-|--------|--------|
-| Route in `backend/server.ts` | `check-server.ts` |
-| Input validation in `backend/server.ts` | `check-server.ts` |
-| `backend/pipeline/agent.ts` | `check-pipeline.ts`, `check-routing.ts` |
-| `backend/pipeline/claude.ts` | `check-pipeline.ts`, `check-chat.ts` |
-| `backend/pipeline/session.ts` | `check-session.ts` |
-| `backend/fetch/loader.ts` | `check-pipeline.ts` |
-| `backend/errors/` | `check-server.ts`, `check-pipeline.ts` |
-| `backend/config.ts` or `backend/config/mewsie.config.ts` | `check-env.ts`, `check-pipeline.ts` |
-| New required env var | `check-env.ts` |
-| `backend/scraper/scrapers/` or `backend/scraper/utils/` or `backend/scraper/pipeline/` | `check-scraper.ts` |
-| `knowledge/knowledge-manifest.json` | `check-manifest.ts`, `check-routing.ts` |
-| `frontend/src/components/` or `frontend/src/utils/` or `frontend/src/config/` | `check-frontend.ts` |
-| `prompts/system.ts` | `check-chat.ts` (review existing assertions) |
+## Ask vs proceed
+- **Ask first:** touching `prompts/system.ts`, adding dependencies, altering signal grammar or tier syntax, writing migrations, changes that could orphan knowledge docs.
+- **Proceed:** failing-test fixes, knowledge docs via the documented process, single-file refactors, new `mewsie.config.ts` constants.
 
-See `tests/README.md` for the full suite table and maintenance rules.
+## Self-improvement loop
+
+When something breaks:
+
+1. Identify what broke
+2. Fix the code — don't work around it
+3. Verify with the relevant suite
+4. Update this file if the fix reveals a new coupling, convention, or placement rule
+5. Update `docs/architecture.md` if the code structure changed
+
+Recurring confusion across sessions means this file is missing something — fix the file.

@@ -76,9 +76,12 @@ import {
   STAGE2A_SHORTLIST_MAX,
   POST_ANSWER_CLARIFY_BUDGET,
   FUZZY_MATCH_ENABLED,
+  ENABLE_DB_WRITES,
 } from '../config/mewsie.config.ts';
 import type { Manifest } from '../types/manifest.ts';
 import { migrateManifest } from '../scraper/pipeline/manifest.ts';
+import { TurnBuffer } from '../db/turn-buffer.ts';
+import { resolveIdentity, linkUserToCustomer } from '../db/identity.ts';
 
 // __dirname is not available in ES modules by default — this reconstructs it
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -856,16 +859,33 @@ export function parseClarifyAnswers(message: string): { q: string; a: string }[]
 // ── Main pipeline ───────────────────────────────────────────────────────────────
 
 // Called by server.ts for every incoming chat message.
-// Runs the full pipeline and returns the final reply string.
+// Runs the full pipeline and returns the reply + optional bundleId for feedback.
 export async function handleMessage(
   sessionId: string,
   userMessage: string,
-  language: string | null = null
-): Promise<string> {
+  language: string | null = null,
+  browserToken: string | null = null
+): Promise<{ reply: string; bundleId?: string }> {
   const session = getSession(sessionId);
   const context = session.context as unknown as SessionContext;
   const history = session.history;
   const isFirstMessage = history.length === 0;
+
+  // ── Identity resolution (Supabase) ─────────────────────────────────────────
+  let conversationId = 'noop';
+  let userId = 'noop';
+  if (ENABLE_DB_WRITES && browserToken) {
+    try {
+      const identity = await resolveIdentity(browserToken, sessionId, language);
+      conversationId = identity.conversationId;
+      userId = identity.userId;
+    } catch (err) {
+      console.error('[agent] identity resolution failed:', (err as Error).message);
+    }
+  }
+
+  // ── TurnBuffer setup ───────────────────────────────────────────────────────
+  const buffer = new TurnBuffer(conversationId);
 
   // Persist the language the frontend last reported. This is authoritative:
   // every request carries the currently-selected language, so we simply
@@ -1015,7 +1035,13 @@ export async function handleMessage(
       }
 
       console.log(`[REPLY]    ${postReply.split(/\s+/).filter(Boolean).length} words sent to user (post-answer)`);
-      return postReply;
+
+      // Flush buffer (fire-and-forget in post-answer path)
+      buffer.addMessage('user', userMessage);
+      buffer.addMessage('bot', postReply);
+      buffer.flush().catch(err => console.error('[turn-buffer] flush failed:', err.message));
+
+      return { reply: postReply };
     }
   }
 
@@ -1387,5 +1413,43 @@ export async function handleMessage(
     }
   }
 
-  return reply;
+  // Link user to customer when accounting tools are detected
+  if (ENABLE_DB_WRITES && detectedTools.length > 0 && userId !== 'noop') {
+    linkUserToCustomer(userId, detectedTools[0]).catch(err =>
+      console.error('[agent] linkUserToCustomer failed:', err.message)
+    );
+  }
+
+  // ── Bundle logic + flush ─────────────────────────────────────────────────
+  // Open a bundle for this turn's question
+  const bundleId = buffer.openBundle(userMessage);
+  buffer.addMessage('user', userMessage);
+  buffer.addMessage('bot', reply);
+
+  // Populate pipeline trace fields on the bundle
+  buffer.updateBundle({
+    routing_mode: finalMode,
+    answer_signal: answerSignal,
+    answer_contract: answerContract,
+    tier_detected: context.tier,
+    trigger_reason: clarifyTriggerReason,
+    frustration_counter: context.frustrationCounter || 0,
+    clarify_round_counter: context.clarifyRoundCounter || 0,
+    detected_tools: (context.tools || []).join(', ') || null,
+    detected_setup_type: context.setupType || null,
+    skip_routing: skipRouting,
+    content_verified_failure: contentVerifiedFailure,
+  });
+
+  // Close the bundle if this is an ANSWER with COMPLETE signal
+  if (finalMode === 'ANSWER' && answerSignal !== 'PARTIAL') {
+    buffer.closeBundle('ANSWER');
+  }
+
+  // Flush to Supabase (fire-and-forget — don't block the response)
+  buffer.flush().catch(err => console.error('[turn-buffer] flush failed:', err.message));
+
+  // Return bundleId only for ANSWER mode (feedback is per-answer)
+  const returnBundleId = finalMode === 'ANSWER' ? bundleId : undefined;
+  return { reply, bundleId: returnBundleId };
 }

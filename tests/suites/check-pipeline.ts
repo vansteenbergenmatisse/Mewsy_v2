@@ -274,7 +274,8 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
     // BASIC mode: out-of-scope question must not hallucinate an answer
     (async () => {
       try {
-        const reply = await handleMessage(`test-basic-${Date.now()}`, 'who won the world cup in 1998?') as string;
+        const result = await handleMessage(`test-basic-${Date.now()}`, 'who won the world cup in 1998?');
+        const reply = (result as { reply: string }).reply;
         const lower = reply.toLowerCase();
         const hallucinates = lower.includes('france') && !lower.includes("don't") && !lower.includes('outside') && !lower.includes('not sure') && !lower.includes("can't");
         if (!hallucinates) { pass('BASIC mode: out-of-scope question returns card carousel or graceful non-answer (no hallucination)'); results.push({ ok: true }); }
@@ -288,7 +289,7 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
     // CLARIFY mode: broad query → TOO_BROAD → clarifying question
     (async () => {
       try {
-        const reply = await handleMessage(`test-clarify-${Date.now()}`, 'help me with my accounting integration setup') as string;
+        const reply = (await handleMessage(`test-clarify-${Date.now()}`, 'help me with my accounting integration setup')).reply;
         if (reply.includes('[BUTTONS:') || reply.includes('?')) { pass('CLARIFY mode: broad query returns a clarifying question or buttons'); results.push({ ok: true }); }
         else { fail('CLARIFY mode: broad query should return question or [BUTTONS:]', `Got: "${reply.slice(0, 150)}"`); results.push({ ok: false }); }
       } catch (err) {
@@ -301,7 +302,7 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
     (async () => {
       try {
         const msg = '[System note: the user has selected their language to German. For the remainder of this conversation, always respond in German.]\n\nWas macht Omniboost?';
-        const reply = await handleMessage(`test-lang-${Date.now()}`, msg) as string;
+        const reply = (await handleMessage(`test-lang-${Date.now()}`, msg)).reply;
         const lower = reply.toLowerCase();
         const looksGerman = lower.includes('die ') || lower.includes('der ') || lower.includes('und ') || lower.includes('ist ') || lower.includes('mit ');
         if (looksGerman) { pass('language injection: German system note produces a German reply'); results.push({ ok: true }); }
@@ -317,7 +318,7 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
     // responded in a language picked from the user message alone.
     (async () => {
       try {
-        const reply = await handleMessage(`test-lang-param-${Date.now()}`, 'help me with my accounting integration setup', 'de') as string;
+        const reply = (await handleMessage(`test-lang-param-${Date.now()}`, 'help me with my accounting integration setup', 'de')).reply;
         // Strip the [BUTTONS: ...] block (English labels), the [ANSWER:...] signal, and the
         // [ANSWER_CONTRACT] JSON — all three are always English and would poison language detection.
         const introPart = reply
@@ -347,7 +348,7 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
       const sessionId = `test-lang-switch-${Date.now()}`;
       try {
         // Turn 1: French question, French reply.
-        const fr = await handleMessage(sessionId, "Qu'est-ce que Omniboost ?", 'fr') as string;
+        const fr = (await handleMessage(sessionId, "Qu'est-ce que Omniboost ?", 'fr')).reply;
         const frClean = fr
           .replace(/\[BUTTONS:[^\]]*\]/gi, '')
           .replace(/\[ANSWER:[^\]]*\]/gi, '')
@@ -365,7 +366,7 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
 
         // Turn 2: English follow-up on the SAME session. Must come back in English,
         // NOT French, even though the history still contains French assistant turns.
-        const en = await handleMessage(sessionId, 'Thanks, can you tell me a bit more about what it does?', 'en') as string;
+        const en = (await handleMessage(sessionId, 'Thanks, can you tell me a bit more about what it does?', 'en')).reply;
         const enClean = en
           .replace(/\[BUTTONS:[^\]]*\]/gi, '')
           .replace(/\[ANSWER:[^\]]*\]/gi, '')
@@ -423,7 +424,7 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
     // Previously failed because Haiku rejected the doc based on thin metadata alone.
     (async () => {
       try {
-        const reply = await handleMessage(`test-city-ledger-${Date.now()}`, 'what is a city ledger?') as string;
+        const reply = (await handleMessage(`test-city-ledger-${Date.now()}`, 'what is a city ledger?')).reply;
         const lower = reply.toLowerCase();
         const hasContent = lower.includes('city ledger') || lower.includes('ledger') || lower.includes('accounts');
         const isBasicCarousel = reply.trimStart().startsWith('{') || (reply.includes('[BUTTONS:') && !lower.includes('ledger'));

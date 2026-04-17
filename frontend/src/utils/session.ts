@@ -10,3 +10,25 @@ export function getSessionId(): string {
   }
   return id;
 }
+
+// Returns a persistent browser token stored in localStorage.
+// Survives tab close, browser restart — only cleared on explicit cache clear or incognito.
+// Used for cross-session user identity linking.
+export function getBrowserToken(): string {
+  try {
+    let token = localStorage.getItem('Mewsie_browser_token');
+    if (!token) {
+      token = 'bt_' + crypto.randomUUID();
+      localStorage.setItem('Mewsie_browser_token', token);
+    }
+    return token;
+  } catch {
+    // localStorage blocked (e.g. by browser extension) — fall back to sessionStorage
+    let token = sessionStorage.getItem('Mewsie_browser_token');
+    if (!token) {
+      token = 'bt_' + crypto.randomUUID();
+      sessionStorage.setItem('Mewsie_browser_token', token);
+    }
+    return token;
+  }
+}

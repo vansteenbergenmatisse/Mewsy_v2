@@ -72,6 +72,12 @@ export const SESSION_TTL_MINUTES = 30;
 // true = language preference is remembered across sessions; false = resets on timeout.
 export const LANGUAGE_PERSISTS_ON_TIMEOUT = true;
 
+// ── Persistence ───────────────────────────────────────────────────────────────
+
+// Master toggle for all Supabase writes. When false, the TurnBuffer.flush()
+// and identity resolution are no-ops. Set to true in production after testing.
+export const ENABLE_DB_WRITES = process.env.ENABLE_DB_WRITES === 'true';
+
 // ── Response batching ──────────────────────────────────────────────────────────
 
 // Word count above which a long response is split into batches for streaming.

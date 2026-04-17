@@ -44,6 +44,7 @@ import { checkServer }   from './suites/check-server.ts';
 import { checkChat }     from './suites/check-chat.ts';
 import { checkFrontend } from './suites/check-frontend.ts';
 import { checkTier }     from './suites/check-tier.ts';
+import { checkDb }       from './suites/check-db.ts';
 
 // ── Suite toggles ─────────────────────────────────────────────────────────────
 // Set `enabled: false` to skip a suite without deleting it.
@@ -58,6 +59,7 @@ const SUITES = {
   chat:     { enabled: true },
   frontend: { enabled: true },
   tier:     { enabled: true },
+  db:       { enabled: true },
 };
 
 // ── Colours ───────────────────────────────────────────────────────────────────
@@ -165,6 +167,10 @@ async function runSuite(name: string, fn: (r: Reporter) => Promise<void>): Promi
   // 10. tier awareness
   if (SUITES.tier.enabled)
     allResults.push(...(await runSuite('10. Tier awareness', checkTier)));
+
+  // 11. database layer
+  if (SUITES.db.enabled)
+    allResults.push(...(await runSuite('11. Database layer', checkDb)));
 
   // ── Summary ───────────────────────────────────────────────────────────────
   const total   = allResults.length;

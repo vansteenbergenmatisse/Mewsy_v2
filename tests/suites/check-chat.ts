@@ -137,7 +137,7 @@ export async function checkChat({ pass, fail, skip, results }: Reporter): Promis
     ...CHAT_TESTS.map((tc) => (async () => {
       try {
         const sessionId = `test-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        const reply = await handleMessage(sessionId, tc.message) as string;
+        const reply = (await handleMessage(sessionId, tc.message)).reply;
         const replyLower = reply.toLowerCase();
         let ok = true;
         const issues: string[] = [];
@@ -159,7 +159,7 @@ export async function checkChat({ pass, fail, skip, results }: Reporter): Promis
     // Em-dash absence check
     (async () => {
       try {
-        const reply = await handleMessage(`test-emdash-${Date.now()}`, 'what are the integration tiers?') as string;
+        const reply = (await handleMessage(`test-emdash-${Date.now()}`, 'what are the integration tiers?')).reply;
         if (!reply.includes('—')) { pass('response does not contain em-dash character (—)'); results.push({ ok: true }); }
         else { fail('em-dash absent from response', `Found — in: "${reply.slice(0, 200)}"`); results.push({ ok: false }); }
       } catch (err) {
@@ -181,7 +181,7 @@ export async function checkChat({ pass, fail, skip, results }: Reporter): Promis
         const sid = `test-multiturn-chat-${Date.now()}`;
         await handleMessage(sid, 'tell me about the bronze tier');
         await new Promise(r => setTimeout(r, 1000));
-        const reply2 = await handleMessage(sid, 'what about the silver tier?') as string;
+        const reply2 = (await handleMessage(sid, 'what about the silver tier?')).reply;
         if (reply2.toLowerCase().includes('silver')) { pass('multi-turn: follow-up "what about silver?" returns silver-related content'); results.push({ ok: true }); }
         else { fail('multi-turn silver follow-up', `Reply did not contain "silver": "${reply2.slice(0, 200)}"`); results.push({ ok: false }); }
       } catch (err) {
@@ -211,7 +211,7 @@ export async function checkChat({ pass, fail, skip, results }: Reporter): Promis
         await handleMessage(sid, 'what does Omniboost do?');
         if ((getContext(sid) as Record<string, unknown>).postAnswerMode === true) {
           await new Promise(r => setTimeout(r, 1000));
-          const followUp = await handleMessage(sid, 'can you explain more about what omniboost does?') as string;
+          const followUp = (await handleMessage(sid, 'can you explain more about what omniboost does?')).reply;
           const ctx2 = getContext(sid) as Record<string, unknown>;
           const roundCounterUnchanged = (ctx2.clarifyRoundCounter as number) === 0;
           const replyNonEmpty = typeof followUp === 'string' && followUp.trim().length > 0;

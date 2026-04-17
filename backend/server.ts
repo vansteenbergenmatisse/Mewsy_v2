@@ -19,6 +19,7 @@ import { PORT } from './config.ts';
 import { loadAllDocuments } from './fetch/loader.ts';
 import { handleMessage } from './pipeline/agent.ts';
 import { handlePipelineError, ErrorTypes } from './errors/errorHandler.ts';
+import { ENABLE_DB_WRITES } from './config/mewsie.config.ts';
 
 const app = new Hono();
 
@@ -53,8 +54,8 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   try {
-    const body = await c.req.json<{ chatInput?: unknown; sessionId?: unknown; language?: unknown }>();
-    const { chatInput, sessionId, language } = body;
+    const body = await c.req.json<{ chatInput?: unknown; sessionId?: unknown; language?: unknown; browserToken?: unknown }>();
+    const { chatInput, sessionId, language, browserToken } = body;
 
     console.log(`\n${'─'.repeat(60)}`);
     console.log(`[REQUEST]  session=${String(sessionId ?? '?').slice(0, 12)}`);
@@ -77,18 +78,23 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
     const ALLOWED_LANGS = new Set(['en', 'de', 'de-ch', 'de-at', 'fr', 'nl']);
     const lang =
       typeof language === 'string' && ALLOWED_LANGS.has(language) ? language : null;
+    const token =
+      typeof browserToken === 'string' && browserToken.startsWith('bt_') ? browserToken : null;
 
     // Hand off to agent.ts, which runs the full CAG pipeline and returns a reply
-    const outputPromise = handleMessage(sessionId, chatInput, lang);
+    const outputPromise = handleMessage(sessionId, chatInput, lang, token);
 
     // Race between the pipeline and a 30-second timeout
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => reject(new Error('TIMEOUT')), ROUTE_TIMEOUT_MS);
     });
 
-    const output = await Promise.race([outputPromise, timeoutPromise]);
+    const result = await Promise.race([outputPromise, timeoutPromise]);
     if (timeoutId) clearTimeout(timeoutId);
-    return c.json({ output });
+    // handleMessage returns { reply, bundleId? } — include bundleId for feedback binding
+    const output = typeof result === 'string' ? result : result.reply;
+    const bundleId = typeof result === 'object' && result !== null ? result.bundleId : undefined;
+    return c.json({ output, ...(bundleId ? { bundleId } : {}) });
   } catch (err) {
     if (timeoutId) clearTimeout(timeoutId);
     const error = err as Error;
@@ -102,6 +108,77 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
       errorType: ErrorTypes.UNHANDLED,
     });
     return c.json({ output: userMessage }, 500);
+  }
+});
+
+// ── POST /api/feedback ────────────────────────────────────────────────────────
+// Stores a thumbs-up/down vote against a question bundle.
+// Idempotent: re-submitting overwrites the previous vote for the same bundle.
+app.post('/api/feedback', async (c) => {
+  if (!ENABLE_DB_WRITES) return c.json({ ok: true });
+
+  try {
+    const { bundleId, vote, reason } = await c.req.json<{
+      bundleId?: string; vote?: string; reason?: string;
+    }>();
+
+    if (!bundleId || typeof bundleId !== 'string') {
+      return c.json({ error: 'bundleId is required' }, 400);
+    }
+    if (vote !== 'up' && vote !== 'down') {
+      return c.json({ error: 'vote must be "up" or "down"' }, 400);
+    }
+    const VALID_REASONS = new Set(['incomplete', 'not_solved', 'irrelevant', 'not_found', 'other']);
+    const safeReason = vote === 'down' && reason && VALID_REASONS.has(reason) ? reason : null;
+
+    const { getSupabase } = await import('./db/supabase.ts');
+    const supabase = getSupabase();
+    await supabase.from('feedback').upsert(
+      { bundle_id: bundleId, vote, reason: safeReason },
+      { onConflict: 'bundle_id' }
+    );
+
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error('[feedback] error:', (err as Error).message);
+    return c.json({ error: 'Failed to save feedback' }, 500);
+  }
+});
+
+// ── POST /api/help-open ──────────────────────────────────────────────────────
+// Logs when a user opens a help-panel topic. Fire-and-forget from frontend.
+app.post('/api/help-open', async (c) => {
+  if (!ENABLE_DB_WRITES) return c.json({ ok: true });
+
+  try {
+    const { sessionId, topic } = await c.req.json<{
+      sessionId?: string; topic?: string;
+    }>();
+
+    if (!sessionId || !topic) {
+      return c.json({ error: 'sessionId and topic are required' }, 400);
+    }
+
+    const { getSupabase } = await import('./db/supabase.ts');
+    const supabase = getSupabase();
+
+    const { data: conv } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('frontend_session_id', sessionId)
+      .single();
+
+    if (conv) {
+      await supabase.from('help_panel_opens').insert({
+        conversation_id: conv.id,
+        topic,
+      });
+    }
+
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error('[help-open] error:', (err as Error).message);
+    return c.json({ ok: true });
   }
 });
 
