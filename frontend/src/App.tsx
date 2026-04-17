@@ -288,7 +288,7 @@ export default function App() {
       .catch(() => {
         removeThinking();
         setIsRequestInProgress(false);
-        addBotMessage('Sorry, something went wrong while contacting the server.', makeMsgId());
+        addBotMessage('Sorry, something went wrong while contacting the server. Please Try Again Later.', makeMsgId());
       });
   }, [selectedLanguage, removeThinking]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -482,7 +482,6 @@ export default function App() {
         showHelpDetail={showHelpDetail}
         helpDetailTopic={helpDetailTopic}
         onClose={() => setWidgetMode('hidden')}
-
         onToggleSidebar={handleToggleSidebar}
         onCloseSidebar={handleCloseSidebar}
         onToggleLayout={handleToggleLayout}
