@@ -78,6 +78,13 @@ export const LANGUAGE_PERSISTS_ON_TIMEOUT = true;
 // and identity resolution are no-ops. Set to true in production after testing.
 export const ENABLE_DB_WRITES = process.env.ENABLE_DB_WRITES === 'true';
 
+// Comma-separated list of allowed origins for CORS (in addition to localhost).
+// Example: "https://app.omniboost.io,https://staging.omniboost.io"
+export const ALLOWED_ORIGINS: string[] = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 // ── Response batching ──────────────────────────────────────────────────────────
 
 // Word count above which a long response is split into batches for streaming.

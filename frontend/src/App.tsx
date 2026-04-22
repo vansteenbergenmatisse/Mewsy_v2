@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ChatBubble } from './components/ChatBubble';
 import { ChatWidget } from './components/ChatWidget';
 import { ChatMessage } from './components/ChatBody';
@@ -6,13 +6,14 @@ import {
   detectOptionButtons,
   stripButtonSyntax,
   splitResponseIntoMessages,
+  registerCopyHandler,
 } from './utils/chat-utils';
 import {
   LANGUAGES,
   getThinkingMessages,
   uiStr,
 } from './config/chat-config';
-import { BACKEND_URL, getSessionId, getBrowserToken } from './utils/session';
+import { BACKEND_URL, getSessionId, getBrowserToken, getBaseUserId, getBaseContext } from './utils/session';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,7 @@ export default function App() {
   const thinkingIndexRef = useRef(0);
   const requestTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const THINKING_TIMEOUT = 30_000;
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // ── Language ───────────────────────────────────────────────────────────────
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(
@@ -87,6 +89,28 @@ export default function App() {
   const [showHelpDetail, setShowHelpDetail] = useState(false);
   const [helpDetailTopic, setHelpDetailTopic] = useState<string | null>(null);
 
+  // ── Register delegated copy-button handler once on mount ─────────────────
+  useEffect(() => { registerCopyHandler(); }, []);
+
+  // ── Base context sync (iframe embed) ────────────────────────────────────────
+  // When Mewsie is loaded inside an iframe by mewsie-loader.js, the URL
+  // carries context params (?baseUserId=...&as=...&tier=...&company=...).
+  // On mount, read them and call /api/sync-context to create/update the user.
+  useEffect(() => {
+    const ctx = getBaseContext();
+    if (!ctx.baseUserId) return; // Not an iframe embed — skip
+    fetch('/api/sync-context', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        baseUserId: ctx.baseUserId,
+        accountingSoftware: ctx.accountingSoftware,
+        tier: ctx.tier,
+        companyName: ctx.companyName,
+      }),
+    }).catch(() => { /* best-effort — identity linking in resolveIdentity is the fallback */ });
+  }, []);
+
   // ── Thinking indicator ─────────────────────────────────────────────────────
 
   const showThinking = useCallback((lang: string | null) => {
@@ -100,6 +124,7 @@ export default function App() {
       const elapsed = Date.now() - (thinkingStartTimeRef.current ?? 0);
       if (elapsed >= THINKING_TIMEOUT) {
         clearInterval(thinkingIntervalRef.current!);
+        abortControllerRef.current?.abort(); // cancel the in-flight fetch
         removeThinking();
         showTimeoutWarning();
         setIsRequestInProgress(false);
@@ -113,6 +138,7 @@ export default function App() {
     }, 5000);
 
     requestTimeoutRef.current = setTimeout(() => {
+      abortControllerRef.current?.abort(); // cancel the in-flight fetch
       removeThinking();
       showTimeoutWarning();
       setIsRequestInProgress(false);
@@ -241,9 +267,15 @@ export default function App() {
     isFirstMessageRef.current = false;
     langChangedRef.current = false;
 
+    // Abort any previous in-flight request before starting a new one
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     fetch(BACKEND_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
       // language is the single authoritative signal. Sent on every request,
       // stored in session.context.language, and surfaced to Sonnet via the
       // LANGUAGE LOCK block in buildSystemPrompt(). We no longer prepend an
@@ -255,13 +287,14 @@ export default function App() {
         sessionId: getSessionId(),
         language: selectedLanguage,
         browserToken: getBrowserToken(),
+        baseUserId: getBaseUserId(),
       }),
     })
       .then(r => r.json())
       .then(data => {
         removeThinking();
         setIsRequestInProgress(false);
-        const reply = data.output || "I didn't catch that — could you rephrase?";
+        const reply = data.output || "I didn't catch that - could you rephrase?";
         const responseBundleId: string | undefined = data.bundleId;
 
         // Detect clarify_questions JSON from the backend
@@ -288,7 +321,9 @@ export default function App() {
         const id = makeMsgId();
         addBotMessage(reply, id, responseBundleId);
       })
-      .catch(() => {
+      .catch((err) => {
+        // If the request was aborted (by timeout or new request), don't show error
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         removeThinking();
         setIsRequestInProgress(false);
         addBotMessage('Sorry, something went wrong while contacting the server. Please Try Again Later.', makeMsgId());

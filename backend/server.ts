@@ -19,17 +19,19 @@ import { PORT } from './config.ts';
 import { loadAllDocuments } from './fetch/loader.ts';
 import { handleMessage } from './pipeline/agent.ts';
 import { handlePipelineError, ErrorTypes } from './errors/errorHandler.ts';
-import { ENABLE_DB_WRITES } from './config/mewsie.config.ts';
+import { ENABLE_DB_WRITES, ALLOWED_ORIGINS } from './config/mewsie.config.ts';
 
 const app = new Hono();
 
-// Allow localhost in dev and the production domain set via ALLOWED_ORIGIN env var
-const allowedOrigin = process.env.ALLOWED_ORIGIN || null;
+// Allow localhost in dev + any origins listed in ALLOWED_ORIGINS env var (comma-separated)
 app.use('*', cors({
   origin: (origin) => {
-    const isLocalhost = !origin || /^https?:\/\/localhost(:\d+)?$/.test(origin);
-    const isProduction = !!(allowedOrigin && origin === allowedOrigin);
-    return isLocalhost || isProduction ? origin : null;
+    // Reject null/missing origin — prevents CORS bypass from file:// or server-to-server.
+    // Only allow explicit localhost or configured allowed origins.
+    if (!origin) return null;
+    const isLocalhost = /^https?:\/\/localhost(:\d+)?$/.test(origin);
+    const isAllowed = ALLOWED_ORIGINS.includes(origin);
+    return isLocalhost || isAllowed ? origin : null;
   },
 }));
 
@@ -38,8 +40,16 @@ const chatRateLimit = rateLimiter({
   windowMs: 60_000,
   limit: 60,
   standardHeaders: 'draft-6',
-  keyGenerator: (c) => c.req.header('x-forwarded-for') ?? c.req.raw.headers.get('x-real-ip') ?? 'unknown',
-  message: { output: 'Too many requests — please slow down.' },
+  // Prefer x-real-ip (set by trusted reverse proxy) over x-forwarded-for
+  // (easily spoofed). Extract only the first IP from x-forwarded-for chains.
+  keyGenerator: (c) => {
+    const realIp = c.req.header('x-real-ip');
+    if (realIp) return realIp;
+    const forwarded = c.req.header('x-forwarded-for');
+    if (forwarded) return forwarded.split(',')[0].trim();
+    return 'unknown';
+  },
+  message: { output: 'Too many requests - please slow down.' },
 });
 
 // If the Anthropic API takes longer than 30 seconds, give up and return an error.
@@ -54,8 +64,8 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   try {
-    const body = await c.req.json<{ chatInput?: unknown; sessionId?: unknown; language?: unknown; browserToken?: unknown }>();
-    const { chatInput, sessionId, language, browserToken } = body;
+    const body = await c.req.json<{ chatInput?: unknown; sessionId?: unknown; language?: unknown; browserToken?: unknown; baseUserId?: unknown }>();
+    const { chatInput, sessionId, language, browserToken, baseUserId } = body;
 
     console.log(`\n${'─'.repeat(60)}`);
     console.log(`[REQUEST]  session=${String(sessionId ?? '?').slice(0, 12)}`);
@@ -80,9 +90,11 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
       typeof language === 'string' && ALLOWED_LANGS.has(language) ? language : null;
     const token =
       typeof browserToken === 'string' && browserToken.startsWith('bt_') ? browserToken : null;
+    const baseId =
+      typeof baseUserId === 'string' && baseUserId.length > 0 && baseUserId.length <= 200 ? baseUserId : null;
 
     // Hand off to agent.ts, which runs the full CAG pipeline and returns a reply
-    const outputPromise = handleMessage(sessionId, chatInput, lang, token);
+    const outputPromise = handleMessage(sessionId, chatInput, lang, token, baseId);
 
     // Race between the pipeline and a 30-second timeout
     const timeoutPromise = new Promise<never>((_, reject) => {
@@ -179,6 +191,43 @@ app.post('/api/help-open', async (c) => {
   } catch (err) {
     console.error('[help-open] error:', (err as Error).message);
     return c.json({ ok: true });
+  }
+});
+
+// ── POST /api/sync-context ──────────────────────────────────────────────────
+// Called by the mewsie-sync.js script embedded in Base (Omniboost main product).
+// Creates or updates a Mewsie customer record from Base's user identity.
+// First call creates customer; subsequent calls update if fields changed.
+app.post('/api/sync-context', async (c) => {
+  if (!ENABLE_DB_WRITES) return c.json({ ok: true, isNew: false, userId: 'noop' });
+
+  try {
+    const body = await c.req.json<{
+      baseUserId?: unknown; accountingSoftware?: unknown; tier?: unknown; companyName?: unknown;
+    }>();
+
+    const { baseUserId, accountingSoftware, tier, companyName } = body;
+
+    // Validate required field
+    if (!baseUserId || typeof baseUserId !== 'string' || baseUserId.length > 200) {
+      return c.json({ error: 'baseUserId is required (string, max 200 chars)' }, 400);
+    }
+
+    // Validate optional fields
+    const VALID_TIERS = new Set(['bronze', 'silver', 'gold']);
+    const safeTier = typeof tier === 'string' && VALID_TIERS.has(tier) ? tier : null;
+    const safeAccounting = typeof accountingSoftware === 'string' && accountingSoftware.length <= 200
+      ? accountingSoftware : null;
+    const safeCompanyName = typeof companyName === 'string' && companyName.length <= 200
+      ? companyName : null;
+
+    const { syncBaseUser } = await import('./db/identity.ts');
+    const result = await syncBaseUser(baseUserId, safeAccounting, safeTier, safeCompanyName);
+
+    return c.json({ ok: true, isNew: result.isNew, userId: result.userId });
+  } catch (err) {
+    console.error('[sync-context] error:', (err as Error).message);
+    return c.json({ error: 'Failed to sync context' }, 500);
   }
 });
 

@@ -67,7 +67,7 @@ import {
   updateContext,
   addToHistory,
 } from './session.ts';
-import type { ClarificationBundle } from './session.ts';
+import type { SessionContext } from './session.ts';
 import {
   ROUTER_MAX_DOCS,
   ROUTER_HISTORY_ENABLED,
@@ -81,7 +81,7 @@ import {
 import type { Manifest } from '../types/manifest.ts';
 import { migrateManifest } from '../scraper/pipeline/manifest.ts';
 import { TurnBuffer } from '../db/turn-buffer.ts';
-import { resolveIdentity, linkUserToCustomer } from '../db/identity.ts';
+import { resolveIdentity, updateUserAccountingSystem } from '../db/identity.ts';
 
 // __dirname is not available in ES modules by default — this reconstructs it
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -669,26 +669,8 @@ async function loadKnowledgeFiles(pages: ManifestPage[]): Promise<(string | null
 
 // ── Skip-routing detection ──────────────────────────────────────────────────────
 
-// Shape of the session context passed from session.ts
-export interface SessionContext {
-  language: string | null;
-  tools: string[];
-  setupType: string | null;
-  tier: 'bronze' | 'silver' | 'gold' | null;
-  lastLoadedDocIds: string[];
-  frustrationCounter: number;
-  clarifyRoundCounter: number;
-  previousQuestion: string | null;
-  clarificationBundles: ClarificationBundle[];
-  originalQuestion?: string | null;
-  qaLog: QAEntry[];
-  // Post-answer state (mirrors session.ts SessionContext)
-  postAnswerMode: boolean;
-  postAnswerSignal: 'COMPLETE' | 'PARTIAL' | null;
-  answerContract: AnswerContract | null;
-  qaLogSnapshot: QAEntry[];
-  postAnswerClarifyUsed: boolean;
-}
+// SessionContext is now imported from session.ts (shared type in types/session-context.ts)
+export type { SessionContext } from './session.ts';
 
 // Returns true when routing should be skipped for this message.
 // Exported for testing.
@@ -864,7 +846,8 @@ export async function handleMessage(
   sessionId: string,
   userMessage: string,
   language: string | null = null,
-  browserToken: string | null = null
+  browserToken: string | null = null,
+  baseUserId: string | null = null
 ): Promise<{ reply: string; bundleId?: string }> {
   const session = getSession(sessionId);
   const context = session.context as unknown as SessionContext;
@@ -876,11 +859,48 @@ export async function handleMessage(
   let userId = 'noop';
   if (ENABLE_DB_WRITES && browserToken) {
     try {
-      const identity = await resolveIdentity(browserToken, sessionId, language);
+      const identity = await resolveIdentity(browserToken, sessionId, language, baseUserId);
       conversationId = identity.conversationId;
       userId = identity.userId;
     } catch (err) {
       console.error('[agent] identity resolution failed:', (err as Error).message);
+    }
+  }
+
+  // ── Pre-populate context from user record (Base sync or prior sessions) ──
+  if (ENABLE_DB_WRITES && isFirstMessage && userId !== 'noop') {
+    try {
+      const supabase = (await import('../db/supabase.ts')).getSupabase();
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('base_user_id, target_accounting_system, tier, company_name')
+        .eq('id', userId)
+        .single();
+      if (userRow) {
+        const patch: Record<string, unknown> = {};
+        if (userRow.target_accounting_system && context.tools.length === 0) {
+          const tools = userRow.target_accounting_system.split(',').map((s: string) => s.trim()).filter(Boolean);
+          patch.tools = tools;
+          context.tools = tools;
+          console.log(`[BASE-SYNC] Pre-populated tools: ${tools.join(', ')}`);
+        }
+        if (userRow.tier && !context.tier) {
+          const validTier = userRow.tier as 'bronze' | 'silver' | 'gold';
+          patch.tier = validTier;
+          context.tier = validTier;
+          console.log(`[BASE-SYNC] Tier: ${validTier}`);
+        }
+        if (userRow.company_name && !context.companyName) {
+          patch.companyName = userRow.company_name;
+          context.companyName = userRow.company_name;
+          console.log(`[BASE-SYNC] Company: ${userRow.company_name}`);
+        }
+        if (Object.keys(patch).length > 0) {
+          updateContext(sessionId, patch);
+        }
+      }
+    } catch (err) {
+      console.error('[agent] context pre-population failed:', (err as Error).message);
     }
   }
 
@@ -1415,8 +1435,8 @@ export async function handleMessage(
 
   // Link user to customer when accounting tools are detected
   if (ENABLE_DB_WRITES && detectedTools.length > 0 && userId !== 'noop') {
-    linkUserToCustomer(userId, detectedTools[0]).catch(err =>
-      console.error('[agent] linkUserToCustomer failed:', err.message)
+    updateUserAccountingSystem(userId, detectedTools[0]).catch((err: Error) =>
+      console.error('[agent] updateUserAccountingSystem failed:', err.message)
     );
   }
 

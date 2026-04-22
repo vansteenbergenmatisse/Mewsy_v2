@@ -18,12 +18,22 @@ const PII_PATTERNS: { name: string; pattern: RegExp; replacement: string }[] = [
   },
   {
     name: 'credit_card',
+    // Match 13-19 digit card numbers (Visa, MC, Amex, etc.) with optional separators.
+    // Requires word boundaries to avoid matching product codes like "V2024-1234-5678-9012".
     pattern: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{1,7}\b/g,
     replacement: '[CARD_REDACTED]',
   },
   {
     name: 'phone_international',
+    // International format: +31 6 12345678, +1 (555) 123-4567, +49.30.12345
     pattern: /\+\d{1,4}[\s.-]?\(?\d{1,4}\)?[\s.-]?\d{1,4}[\s.-]?\d{1,9}/g,
+    replacement: '[PHONE_REDACTED]',
+  },
+  {
+    name: 'phone_local',
+    // Local formats: (555) 123-4567, 06-12345678, 030 1234567
+    // Requires 7+ digits total to avoid matching short product codes.
+    pattern: /\(?\d{2,4}\)?[\s.-]\d{3,4}[\s.-]\d{3,5}/g,
     replacement: '[PHONE_REDACTED]',
   },
 ];

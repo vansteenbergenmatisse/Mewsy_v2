@@ -149,18 +149,8 @@ const MAX_TOKENS = 2048;
 // Temperature: 0.1 keeps responses close to source docs while allowing natural phrasing.
 const TEMPERATURE = 0.1;
 
-// Shape of the session context object passed from agent.ts
-interface SessionContext {
-  language: string | null;
-  tools: string[];
-  setupType: string | null;
-  tier: 'bronze' | 'silver' | 'gold' | null;
-  lastLoadedDocIds: string[];
-  frustrationCounter: number;
-  clarifyRoundCounter: number;
-  previousQuestion: string | null;
-  clarificationBundles?: { categoryIds: string[]; qaPairs: { q: string; a: string }[] }[];
-}
+// SessionContext is imported from the shared type definition
+import type { SessionContext } from '../types/session-context.ts';
 
 // Structured payload that summarises everything known about the current query.
 // Passed to buildSystemPrompt() so Sonnet has full context regardless of mode.
@@ -270,12 +260,22 @@ export function buildSystemPrompt(
 
   // Block 3 — session context, injected when available.
   if (sessionContext && typeof sessionContext === 'object') {
+    // Sanitize companyName to prevent prompt injection — strip anything that
+    // looks like an instruction, keep only alphanumeric, spaces, and basic punctuation.
+    const rawCompany = sessionContext.companyName || '';
+    const safeCompany = rawCompany
+      .replace(/[\n\r]/g, ' ')           // no newlines (block injection)
+      .replace(/[^\p{L}\p{N}\s&.,''()\-]/gu, '') // keep letters, numbers, basic punctuation
+      .slice(0, 100)                      // cap length
+      .trim() || 'not known';
+
     const contextText = [
       'SESSION CONTEXT',
       `Language: ${sessionContext.language || 'not specified'}`,
       `Known tools: ${sessionContext.tools && sessionContext.tools.length > 0 ? sessionContext.tools.join(', ') : 'none mentioned'}`,
       `Setup type: ${sessionContext.setupType || 'not confirmed'}`,
       `Tier: ${sessionContext.tier || 'not confirmed'}`,
+      `Company: ${safeCompany}`,
       `Clarification rounds so far: ${sessionContext.clarifyRoundCounter ?? 0}`,
       `Frustration level: ${sessionContext.frustrationCounter ?? 0}/3`,
     ].join('\n');

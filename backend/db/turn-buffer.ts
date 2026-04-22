@@ -139,6 +139,8 @@ export class TurnBuffer {
   /** Flushes all accumulated data to Supabase in batch inserts. */
   async flush(): Promise<void> {
     if (!ENABLE_DB_WRITES || !this.bundleId) return;
+    // Guard: don't attempt DB writes with placeholder IDs — they'd cause FK violations
+    if (this.conversationId === 'noop' || this.conversationId === 'error') return;
 
     const supabase = getSupabase();
 

@@ -1,26 +1,21 @@
--- Mewsie Persistence Schema — 9 tables
+-- Mewsie Persistence Schema — 8 tables
 -- Run in Supabase SQL Editor. Then disable RLS on all tables.
 
--- 1. customers
-CREATE TABLE customers (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_name text,
-  target_accounting_system text,
-  hotel_property_id uuid,              -- nullable, future backfill
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
--- 2. users
+-- 1. users
 CREATE TABLE users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  customer_id uuid REFERENCES customers(id) ON DELETE SET NULL,
-  browser_token text NOT NULL UNIQUE,
+  browser_token text UNIQUE,             -- nullable: Base-synced users start without one
+  base_user_id text UNIQUE,              -- links to user identity in Base (Omniboost main product)
+  company_name text,
+  tier text,                              -- 'bronze' | 'silver' | 'gold' | null
+  target_accounting_system text,
   derived_country text,
   first_seen timestamptz NOT NULL DEFAULT now(),
   last_seen timestamptz NOT NULL DEFAULT now()
 );
+CREATE INDEX idx_users_base_user_id ON users(base_user_id);
 
--- 3. conversations
+-- 2. conversations
 CREATE TABLE conversations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -33,7 +28,7 @@ CREATE TABLE conversations (
 CREATE INDEX idx_conversations_user_id ON conversations(user_id);
 CREATE INDEX idx_conversations_frontend_sid ON conversations(frontend_session_id);
 
--- 4. bundles (extended — absorbs pipeline_traces + doc_events)
+-- 3. bundles (extended — absorbs pipeline_traces + doc_events)
 CREATE TABLE bundles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   conversation_id uuid NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
@@ -72,7 +67,7 @@ CREATE INDEX idx_bundles_open ON bundles(is_closed) WHERE is_closed = false;
 CREATE INDEX idx_bundles_docs_used ON bundles USING GIN (docs_used);
 CREATE INDEX idx_bundles_pipeline_log ON bundles USING GIN (pipeline_log);
 
--- 5. messages
+-- 4. messages
 CREATE TABLE messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   bundle_id uuid NOT NULL REFERENCES bundles(id) ON DELETE CASCADE,
@@ -89,7 +84,7 @@ CREATE INDEX idx_messages_conversation_id ON messages(conversation_id);
 COMMENT ON TABLE messages IS
   'Individual chat messages. The full conversation is queryable by fetching all messages for a given conversation_id sorted by timestamp_ms. Bundles are an analytical grouping of messages around one question, but the canonical conversation history lives here.';
 
--- 6. llm_calls
+-- 5. llm_calls
 CREATE TABLE llm_calls (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   bundle_id uuid NOT NULL REFERENCES bundles(id) ON DELETE CASCADE,
@@ -111,7 +106,7 @@ CREATE TABLE llm_calls (
 CREATE INDEX idx_llm_calls_bundle_id ON llm_calls(bundle_id);
 CREATE INDEX idx_llm_calls_model ON llm_calls(model);
 
--- 7. feedback
+-- 6. feedback
 CREATE TABLE feedback (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   bundle_id uuid NOT NULL UNIQUE REFERENCES bundles(id) ON DELETE CASCADE,
@@ -121,7 +116,7 @@ CREATE TABLE feedback (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 8. help_panel_opens
+-- 7. help_panel_opens
 CREATE TABLE help_panel_opens (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   conversation_id uuid NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
@@ -130,7 +125,7 @@ CREATE TABLE help_panel_opens (
 );
 CREATE INDEX idx_help_opens_conversation_id ON help_panel_opens(conversation_id);
 
--- 9. errors
+-- 8. errors
 CREATE TABLE errors (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   conversation_id uuid REFERENCES conversations(id) ON DELETE SET NULL,
@@ -145,7 +140,6 @@ CREATE TABLE errors (
 CREATE INDEX idx_errors_created_at ON errors(created_at);
 
 -- Disable RLS on all tables (internal analytics DB, backend-only writes)
-ALTER TABLE customers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE conversations DISABLE ROW LEVEL SECURITY;
 ALTER TABLE bundles DISABLE ROW LEVEL SECURITY;

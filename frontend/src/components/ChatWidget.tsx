@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef } from 'react';
 import { ChatHeader } from './ChatHeader';
 import { Sidebar } from './Sidebar';
 import { ChatBody, ChatMessage } from './ChatBody';
@@ -53,23 +53,33 @@ interface ChatWidgetProps {
 // ── Quick action icons (order matches QUICK_ACTION_KEYS in chat-config) ────────
 
 const QUICK_ACTION_ICONS = [
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-  </svg>,
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-  </svg>,
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
-  </svg>,
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-  </svg>,
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-  </svg>,
+  <span className="qa-icon-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+    </svg>
+  </span>,
+  <span className="qa-icon-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+  </span>,
+  <span className="qa-icon-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+    </svg>
+  </span>,
+  <span className="qa-icon-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  </span>,
+  <span className="qa-icon-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+    </svg>
+  </span>,
 ];
 
 // ── Hero section ───────────────────────────────────────────────────────────────
@@ -134,29 +144,6 @@ function FullscreenHeroSection({
   onRemoveFile,
 }: FullscreenHeroProps) {
   const s = (key: string) => uiStr(key, selectedLanguage);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Auto-resize textarea
-  useEffect(() => {
-    const ta = inputRef.current;
-    if (!ta) return;
-    ta.style.height = '1px';
-    ta.style.height = Math.min(ta.scrollHeight, 200) + 'px';
-  }, [inputValue, inputRef]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (!isRequestInProgress && inputValue.trim()) onSend();
-    }
-  }, [isRequestInProgress, inputValue, onSend]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    Array.from(files).forEach(f => onAttachFile(f));
-    e.target.value = '';
-  };
 
   return (
     <div className={`hero-fullscreen${exiting ? ' hero-exiting' : ''}`}>
@@ -164,62 +151,19 @@ function FullscreenHeroSection({
         {s('heroHeadlinePre')}<span className="highlight">{s('heroHighlight')}</span>{s('heroHeadlinePost')}
       </h1>
 
-      <div className="hero-input-box">
-        {attachedFiles.length > 0 && (
-          <div className="file-chips">
-            {attachedFiles.map(f => (
-              <div key={f.id} className="file-chip">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
-                  <polyline points="13 2 13 9 20 9"/>
-                </svg>
-                <span className="file-chip-name">{f.name}</span>
-                <button className="file-chip-remove" onClick={() => onRemoveFile(f.id)} aria-label={`Remove ${f.name}`}>×</button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <textarea
-          ref={inputRef}
-          className="hero-textarea"
-          placeholder={inputPlaceholder}
-          value={inputValue}
-          disabled={isRequestInProgress}
-          rows={1}
-          onChange={e => onInputChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
-
-        <div className="hero-input-footer">
-          <input ref={fileInputRef} type="file" accept="image/*,.pdf,.doc,.docx" multiple style={{ display: 'none' }} onChange={handleFileChange} />
-          <button className="hero-attach-btn" type="button" onClick={() => fileInputRef.current?.click()}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-          </button>
-          <div className="hero-input-right">
-            <button className="hero-voice-btn" type="button" title="Voice input — coming soon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="9" y="2" width="6" height="11" rx="3"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
-              </svg>
-            </button>
-            <button
-              className="hero-send-btn"
-              type="button"
-              disabled={isRequestInProgress || !inputValue.trim()}
-              onClick={onSend}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"/>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
+      <ChatInput
+        ref={inputRef}
+        hero
+        value={inputValue}
+        placeholder={inputPlaceholder}
+        disabled={isRequestInProgress}
+        selectedLanguage={selectedLanguage}
+        attachedFiles={attachedFiles}
+        onChange={onInputChange}
+        onSend={onSend}
+        onAttachFile={onAttachFile}
+        onRemoveFile={onRemoveFile}
+      />
 
       <div className="hero-pills">
         {QUICK_ACTION_KEYS.map((key, idx) => {

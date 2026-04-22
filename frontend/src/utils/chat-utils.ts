@@ -151,16 +151,40 @@ export function formatBotText(text: string): string {
   html = html.replace(/^### (.+)$/gm, '\n\n**$1**');
 
   // ── Convert prose sequential instructions to numbered list
-  // Matches runs of lines each starting with a sequential marker (2+ lines required)
-  html = html.replace(
-    /((?:^|\n)(First|Then|Next|After that|After this|Finally|Lastly)[,:]?\s+[^\n]+(?:\n(Then|Next|After that|After this|Finally|Lastly)[,:]?\s+[^\n]+)+)/gim,
-    (match: string) => {
-      const lines = match.trim().split('\n').filter((l: string) => l.trim());
-      return '\n\n' + lines.map((line: string, i: number) =>
-        `${i + 1}. ${line.replace(/^(?:First|Then|Next|After that|After this|Finally|Lastly)[,:]?\s+/i, '').trim()}`
-      ).join('\n') + '\n';
+  // Matches runs of lines each starting with a sequential marker (2+ lines required).
+  // Uses atomic-style matching: each line is matched individually then joined,
+  // avoiding catastrophic backtracking on long prose without markers.
+  {
+    const MARKER_RE = /^(First|Then|Next|After that|After this|Finally|Lastly)[,:]?\s+/i;
+    const inputLines = html.split('\n');
+    const outputLines: string[] = [];
+    let runStart = -1;
+
+    for (let i = 0; i <= inputLines.length; i++) {
+      const line = i < inputLines.length ? inputLines[i] : '';
+      const isMarker = MARKER_RE.test(line.trim());
+
+      if (!isMarker && runStart >= 0) {
+        const runLength = i - runStart;
+        if (runLength >= 2) {
+          // Convert the run to numbered list
+          outputLines.push('');
+          for (let j = runStart; j < i; j++) {
+            outputLines.push(`${j - runStart + 1}. ${inputLines[j].trim().replace(MARKER_RE, '').trim()}`);
+          }
+          outputLines.push('');
+        } else {
+          // Single marker line — keep as-is
+          for (let j = runStart; j < i; j++) outputLines.push(inputLines[j]);
+        }
+        runStart = -1;
+      }
+
+      if (isMarker && runStart < 0) runStart = i;
+      if (!isMarker && i < inputLines.length) outputLines.push(line);
     }
-  );
+    html = outputLines.join('\n');
+  }
 
   // ── Remove wrapping sentences before/after numbered lists
   html = html.replace(/^[^\n]*(?:here are(?: the)?|follow these|these are the|please follow|steps? below|following steps?)[^\n]*:?\s*\n+(\s*\d+\.)/gim, '$1');
@@ -233,8 +257,10 @@ export function formatBotText(text: string): string {
   codeBlocks.forEach(({ lang, code }: { lang: string; code: string }, idx: number) => {
     const label = lang || "Example";
     const escapedCode = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const dataCode = code.replace(/"/g, "&quot;");
-    const codeHtml = `<div class="code-block"><div class="code-label">${label}</div><button class="copy-btn" onclick="this.textContent='Copied';setTimeout(()=>this.textContent='Copy',1500);navigator.clipboard.writeText(this.dataset.code)" data-code="${dataCode}">Copy</button><pre><code>${escapedCode}</code></pre></div>`;
+    // Base64-encode the raw code to eliminate any XSS risk from user-controlled data
+    // in data attributes. The click handler decodes it before copying.
+    const b64Code = btoa(unescape(encodeURIComponent(code)));
+    const codeHtml = `<div class="code-block"><div class="code-label">${label}</div><button class="copy-btn" data-code-b64="${b64Code}">Copy</button><pre><code>${escapedCode}</code></pre></div>`;
     html = html.replace(`<p>MEWSIECODEBLOCK${idx}MEWSIECODEBLOCK</p>`, codeHtml);
     html = html.replace(`MEWSIECODEBLOCK${idx}MEWSIECODEBLOCK`, codeHtml);
   });
@@ -326,8 +352,8 @@ export function detectListButtons(text: string): DetectedButtons | null {
   // Must have between 2 and BUTTON_MAX items
   if (items.length < 2 || items.length > BUTTON_MAX) return null;
 
-  // All items must be ≤ 65 characters
-  if (items.some(i => i.length > 65)) return null;
+  // All items must be ≤ 90 characters (consistent with checkListForButtons)
+  if (items.some(i => i.length > 90)) return null;
 
   // The message must contain a sentence ending in ? (required)
   const hasQuestion = text.includes("?");
@@ -477,6 +503,30 @@ export function initAccordions(_container: HTMLElement): void {
  *   - Bubbles that contain an accordion (they have their own structure)
  *   - Single-element bubbles (nothing to reveal progressively)
  */
+// ── Delegated copy-button handler ─────────────────────────────────────────────
+// Registered once on document. Handles clicks on .copy-btn elements created by
+// formatBotText. Uses base64-encoded data-code-b64 attribute to avoid XSS.
+let _copyHandlerRegistered = false;
+export function registerCopyHandler(): void {
+  if (_copyHandlerRegistered) return;
+  _copyHandlerRegistered = true;
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.copy-btn') as HTMLElement | null;
+    if (!btn) return;
+    const b64 = btn.getAttribute('data-code-b64');
+    if (!b64) return;
+    try {
+      const code = decodeURIComponent(escape(atob(b64)));
+      navigator.clipboard.writeText(code);
+      btn.textContent = 'Copied';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+    } catch {
+      btn.textContent = 'Error';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+    }
+  });
+}
+
 export function applyProgressiveReveal(msgDiv: HTMLElement, autoScrollFn: () => void): void {
   // No inter-paragraph reveal — content is shown immediately.
   // Bubble entry animation is handled entirely by CSS (.bot-msg-container).

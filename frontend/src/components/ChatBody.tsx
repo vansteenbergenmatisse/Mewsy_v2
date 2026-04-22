@@ -10,6 +10,7 @@ import { uiStr } from '../config/chat-config';
 import { ClarifyCards } from './ClarifyCards';
 import type { ClarifyQuestion } from './ClarifyCards';
 import { FeedbackButtons } from './FeedbackButtons';
+import { MewsieLogo } from './MewsieLogo';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -31,7 +32,11 @@ export interface ChatMessage {
 // ── Bot avatar ────────────────────────────────────────────────────────────────
 
 function BotAvatar() {
-  return <div className="bot-avatar">M</div>;
+  return (
+    <div className="bot-avatar">
+      <MewsieLogo width={35} height={35} stylePrefix="ba" />
+    </div>
+  );
 }
 
 // ── Thinking bubble ───────────────────────────────────────────────────────────
@@ -68,7 +73,6 @@ interface BotTextBubbleProps {
   text: string;
   msgId: string;
   isNewGroup: boolean;
-  clarifying?: boolean;
   bundleId?: string;
   onAutoScroll: () => void;
   onDetectedButtons: (options: string[], questionText: string | null) => void;
@@ -78,7 +82,6 @@ function BotTextBubble({
   text,
   msgId,
   isNewGroup,
-  clarifying,
   bundleId,
   onAutoScroll,
   onDetectedButtons,
@@ -124,7 +127,7 @@ function BotTextBubble({
           data-msg-id={msgId}
           dangerouslySetInnerHTML={{ __html: htmlContent }}
         />
-        {bundleId && !clarifying && (
+        {bundleId && (
           <FeedbackButtons bundleId={bundleId} />
         )}
       </div>
@@ -305,7 +308,6 @@ export function ChatBody({
               text={msg.text}
               msgId={msg.msgId ?? msg.id}
               isNewGroup={msg.isNewGroup ?? false}
-              clarifying={msg.clarifying}
               bundleId={msg.bundleId}
               onAutoScroll={autoScroll}
               onDetectedButtons={(options, questionText) => {

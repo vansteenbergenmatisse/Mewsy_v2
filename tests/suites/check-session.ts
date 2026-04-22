@@ -78,6 +78,14 @@ export async function checkSession({ pass, fail, skip: _skip, results }: Reporte
     results.push({ ok: false });
   }
 
+  if ((session.context as unknown as Record<string, unknown>).companyName === null) {
+    pass('new session has null companyName');
+    results.push({ ok: true });
+  } else {
+    fail('new session has null companyName', `Got: ${(session.context as unknown as Record<string, unknown>).companyName}`);
+    results.push({ ok: false });
+  }
+
   if (Array.isArray(session.context?.qaLog) && session.context.qaLog.length === 0) {
     pass('new session has empty qaLog array');
     results.push({ ok: true });

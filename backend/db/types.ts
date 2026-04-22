@@ -3,18 +3,13 @@
  * Used by turn-buffer.ts, identity.ts, and the feedback endpoint.
  */
 
-export interface CustomerRow {
-  id: string;
-  company_name: string | null;
-  target_accounting_system: string | null;
-  hotel_property_id: string | null;
-  created_at: string;
-}
-
 export interface UserRow {
   id: string;
-  customer_id: string | null;
-  browser_token: string;
+  browser_token: string | null;
+  base_user_id: string | null;
+  company_name: string | null;
+  tier: string | null;
+  target_accounting_system: string | null;
   derived_country: string | null;
   first_seen: string;
   last_seen: string;

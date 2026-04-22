@@ -209,6 +209,66 @@ export async function checkServer({ pass, fail, skip, results }: Reporter): Prom
       results.push({ ok: false });
     }
 
+    // ── POST /api/sync-context — missing baseUserId → 400 ────────────────
+    const syncMissing = await fetchJson(`${BASE}/api/sync-context`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountingSoftware: 'Xero' }),
+    });
+    if (syncMissing.status === 400) {
+      pass('POST /api/sync-context rejects missing baseUserId with 400');
+      results.push({ ok: true });
+    } else {
+      fail('POST /api/sync-context rejects missing baseUserId', `Got status ${syncMissing.status}`);
+      results.push({ ok: false });
+    }
+
+    // ── POST /api/sync-context — valid payload → 200 ─────────────────────
+    const syncValidBaseId = `test_server_${Date.now()}`;
+    const syncValid = await fetchJson(`${BASE}/api/sync-context`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        baseUserId: syncValidBaseId,
+        accountingSoftware: 'Xero',
+        tier: 'silver',
+        companyName: 'Test Corp',
+      }),
+    });
+    if (syncValid.status === 200 && (syncValid.body as { ok?: boolean })?.ok === true) {
+      pass('POST /api/sync-context with valid payload returns 200 { ok: true }');
+      results.push({ ok: true });
+    } else {
+      fail('POST /api/sync-context valid payload', `Got status ${syncValid.status}, body: ${JSON.stringify(syncValid.body)}`);
+      results.push({ ok: false });
+    }
+
+    // ── POST /api/sync-context — invalid tier is accepted (sanitized to null) ──
+    const syncBadTierBaseId = `test_tier_${Date.now()}`;
+    const syncBadTier = await fetchJson(`${BASE}/api/sync-context`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseUserId: syncBadTierBaseId, tier: 'diamond' }),
+    });
+    if (syncBadTier.status === 200) {
+      pass('POST /api/sync-context with invalid tier still returns 200 (tier sanitized to null)');
+      results.push({ ok: true });
+    } else {
+      fail('POST /api/sync-context invalid tier handling', `Got status ${syncBadTier.status}`);
+      results.push({ ok: false });
+    }
+
+    // Clean up test rows created by sync-context tests
+    try {
+      const { getSupabase } = await import('../../backend/db/supabase.ts');
+      const { ENABLE_DB_WRITES } = await import('../../backend/config/mewsie.config.ts');
+      if (ENABLE_DB_WRITES) {
+        const supabase = getSupabase();
+        await supabase.from('users').delete().eq('base_user_id', syncValidBaseId);
+        await supabase.from('users').delete().eq('base_user_id', syncBadTierBaseId);
+      }
+    } catch { /* best-effort cleanup */ }
+
   } catch (err) {
     fail('server tests', (err as Error).message);
     results.push({ ok: false });
