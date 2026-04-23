@@ -109,17 +109,21 @@ CREATE INDEX idx_llm_calls_model ON llm_calls(model);
 -- 6. feedback
 CREATE TABLE feedback (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  bundle_id uuid NOT NULL UNIQUE REFERENCES bundles(id) ON DELETE CASCADE,
+  bundle_id uuid UNIQUE REFERENCES bundles(id) ON DELETE SET NULL,
   vote text NOT NULL,
   reason text,
   comment text,
+  original_question text,
+  answer_text text,
+  conversation_history jsonb,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
 -- 7. help_panel_opens
 CREATE TABLE help_panel_opens (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  conversation_id uuid NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  conversation_id uuid REFERENCES conversations(id) ON DELETE CASCADE,
+  session_id text,
   topic text NOT NULL,
   opened_at timestamptz NOT NULL DEFAULT now()
 );

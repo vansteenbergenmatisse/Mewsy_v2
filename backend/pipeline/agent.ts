@@ -60,6 +60,8 @@ import {
   generateSmartBasicQuestion,
   generateClarifyingQuestions,
   generateIntroLine,
+  ANSWER_MODEL,
+  PROMPT_VERSION_HASH,
 } from './claude.ts';
 import type { QueryContext, Page, AnswerContract } from './claude.ts';
 import {
@@ -982,6 +984,20 @@ export async function handleMessage(
         context as unknown as Parameters<typeof chat>[3],
         postAnswerQueryContext
       );
+      buffer.addLlmCall({
+        call_type: 'POST_ANSWER',
+        model: ANSWER_MODEL,
+        input_tokens: postChatResult.usage.input_tokens,
+        output_tokens: postChatResult.usage.output_tokens,
+        cache_creation_tokens: postChatResult.usage.cache_creation_tokens,
+        cache_read_tokens: postChatResult.usage.cache_read_tokens,
+        stop_reason: postChatResult.stop_reason,
+        api_response_id: postChatResult.api_response_id,
+        latency_ms: postChatResult.latency_ms,
+        retry_count: 0,
+        error_message: null,
+        system_prompt_version_hash: PROMPT_VERSION_HASH,
+      });
       let postReply = postChatResult.reply;
       const postSignal = postChatResult.signal;
       const postContract = postChatResult.contract;
@@ -1057,11 +1073,13 @@ export async function handleMessage(
       console.log(`[REPLY]    ${postReply.split(/\s+/).filter(Boolean).length} words sent to user (post-answer)`);
 
       // Flush buffer (fire-and-forget in post-answer path)
+      const postBundleId = buffer.openBundle(userMessage);
       buffer.addMessage('user', userMessage);
       buffer.addMessage('bot', postReply);
+      buffer.updateBundle({ routing_mode: 'POST_ANSWER' });
       buffer.flush().catch(err => console.error('[turn-buffer] flush failed:', err.message));
 
-      return { reply: postReply };
+      return { reply: postReply, bundleId: postBundleId };
     }
   }
 
@@ -1268,6 +1286,20 @@ export async function handleMessage(
 
     console.log(`[ANSWER]   ${capped.length} doc(s) loaded`);
     const chatResult = await chat(sessionId, userMessage, knowledgeContent, context as unknown as Parameters<typeof chat>[3], queryContext);
+    buffer.addLlmCall({
+      call_type: 'ANSWER',
+      model: ANSWER_MODEL,
+      input_tokens: chatResult.usage.input_tokens,
+      output_tokens: chatResult.usage.output_tokens,
+      cache_creation_tokens: chatResult.usage.cache_creation_tokens,
+      cache_read_tokens: chatResult.usage.cache_read_tokens,
+      stop_reason: chatResult.stop_reason,
+      api_response_id: chatResult.api_response_id,
+      latency_ms: chatResult.latency_ms,
+      retry_count: 0,
+      error_message: null,
+      system_prompt_version_hash: PROMPT_VERSION_HASH,
+    });
     reply = chatResult.reply;
     answerSignal = chatResult.signal;
     answerContract = chatResult.contract;
@@ -1469,7 +1501,6 @@ export async function handleMessage(
   // Flush to Supabase (fire-and-forget — don't block the response)
   buffer.flush().catch(err => console.error('[turn-buffer] flush failed:', err.message));
 
-  // Return bundleId only for ANSWER mode (feedback is per-answer)
-  const returnBundleId = finalMode === 'ANSWER' ? bundleId : undefined;
-  return { reply, bundleId: returnBundleId };
+  // Always return bundleId so feedback buttons appear on every response
+  return { reply, bundleId };
 }

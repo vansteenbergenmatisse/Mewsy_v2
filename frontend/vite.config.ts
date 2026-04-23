@@ -10,6 +10,7 @@ export default defineConfig({
     // Proxy /webhook/ requests to the backend during development
     proxy: {
       '/webhook': 'http://localhost:4010',
+      '/api': 'http://localhost:4010',
     },
     // Allow importing files from knowledge/ which lives outside the frontend root
     fs: {

@@ -2,6 +2,7 @@
 // All errors route through here — never expose raw errors or stack traces to users.
 
 import { sendSlackAlert, sendEmailAlert } from './alerts.ts';
+import { logErrorToDb } from '../db/turn-buffer.ts';
 
 const USER_FACING_MESSAGE = "Something went wrong on my end — please try again in a moment.";
 
@@ -10,10 +11,12 @@ interface ErrorContext {
   sessionId?: string;
   userMessage?: string;
   errorType?: string;
+  conversationId?: string;
+  bundleId?: string;
 }
 
 export async function handlePipelineError(error: unknown, context: ErrorContext = {}): Promise<string> {
-  const { sessionId = 'unknown', userMessage = '', errorType = 'UNKNOWN' } = context;
+  const { sessionId = 'unknown', userMessage = '', errorType = 'UNKNOWN', conversationId, bundleId } = context;
 
   const logEntry = {
     timestamp: new Date().toISOString(),
@@ -42,6 +45,17 @@ export async function handlePipelineError(error: unknown, context: ErrorContext 
   } catch (alertErr) {
     console.error('[MEWSIE] Email alert failed:', (alertErr as Error).message);
   }
+
+  // Persist to errors table (fire-and-forget — don't block user response)
+  logErrorToDb(
+    errorType,
+    error instanceof Error ? error.message : String(error),
+    error instanceof Error ? (error.stack ?? null) : null,
+    sessionId,
+    userMessage.slice(0, 200) || null,
+    conversationId,
+    bundleId,
+  ).catch((dbErr) => console.error('[MEWSIE] logErrorToDb failed:', (dbErr as Error).message));
 
   return USER_FACING_MESSAGE;
 }

@@ -4,6 +4,13 @@
  * Never hardcode these values elsewhere — always import from this file.
  */
 
+// Ensure .env is loaded before reading process.env — ESM import order
+// doesn't guarantee config.ts (which calls dotenv.config()) runs first.
+import dotenv from 'dotenv';
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
+
 // ── Routing ────────────────────────────────────────────────────────────────────
 
 // Maximum number of knowledge documents loaded and passed to Sonnet per answer turn.

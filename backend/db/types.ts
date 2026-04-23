@@ -109,16 +109,20 @@ export interface LlmCallRow {
 
 export interface FeedbackRow {
   id: string;
-  bundle_id: string;
+  bundle_id: string | null;
   vote: 'up' | 'down';
   reason: string | null;
   comment: string | null;
+  original_question: string | null;
+  answer_text: string | null;
+  conversation_history: Array<{ role: string; content: string }> | null;
   created_at: string;
 }
 
 export interface HelpPanelOpenRow {
   id: string;
-  conversation_id: string;
+  conversation_id: string | null;
+  session_id: string | null;
   topic: string;
   opened_at: string;
 }

@@ -84,6 +84,10 @@ export class TurnBuffer {
     return this.bundleId;
   }
 
+  get currentConversationId(): string {
+    return this.conversationId;
+  }
+
   /** Opens a new bundle. Returns the bundle ID. */
   openBundle(originalQuestion: string): string {
     this.bundleId = crypto.randomUUID();

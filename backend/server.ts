@@ -87,7 +87,7 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
     // Constrained to a short allowlist of codes; anything else is ignored.
     const ALLOWED_LANGS = new Set(['en', 'de', 'de-ch', 'de-at', 'fr', 'nl']);
     const lang =
-      typeof language === 'string' && ALLOWED_LANGS.has(language) ? language : null;
+      typeof language === 'string' && ALLOWED_LANGS.has(language) ? language : 'en';
     const token =
       typeof browserToken === 'string' && browserToken.startsWith('bt_') ? browserToken : null;
     const baseId =
@@ -105,7 +105,7 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
     if (timeoutId) clearTimeout(timeoutId);
     // handleMessage returns { reply, bundleId? } — include bundleId for feedback binding
     const output = typeof result === 'string' ? result : result.reply;
-    const bundleId = typeof result === 'object' && result !== null ? result.bundleId : undefined;
+    const bundleId = typeof result === 'object' && result !== null ? (result as { bundleId?: string }).bundleId : undefined;
     return c.json({ output, ...(bundleId ? { bundleId } : {}) });
   } catch (err) {
     if (timeoutId) clearTimeout(timeoutId);
@@ -124,8 +124,11 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
 });
 
 // ── POST /api/feedback ────────────────────────────────────────────────────────
-// Stores a thumbs-up/down vote against a question bundle.
+// Stores a thumbs-up/down vote against a question bundle, enriched with context
+// (original question, answer text, conversation history) looked up from the DB.
 // Idempotent: re-submitting overwrites the previous vote for the same bundle.
+// If the bundle hasn't been flushed yet (race condition), the vote is still saved
+// with bundle_id = null so no feedback is lost.
 app.post('/api/feedback', async (c) => {
   if (!ENABLE_DB_WRITES) return c.json({ ok: true });
 
@@ -145,10 +148,71 @@ app.post('/api/feedback', async (c) => {
 
     const { getSupabase } = await import('./db/supabase.ts');
     const supabase = getSupabase();
-    await supabase.from('feedback').upsert(
-      { bundle_id: bundleId, vote, reason: safeReason },
-      { onConflict: 'bundle_id' }
-    );
+
+    // ── Enrich: look up bundle + messages for context ──────────────────
+    let originalQuestion: string | null = null;
+    let answerText: string | null = null;
+    let conversationHistory: Array<{ role: string; content: string }> | null = null;
+    let bundleExists = false;
+
+    const { data: bundle } = await supabase
+      .from('bundles')
+      .select('original_question, conversation_id')
+      .eq('id', bundleId)
+      .single();
+
+    if (bundle) {
+      bundleExists = true;
+      originalQuestion = bundle.original_question;
+
+      // Get the bot's answer from the messages table
+      const { data: msgs } = await supabase
+        .from('messages')
+        .select('role, content_raw')
+        .eq('bundle_id', bundleId)
+        .order('sequence_in_bundle', { ascending: true });
+
+      if (msgs && msgs.length > 0) {
+        const botMsgs = msgs.filter((m: { role: string }) => m.role === 'bot');
+        answerText = botMsgs.map((m: { content_raw: string }) => m.content_raw).join('\n') || null;
+      }
+
+      // Get recent conversation history (up to 20 messages from this conversation)
+      if (bundle.conversation_id) {
+        const { data: history } = await supabase
+          .from('messages')
+          .select('role, content_raw')
+          .eq('conversation_id', bundle.conversation_id)
+          .order('timestamp_ms', { ascending: true })
+          .limit(20);
+
+        if (history && history.length > 0) {
+          conversationHistory = history.map((m: { role: string; content_raw: string }) => ({
+            role: m.role,
+            content: m.content_raw,
+          }));
+        }
+      }
+    }
+
+    // ── Upsert feedback row ────────────────────────────────────────────
+    const feedbackRow = {
+      bundle_id: bundleExists ? bundleId : null,
+      vote,
+      reason: safeReason,
+      original_question: originalQuestion,
+      answer_text: answerText,
+      conversation_history: conversationHistory,
+    };
+
+    const { error: upsertErr } = bundleExists
+      ? await supabase.from('feedback').upsert(feedbackRow, { onConflict: 'bundle_id' })
+      : await supabase.from('feedback').insert(feedbackRow);
+
+    if (upsertErr) {
+      console.error('[feedback] upsert failed:', upsertErr.message);
+      return c.json({ error: 'Failed to save feedback' }, 500);
+    }
 
     return c.json({ ok: true });
   } catch (err) {
@@ -159,6 +223,8 @@ app.post('/api/feedback', async (c) => {
 
 // ── POST /api/help-open ──────────────────────────────────────────────────────
 // Logs when a user opens a help-panel topic. Fire-and-forget from frontend.
+// Always inserts a row — uses conversation_id when a conversation exists,
+// falls back to session_id so we track help opens even before the first message.
 app.post('/api/help-open', async (c) => {
   if (!ENABLE_DB_WRITES) return c.json({ ok: true });
 
@@ -174,17 +240,21 @@ app.post('/api/help-open', async (c) => {
     const { getSupabase } = await import('./db/supabase.ts');
     const supabase = getSupabase();
 
+    // Try to find an existing conversation for this session
     const { data: conv } = await supabase
       .from('conversations')
       .select('id')
       .eq('frontend_session_id', sessionId)
       .single();
 
-    if (conv) {
-      await supabase.from('help_panel_opens').insert({
-        conversation_id: conv.id,
-        topic,
-      });
+    const { error: insertErr } = await supabase.from('help_panel_opens').insert({
+      conversation_id: conv?.id || null,
+      session_id: sessionId,
+      topic,
+    });
+
+    if (insertErr) {
+      console.error('[help-open] insert failed:', insertErr.message);
     }
 
     return c.json({ ok: true });

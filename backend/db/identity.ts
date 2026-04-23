@@ -38,88 +38,68 @@ export async function resolveIdentity(
     return { userId: 'noop', conversationId: 'noop' };
   }
 
+  // Only create/track users who are linked to Base.
+  // Anonymous sessions (no baseUserId) skip all DB writes — no user row is created.
+  if (!baseUserId) {
+    return { userId: 'noop', conversationId: 'noop' };
+  }
+
   const supabase = getSupabase();
   const now = new Date().toISOString();
 
-  // 1. Resolve or create user — with Base identity linking
+  // Resolve or create user via Base identity
   let userId: string;
 
-  if (baseUserId) {
-    // Base embed: check if a user already exists with this base_user_id
-    // (created earlier by /api/sync-context)
-    const { data: baseUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('base_user_id', baseUserId)
-      .single();
+  // Check if a user already exists with this base_user_id
+  // (created earlier by /api/sync-context)
+  const { data: baseUser } = await supabase
+    .from('users')
+    .select('id')
+    .eq('base_user_id', baseUserId)
+    .single();
 
-    if (baseUser) {
-      // Link: attach browser_token to the existing Base user row.
-      // First check if this token already belongs to a different user —
-      // if so, clear it from the old row to avoid a UNIQUE constraint crash.
-      userId = baseUser.id;
-      const { data: tokenOwner } = await supabase
-        .from('users')
-        .select('id')
-        .eq('browser_token', browserToken)
-        .single();
-
-      if (tokenOwner && tokenOwner.id !== userId) {
-        // Token belongs to a different user — detach it from the old row
-        await supabase.from('users')
-          .update({ browser_token: null })
-          .eq('id', tokenOwner.id);
-        console.log(`[identity] Detached browser_token from old user ${tokenOwner.id} before linking to ${baseUserId}`);
-      }
-
-      await supabase.from('users')
-        .update({ browser_token: browserToken, last_seen: now })
-        .eq('id', userId);
-      console.log(`[identity] Linked browser_token to existing Base user ${baseUserId}`);
-    } else {
-      // No sync-context call happened yet — create user with both identities.
-      // Use upsert with base_user_id conflict handling to prevent race conditions
-      // when sync-context and first message arrive simultaneously.
-      const { data: newUser, error } = await supabase
-        .from('users')
-        .upsert(
-          { browser_token: browserToken, base_user_id: baseUserId },
-          { onConflict: 'base_user_id' }
-        )
-        .select('id')
-        .single();
-
-      if (error || !newUser) {
-        console.error('[identity] failed to create user with base_user_id:', error?.message);
-        return { userId: 'error', conversationId: 'error' };
-      }
-      userId = newUser.id;
-      console.log(`[identity] Created/linked user with base_user_id=${baseUserId}`);
-    }
-  } else {
-    // Standalone widget: resolve by browser_token only
-    const { data: existingUser } = await supabase
+  if (baseUser) {
+    // Link: attach browser_token to the existing Base user row.
+    // First check if this token already belongs to a different user —
+    // if so, clear it from the old row to avoid a UNIQUE constraint crash.
+    userId = baseUser.id;
+    const { data: tokenOwner } = await supabase
       .from('users')
       .select('id')
       .eq('browser_token', browserToken)
       .single();
 
-    if (existingUser) {
-      userId = existingUser.id;
-      await supabase.from('users').update({ last_seen: now }).eq('id', userId);
-    } else {
-      const { data: newUser, error } = await supabase
-        .from('users')
-        .insert({ browser_token: browserToken })
-        .select('id')
-        .single();
-
-      if (error || !newUser) {
-        console.error('[identity] failed to create user:', error?.message);
-        return { userId: 'error', conversationId: 'error' };
-      }
-      userId = newUser.id;
+    if (tokenOwner && tokenOwner.id !== userId) {
+      // Token belongs to a different user — detach it from the old row
+      await supabase.from('users')
+        .update({ browser_token: null })
+        .eq('id', tokenOwner.id);
+      console.log(`[identity] Detached browser_token from old user ${tokenOwner.id} before linking to ${baseUserId}`);
     }
+
+    await supabase.from('users')
+      .update({ browser_token: browserToken, last_seen: now })
+      .eq('id', userId);
+    console.log(`[identity] Linked browser_token to existing Base user ${baseUserId}`);
+  } else {
+    // No sync-context call happened yet — create user with both identities.
+    // Use upsert with base_user_id conflict handling to prevent race conditions
+    // when sync-context and first message arrive simultaneously.
+    const { data: newUser, error } = await supabase
+      .from('users')
+      .upsert(
+        { browser_token: browserToken, base_user_id: baseUserId },
+        { onConflict: 'base_user_id' }
+      )
+      .select('id')
+      .single();
+
+    if (error || !newUser) {
+      console.error('[identity] failed to create user with base_user_id:', error?.message);
+      return { userId: 'error', conversationId: 'error' };
+    }
+    userId = newUser.id;
+    console.log(`[identity] Created/linked user with base_user_id=${baseUserId}`);
   }
 
   // 2. Resolve or create conversation

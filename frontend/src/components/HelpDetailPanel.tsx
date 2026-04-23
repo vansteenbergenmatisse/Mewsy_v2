@@ -1,5 +1,6 @@
 import React from 'react';
 import { getHelpTopicContent } from '../help';
+import { getHelpItems } from '../help/help-items';
 
 // ── HelpDetailPanel ────────────────────────────────────────────────────────────
 // Shows the full content for a single help topic.
@@ -16,6 +17,7 @@ interface HelpDetailPanelProps {
 
 export function HelpDetailPanel({ show, topic, selectedLanguage, onBack, onCloseAll, onAskMewsie }: HelpDetailPanelProps) {
   const content = topic ? getHelpTopicContent(topic, selectedLanguage) : null;
+  const helpItem = topic ? getHelpItems(selectedLanguage).find(i => i.topic === topic) : null;
 
   return (
     <div id="help-detail-panel" className={show ? 'show' : ''}>
@@ -26,7 +28,10 @@ export function HelpDetailPanel({ show, topic, selectedLanguage, onBack, onClose
             <polyline points="12 19 5 12 12 5"/>
           </svg>
         </button>
-        <span id="help-detail-title">{content ? content.title : 'Help Topic'}</span>
+        <div id="help-detail-title-block">
+          <span id="help-detail-title">{helpItem?.title ?? content?.title ?? 'Help Topic'}</span>
+          {helpItem?.subtitle && <span id="help-detail-subtitle">{helpItem.subtitle}</span>}
+        </div>
       </div>
       <div id="help-detail-content">
         {content && (

@@ -529,6 +529,11 @@ export default function App() {
         onSelectHelpTopic={(topic) => {
           setHelpDetailTopic(topic);
           setShowHelpDetail(true);
+          fetch('/api/help-open', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: getSessionId(), topic }),
+          }).catch(() => {});
         }}
         onCloseHelpDetail={() => setShowHelpDetail(false)}
         onCloseAllHelp={() => {

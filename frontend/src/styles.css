@@ -1536,7 +1536,9 @@ body {
 }
 #help-detail-back:hover { color: var(--Mewsie-blue); background: var(--Mewsie-blue-light); }
 #help-detail-back svg { width: 20px; height: 20px; }
+#help-detail-title-block { display: flex; flex-direction: column; gap: 2px; }
 #help-detail-title { font-size: 17px; font-weight: 700; color: var(--Mewsie-text); line-height: 1.3; }
+#help-detail-subtitle { font-size: 13px; font-weight: 400; color: var(--Mewsie-text-muted); line-height: 1.3; }
 #help-detail-content { flex: 1; overflow-y: auto; padding: 0 0 32px; }
 
 /* Each section is a card */

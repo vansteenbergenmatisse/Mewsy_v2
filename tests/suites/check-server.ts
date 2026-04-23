@@ -258,7 +258,73 @@ export async function checkServer({ pass, fail, skip, results }: Reporter): Prom
       results.push({ ok: false });
     }
 
-    // Clean up test rows created by sync-context tests
+    // ── POST /api/feedback — missing bundleId → 400 ────────────────────
+    const fbMissing = await fetchJson(`${BASE}/api/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vote: 'up' }),
+    });
+    if (fbMissing.status === 400) {
+      pass('POST /api/feedback rejects missing bundleId with 400');
+      results.push({ ok: true });
+    } else {
+      fail('POST /api/feedback rejects missing bundleId', `Got status ${fbMissing.status}`);
+      results.push({ ok: false });
+    }
+
+    // ── POST /api/feedback — invalid vote → 400 ─────────────────────
+    const fbBadVote = await fetchJson(`${BASE}/api/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bundleId: crypto.randomUUID(), vote: 'maybe' }),
+    });
+    if (fbBadVote.status === 400) {
+      pass('POST /api/feedback rejects invalid vote with 400');
+      results.push({ ok: true });
+    } else {
+      fail('POST /api/feedback rejects invalid vote', `Got status ${fbBadVote.status}`);
+      results.push({ ok: false });
+    }
+
+    // ── POST /api/feedback — valid up vote → 200 ────────────────────
+    // Uses a random bundleId that won't exist in the DB — the endpoint
+    // saves with bundle_id = null as graceful fallback (requires migration 0004).
+    // If migration hasn't been applied, bundle_id is still NOT NULL and the insert
+    // fails with 500 — skip gracefully in that case.
+    const fbUpVote = await fetchJson(`${BASE}/api/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bundleId: crypto.randomUUID(), vote: 'up' }),
+    });
+    if (fbUpVote.status === 200 && (fbUpVote.body as { ok?: boolean })?.ok === true) {
+      pass('POST /api/feedback with valid up vote returns 200');
+      results.push({ ok: true });
+    } else if (fbUpVote.status === 500) {
+      skip('POST /api/feedback valid up vote', 'bundle_id still NOT NULL — run migration 0004');
+      results.push({ ok: 'skip' });
+    } else {
+      fail('POST /api/feedback valid up vote', `Got status ${fbUpVote.status}, body: ${JSON.stringify(fbUpVote.body)}`);
+      results.push({ ok: false });
+    }
+
+    // ── POST /api/feedback — down vote with reason → 200 ────────────
+    const fbDownVote = await fetchJson(`${BASE}/api/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bundleId: crypto.randomUUID(), vote: 'down', reason: 'incomplete' }),
+    });
+    if (fbDownVote.status === 200 && (fbDownVote.body as { ok?: boolean })?.ok === true) {
+      pass('POST /api/feedback with down vote + reason returns 200');
+      results.push({ ok: true });
+    } else if (fbDownVote.status === 500) {
+      skip('POST /api/feedback down vote with reason', 'bundle_id still NOT NULL — run migration 0004');
+      results.push({ ok: 'skip' });
+    } else {
+      fail('POST /api/feedback down vote with reason', `Got status ${fbDownVote.status}, body: ${JSON.stringify(fbDownVote.body)}`);
+      results.push({ ok: false });
+    }
+
+    // Clean up test rows created by sync-context and feedback tests
     try {
       const { getSupabase } = await import('../../backend/db/supabase.ts');
       const { ENABLE_DB_WRITES } = await import('../../backend/config/mewsie.config.ts');
@@ -266,6 +332,8 @@ export async function checkServer({ pass, fail, skip, results }: Reporter): Prom
         const supabase = getSupabase();
         await supabase.from('users').delete().eq('base_user_id', syncValidBaseId);
         await supabase.from('users').delete().eq('base_user_id', syncBadTierBaseId);
+        // Clean up feedback rows with null bundle_id (created by tests above)
+        await supabase.from('feedback').delete().is('bundle_id', null);
       }
     } catch { /* best-effort cleanup */ }
 

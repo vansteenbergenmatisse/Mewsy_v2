@@ -45,10 +45,15 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import type { TextBlockParam, MessageParam } from '@anthropic-ai/sdk/resources/messages/messages';
+import { createHash } from 'crypto';
 import { ANTHROPIC_API_KEY } from '../config.ts';
 import { baseSystemPrompt } from '../../prompts/system.ts';
 import { getHistory, addToHistory } from './session.ts';
 import { callHaiku, haikuClient, HAIKU_MODEL } from '../utils/haiku.ts';
+
+// Stable 16-char hash of the current base system prompt. Changes whenever the
+// prompt is edited, letting you correlate answer quality with prompt versions.
+export const PROMPT_VERSION_HASH = createHash('sha256').update(baseSystemPrompt).digest('hex').slice(0, 16);
 
 // The beta header is required by Anthropic to enable prompt caching.
 // maxRetries: 4 — handles transient 529 overload errors with exponential backoff.
@@ -135,6 +140,16 @@ export interface ChatResult {
   signal: AnswerSignal | null;
   contract: AnswerContract | null;
   tier: TierSignal | null;
+  // Token usage and call metadata — passed to buffer.addLlmCall() in agent.ts
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+    cache_creation_tokens: number | null;
+    cache_read_tokens: number | null;
+  };
+  stop_reason: string | null;
+  api_response_id: string;
+  latency_ms: number;
 }
 
 // Routing uses Haiku — fast, cheap, deterministic classification task.
@@ -324,6 +339,7 @@ export async function chat(
     { role: 'user', content: userMessage },
   ];
 
+  const t0 = Date.now();
   const response = await clientWithCaching.messages.create({
     model: ANSWER_MODEL,
     max_tokens: MAX_TOKENS,
@@ -331,6 +347,7 @@ export async function chat(
     system: buildSystemPrompt(knowledgeContent, sessionContext, queryContext),
     messages,
   });
+  const latency_ms = Date.now() - t0;
 
   const replyText = response.content?.[0]?.type === 'text' ? response.content[0].text : '';
   // Strip em dashes — the system prompt bans them but Claude occasionally produces them anyway.
@@ -390,7 +407,21 @@ export async function chat(
   addToHistory(sessionId, 'user', userMessage);
   addToHistory(sessionId, 'assistant', reply);
 
-  return { reply, signal, contract, tier };
+  return {
+    reply,
+    signal,
+    contract,
+    tier,
+    usage: {
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
+      cache_creation_tokens: (response.usage as unknown as Record<string, unknown>).cache_creation_input_tokens as number | null ?? null,
+      cache_read_tokens: (response.usage as unknown as Record<string, unknown>).cache_read_input_tokens as number | null ?? null,
+    },
+    stop_reason: response.stop_reason ?? null,
+    api_response_id: response.id,
+    latency_ms,
+  };
 }
 
 // ── Stage 2A: Document verification ───────────────────────────────────────────
