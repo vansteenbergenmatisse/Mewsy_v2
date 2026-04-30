@@ -16,7 +16,7 @@ import { MewsieLogo } from './MewsieLogo';
 
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'bot' | 'welcome' | 'thinking' | 'option-buttons' | 'clarify-cards';
+  role: 'user' | 'bot' | 'welcome' | 'thinking' | 'option-buttons' | 'clarify-cards' | 'ticket-offer';
   text: string;
   msgId?: string;
   isNewGroup?: boolean;
@@ -27,6 +27,8 @@ export interface ChatMessage {
   clarifying?: boolean;
   clarifyQuestions?: ClarifyQuestion[];  // for clarify-cards role
   bundleId?: string;                    // present on ANSWER bubbles for feedback
+  ticketState?: 'idle' | 'creating' | 'done' | 'error';
+  ticketMessage?: string;
 }
 
 // ── Bot avatar ────────────────────────────────────────────────────────────────
@@ -238,6 +240,37 @@ function OptionButtons({
 
 // ── ChatBody ──────────────────────────────────────────────────────────────────
 
+function TicketOfferBubble({ msgId, ticketState, ticketMessage, onCreateTicket }: {
+  msgId: string;
+  ticketState: 'idle' | 'creating' | 'done' | 'error';
+  ticketMessage?: string;
+  onCreateTicket?: (msgId: string) => void;
+}) {
+  return (
+    <div className="bot-row ticket-offer-row">
+      <BotAvatar />
+      <div className="ticket-offer-bubble">
+        {ticketState === 'idle' && (
+          <>
+            <p className="ticket-offer-text">Still not finding what you need?</p>
+            <button className="ticket-offer-btn" onClick={() => onCreateTicket?.(msgId)}>
+              Create a support ticket
+            </button>
+          </>
+        )}
+        {ticketState === 'creating' && (
+          <p className="ticket-offer-text">Creating your ticket…</p>
+        )}
+        {(ticketState === 'done' || ticketState === 'error') && (
+          <p className="ticket-offer-text ticket-offer-confirm">
+            {ticketMessage ?? 'Our team has been notified — expect a reply within 1 business day.'}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface ChatBodyProps {
   messages: ChatMessage[];
   isThinking: boolean;
@@ -248,6 +281,7 @@ interface ChatBodyProps {
   onSendOptionMessage: (label: string, question: string | null) => void;
   onAddOptionButtons: (options: string[], questionText: string | null, msgId: string) => void;
   onSendClarifyAnswers: (formatted: string, summary: { q: string; a: string }[]) => void;
+  onCreateTicket?: (msgId: string) => void;
 }
 
 export function ChatBody({
@@ -260,6 +294,7 @@ export function ChatBody({
   onSendOptionMessage,
   onAddOptionButtons,
   onSendClarifyAnswers,
+  onCreateTicket,
 }: ChatBodyProps) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const [showScrollBtn, setShowScrollBtn] = React.useState(false);
@@ -341,6 +376,18 @@ export function ChatBody({
               msgId={msg.msgId ?? msg.id}
               disabled={msg.disabled ?? isRequestInProgress}
               onComplete={onSendClarifyAnswers}
+            />
+          );
+        }
+
+        if (msg.role === 'ticket-offer') {
+          return (
+            <TicketOfferBubble
+              key={msg.id}
+              msgId={msg.id}
+              ticketState={msg.ticketState ?? 'idle'}
+              ticketMessage={msg.ticketMessage}
+              onCreateTicket={onCreateTicket}
             />
           );
         }

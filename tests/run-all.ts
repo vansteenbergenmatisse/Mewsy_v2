@@ -45,6 +45,7 @@ import { checkChat }     from './suites/check-chat.ts';
 import { checkFrontend } from './suites/check-frontend.ts';
 import { checkTier }     from './suites/check-tier.ts';
 import { checkDb }       from './suites/check-db.ts';
+import { checkMemory }   from './suites/check-memory.ts';
 
 // ── Suite toggles ─────────────────────────────────────────────────────────────
 // Set `enabled: false` to skip a suite without deleting it.
@@ -60,6 +61,7 @@ const SUITES = {
   frontend: { enabled: true },
   tier:     { enabled: true },
   db:       { enabled: true },
+  memory:   { enabled: true },
 };
 
 // ── Colours ───────────────────────────────────────────────────────────────────
@@ -171,6 +173,15 @@ async function runSuite(name: string, fn: (r: Reporter) => Promise<void>): Promi
   // 11. database layer
   if (SUITES.db.enabled)
     allResults.push(...(await runSuite('11. Database layer', checkDb)));
+
+  // 12. session memory
+  if (SUITES.memory.enabled) {
+    if (hasApiKey) {
+      allResults.push(...(await runSuite('12. Session memory', checkMemory)));
+    } else {
+      console.log(`\n${YELLOW}Skipping suite 12 (memory) — ANTHROPIC_API_KEY not set${RESET}`);
+    }
+  }
 
   // ── Summary ───────────────────────────────────────────────────────────────
   const total   = allResults.length;

@@ -485,35 +485,35 @@ export async function checkFrontend({ pass, fail, skip: _skip, results }: Report
     results.push({ ok: false });
   }
 
-  // #5: Intro line always appears before <h1> in rendered HTML — never after
+  // #5: Intro line always appears before the title in rendered HTML — never after
   try {
     const result = formatBotText('# My Title\n\nBody text here.') as string;
     const introPos = result.indexOf('intro-line');
-    const h1Pos = result.indexOf('<h1>');
-    if (introPos !== -1 && h1Pos !== -1 && introPos < h1Pos) {
-      pass('formatBotText [#5]: intro-line always appears before <h1> in rendered output');
+    const titlePos = result.indexOf('section-label');
+    if (introPos !== -1 && titlePos !== -1 && introPos < titlePos) {
+      pass('formatBotText [#5]: intro-line always appears before title section-label in rendered output');
       results.push({ ok: true });
     } else {
-      fail('formatBotText [#5]: intro-line must precede <h1>', `introPos=${introPos}, h1Pos=${h1Pos}`);
+      fail('formatBotText [#5]: intro-line must precede title', `introPos=${introPos}, titlePos=${titlePos}`);
       results.push({ ok: false });
     }
   } catch (err) {
-    fail('formatBotText [#5] intro before h1', (err as Error).message);
+    fail('formatBotText [#5] intro before title', (err as Error).message);
     results.push({ ok: false });
   }
 
-  // #6: # Title → <h1>Title</h1> in rendered output
+  // #6: # Title → section-label (bold) in rendered output — no <h1> tags
   try {
     const result = formatBotText('# My Title\n\nSome body text.') as string;
-    if (result.includes('<h1>My Title</h1>')) {
-      pass('formatBotText [#6]: # Title → <h1>Title</h1>');
+    if (result.includes('section-label') && result.includes('My Title') && !result.includes('<h1>')) {
+      pass('formatBotText [#6]: # Title → section-label bold (no <h1> tags)');
       results.push({ ok: true });
     } else {
-      fail('formatBotText [#6]: H1 not rendered as <h1>', `Got: ${result}`);
+      fail('formatBotText [#6]: # Title not rendered as section-label', `Got: ${result}`);
       results.push({ ok: false });
     }
   } catch (err) {
-    fail('formatBotText [#6] H1 rendered', (err as Error).message);
+    fail('formatBotText [#6] title rendered as section-label', (err as Error).message);
     results.push({ ok: false });
   }
 
@@ -1065,37 +1065,35 @@ export async function checkFrontend({ pass, fail, skip: _skip, results }: Report
         return m ? parseInt(m[1]) : null;
       };
 
-      // #6 (CSS): H1 font-size is 20–22px — clearly bold and dominant
+      // #6 (CSS): No .bot-text h1 rule — titles are now section-label divs (bold, same size as body)
       try {
         const h1Size = extractPx('.bot-text h1', 'font-size');
-        if (h1Size !== null && h1Size >= 20 && h1Size <= 22) {
-          pass(`CSS [#6]: .bot-text h1 font-size is ${h1Size}px (spec: 20–22px)`);
+        if (h1Size === null) {
+          pass('CSS [#6]: no .bot-text h1 rule (titles use section-label, not h1)');
           results.push({ ok: true });
         } else {
-          fail('CSS [#6]: .bot-text h1 font-size must be 20–22px', `Got: ${h1Size}px`);
+          fail('CSS [#6]: .bot-text h1 rule should be removed', `Still has font-size: ${h1Size}px`);
           results.push({ ok: false });
         }
       } catch (err) {
-        fail('CSS [#6] h1 font-size', (err as Error).message);
+        fail('CSS [#6] h1 rule absent', (err as Error).message);
         results.push({ ok: false });
       }
 
-      // #8: H1 is visually the largest element — h1 > section-label > body
+      // #8: section-label is close to body size (≤4px difference) — no more 22px H1 jumps
       try {
-        const h1Size = extractPx('.bot-text h1', 'font-size');
-        const labelSize = extractPx('.bot-text .section-label', 'font-size');
+        const labelSize = extractPx('.bot-text .section-label', 'font-size') ?? extractPx('.bot-text p', 'font-size');
         const bodySize = extractPx('.bot-text p', 'font-size');
-        if (h1Size !== null && labelSize !== null && bodySize !== null
-            && h1Size > labelSize && labelSize > bodySize) {
-          pass(`CSS [#8]: H1 (${h1Size}px) > section-label (${labelSize}px) > body (${bodySize}px) — H1 is dominant`);
+        if (labelSize !== null && bodySize !== null && Math.abs(labelSize - bodySize) <= 4) {
+          pass(`CSS [#8]: section-label (${labelSize}px) is within 4px of body (${bodySize}px) — no dominant H1`);
           results.push({ ok: true });
         } else {
-          fail('CSS [#8]: H1 must be larger than section-label, which must be larger than body',
-            `h1=${h1Size}px, label=${labelSize}px, body=${bodySize}px`);
+          fail('CSS [#8]: section-label should be within 4px of body text',
+            `label=${labelSize}px, body=${bodySize}px`);
           results.push({ ok: false });
         }
       } catch (err) {
-        fail('CSS [#8] H1 dominant', (err as Error).message);
+        fail('CSS [#8] section-label consistent', (err as Error).message);
         results.push({ ok: false });
       }
 

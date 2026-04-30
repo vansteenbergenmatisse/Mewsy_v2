@@ -20,6 +20,7 @@ import {
   SESSION_TTL_MINUTES,
   LANGUAGE_PERSISTS_ON_TIMEOUT,
   ENABLE_DB_WRITES,
+  CLEANUP_INTERVAL_MS,
 } from '../config/mewsie.config.ts';
 import { closeAbandonedBundles } from '../db/turn-buffer.ts';
 import type { SessionContext, ClarificationBundle } from '../types/session-context.ts';
@@ -27,11 +28,7 @@ import type { SessionContext, ClarificationBundle } from '../types/session-conte
 // Re-export so existing imports from session.ts still work
 export type { SessionContext, ClarificationBundle };
 
-// How long a session can be inactive before it is deleted (in milliseconds)
 const INACTIVITY_TTL_MS = SESSION_TTL_MINUTES * 60 * 1000;
-
-// How often to run the cleanup that deletes expired sessions (every 5 minutes)
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 
 interface Session {
   history: { role: string; content: string }[];

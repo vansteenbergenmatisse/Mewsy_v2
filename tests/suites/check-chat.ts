@@ -227,6 +227,34 @@ export async function checkChat({ pass, fail, skip, results }: Reporter): Promis
       }
     })(),
 
+    // CLARIFY escape hatch: repeated same question must yield ANSWER within MAX_CLARIFY_ROUNDS+1 turns
+    (async () => {
+      try {
+        const { MAX_CLARIFY_ROUNDS } = await import(`${ROOT}/backend/config/mewsie.config.ts`);
+        const sid = `test-clarify-escape-${Date.now()}`;
+        const question = 'What are the different accounting flows in Omniboost and which one should I choose?';
+        let gotAnswer = false;
+        let rounds = 0;
+        const maxAllowed = (MAX_CLARIFY_ROUNDS as number) + 1;
+        while (rounds <= maxAllowed) {
+          await new Promise(r => setTimeout(r, 500));
+          const result = await handleMessage(sid, question);
+          rounds++;
+          if (!result.reply.includes('[BUTTONS:')) { gotAnswer = true; break; }
+        }
+        if (gotAnswer) {
+          pass(`CLARIFY escape hatch: got ANSWER after ${rounds} round(s) (max: ${maxAllowed})`);
+          results.push({ ok: true });
+        } else {
+          fail('CLARIFY escape hatch: still in CLARIFY loop after MAX_CLARIFY_ROUNDS+1 turns', `rounds=${rounds}`);
+          results.push({ ok: false });
+        }
+      } catch (err) {
+        if (is529(err)) { skip('CLARIFY escape hatch test', 'API overloaded (529) — transient'); results.push({ ok: 'skip' }); }
+        else { fail('CLARIFY escape hatch test', (err as Error).message); results.push({ ok: false }); }
+      }
+    })(),
+
     // Lane B: unrelated follow-up resets post-answer state
     (async () => {
       try {

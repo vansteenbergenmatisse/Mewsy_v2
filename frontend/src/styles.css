@@ -822,6 +822,14 @@ body {
 .bot-option-something-else { color: var(--Mewsie-text-muted); }
 .bot-option-something-else:hover:not(:disabled) { color: var(--Mewsie-blue); }
 
+/* ── Ticket offer bubble ─────────────────────────────────────────────────── */
+.ticket-offer-row { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0 4px 0; animation: fadeInUp .2s ease; }
+.ticket-offer-bubble { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; max-width: 360px; display: flex; flex-direction: column; gap: 10px; }
+.ticket-offer-text { margin: 0; font-size: 14px; color: var(--Mewsie-text-muted); line-height: 1.45; }
+.ticket-offer-confirm { color: var(--Mewsie-text); }
+.ticket-offer-btn { align-self: flex-start; padding: 7px 14px; background: var(--Mewsie-blue); color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s ease; }
+.ticket-offer-btn:hover { opacity: 0.85; }
+
 /* ── ClarifyCards free-text input (Something else → type answer) ──────────── */
 .clarify-free-text { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-top: none; background: var(--surface); }
 .clarify-free-text-input { flex: 1; border: none; outline: none; background: transparent; font-size: 14px; color: var(--text); }
@@ -908,7 +916,6 @@ body {
 
 /* ── Bot text formatting ─────────────────────────────────────────────────── */
 .bot-text { display: flex; flex-direction: column; width: 100%; overflow-wrap: break-word; word-break: break-word; font-size: 16px; }
-.bot-text h1 { font-size: 22px; font-weight: 700; color: var(--Mewsie-text); margin: 6px 0 8px; line-height: 1.25; }
 .bot-text p { margin: 0 0 4px; line-height: 1.5; color: var(--Mewsie-text); font-size: 16px; }
 .bot-text .intro-line { font-size: 16px; color: var(--Mewsie-text-muted); margin-bottom: 6px; }
 .bot-text .response-end { margin-top: 18px; }

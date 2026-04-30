@@ -73,9 +73,9 @@ function enforceRelatedLinksSection(html: string): string {
   const relatedEnd = Math.min(...endCandidates);
   const section = html.slice(relatedStart, relatedEnd);
 
-  // Complex = has H1 AND (has ordered list OR 2+ section-label divs)
+  // Complex = has ordered list OR 2+ section-label divs (responses with sections/steps)
   const sectionLabelCount = (html.match(/<div class="section-label">/g) ?? []).length;
-  const isComplex = html.includes('<h1>') && (html.includes('<ol') || sectionLabelCount >= 2);
+  const isComplex = html.includes('<ol') || sectionLabelCount >= 2;
 
   if (!isComplex) {
     // Simple response — remove the section entirely
@@ -203,8 +203,8 @@ export function formatBotText(text: string): string {
   html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
   html = html.replace(/_(.*?)_/g, "<em>$1</em>");
   html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-  html = html.replace(/^# (.*)$/gm, '<h1>$1</h1>');               // H1 → h1 (only heading tag allowed)
-  // H2 and H3 already converted to **bold** above
+  html = html.replace(/^# (.*)$/gm, '<strong>$1</strong>');       // # Title → bold (same as section titles)
+  // ## and ### already converted to **bold** above
   html = html.replace(/((?:^\d+[\.)]\s+.*$\n?)+)/gm, (match: string) => {
     const items = match.trim().split(/\n(?=\d+[\.)]\s+)/);
     // Single item — strip the number and render as plain text (not a list)
@@ -225,7 +225,7 @@ export function formatBotText(text: string): string {
     return `<ul>${listItems}</ul>`;
   });
   html = html.replace(/\n\n+/g, "</p><p>");
-  if (!html.startsWith("<ol") && !html.startsWith("<ul") && !html.startsWith("<h1")) {
+  if (!html.startsWith("<ol") && !html.startsWith("<ul")) {
     html = `<p>${html}</p>`;
   }
   // Lone-bold paragraphs → section labels (bold that is the entire paragraph content)

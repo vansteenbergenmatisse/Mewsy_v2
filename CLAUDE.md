@@ -97,6 +97,14 @@ Run with `npm test` (or `tsx tests/run-all.ts`). Predev hook on `npm run dev` bl
 - **Ask first:** touching `prompts/system.ts`, adding dependencies, altering signal grammar or tier syntax, writing migrations, changes that could orphan knowledge docs.
 - **Proceed:** failing-test fixes, knowledge docs via the documented process, single-file refactors, new `mewsie.config.ts` constants.
 
+## Pipeline guard invariants — partial-guard pattern is a recurring bug
+
+The pipeline has a known failure mode: a config constant or counter is defined but only wired to a **subset** of the code paths that should respect it, making the guard silently broken. Before adding any counter, flag, or threshold to `mewsie.config.ts` or `session.ts`:
+
+1. **Every CLARIFY reply** (Stage 1 gates and Stage 2B recovery alike) must increment `clarifyRoundCounter`. The counter is checked against `MAX_CLARIFY_ROUNDS` before the next CLARIFY is sent. If you add a new CLARIFY trigger in `agent.ts`, make sure the counter increment is in the shared CLARIFY path — not gated on a specific reason.
+2. **`postAnswerClarifyUsed`** must be reset to `false` after every successful ANSWER (both in the main pipeline and the post-answer Lane A path). If you add a new path that clears post-answer state, include this field.
+3. **Never add a config constant that is never read.** If you're not ready to wire it up, don't add it. Dead constants (`FRUSTRATION_THRESHOLD` was unused for several sessions) cause future sessions to assume they're active. Wire it immediately or delete it.
+
 ## Self-improvement loop
 
 When something breaks:

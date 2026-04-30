@@ -67,8 +67,8 @@ import type { QueryContext, Page, AnswerContract } from './claude.ts';
 import {
   getSession,
   updateContext,
-  addToHistory,
 } from './session.ts';
+import { recordTurn } from '../memory/session-memory.ts';
 import type { SessionContext } from './session.ts';
 import {
   ROUTER_MAX_DOCS,
@@ -79,6 +79,7 @@ import {
   POST_ANSWER_CLARIFY_BUDGET,
   FUZZY_MATCH_ENABLED,
   ENABLE_DB_WRITES,
+  FRUSTRATION_THRESHOLD,
 } from '../config/mewsie.config.ts';
 import type { Manifest } from '../types/manifest.ts';
 import { migrateManifest } from '../scraper/pipeline/manifest.ts';
@@ -850,7 +851,7 @@ export async function handleMessage(
   language: string | null = null,
   browserToken: string | null = null,
   baseUserId: string | null = null
-): Promise<{ reply: string; bundleId?: string }> {
+): Promise<{ reply: string; bundleId?: string; ticketOffer?: boolean }> {
   const session = getSession(sessionId);
   const context = session.context as unknown as SessionContext;
   const history = session.history;
@@ -1040,6 +1041,7 @@ export async function handleMessage(
           clarifyRoundCounter: 0,
           originalQuestion: null,
           qaLog: [],
+          postAnswerClarifyUsed: false,
         });
       } else {
         updateContext(sessionId, {
@@ -1051,8 +1053,14 @@ export async function handleMessage(
       // Common session tail updates (run even on early return)
       const postPrevQ = postReply.trimStart().startsWith('{') ? null : extractPreviousQuestion(postReply);
       updateContext(sessionId, { previousQuestion: postPrevQ });
+      let ticketOffer = false;
       if (detectFrustration(userMessage)) {
-        updateContext(sessionId, { frustrationCounter: (context.frustrationCounter || 0) + 1 });
+        const newPostFrustration = (context.frustrationCounter || 0) + 1;
+        updateContext(sessionId, { frustrationCounter: newPostFrustration });
+        if (newPostFrustration >= FRUSTRATION_THRESHOLD) {
+          ticketOffer = true;
+          console.log(`[agent] frustration threshold (${FRUSTRATION_THRESHOLD}) reached → ticket offer (post-answer)`);
+        }
       }
       const postTools = detectTools(userMessage);
       if (postTools.length > 0) {
@@ -1079,7 +1087,7 @@ export async function handleMessage(
       buffer.updateBundle({ routing_mode: 'POST_ANSWER' });
       buffer.flush().catch(err => console.error('[turn-buffer] flush failed:', err.message));
 
-      return { reply: postReply, bundleId: postBundleId };
+      return { reply: postReply, bundleId: postBundleId, ...(ticketOffer ? { ticketOffer: true } : {}) };
     }
   }
 
@@ -1126,6 +1134,7 @@ export async function handleMessage(
   let selectedPages: ManifestPage[] = [];
   let clarifyTriggerReason: 'DIVERSE_TOPICS' | 'THEME_OVERFLOW' | 'TOO_BROAD' | 'STAGE2B_NEEDS_CONTEXT' | null = null;
   let clarifyMatchedMeta: { title: string; theme: string; keywords: string[] }[] = [];
+  let escapeHatchDocs: ManifestPage[] = [];
   let stage2bDecisionB = false;
   let contentVerifiedFailure = false;
   let shortTokenCandidates: string[] = [];
@@ -1226,11 +1235,13 @@ export async function handleMessage(
             console.log(`[STAGE 1]  ${matchedDocCount}/${allPages.length} docs matched, all theme: "${dominantTheme}" → CLARIFY(THEME_OVERFLOW)`);
             clarifyTriggerReason = 'THEME_OVERFLOW';
             clarifyMatchedMeta = topForButtons.map(d => ({ title: d.label, theme: d.theme, keywords: d.keywords ?? [] }));
+            escapeHatchDocs = scored.slice(0, STAGE2A_SHORTLIST_MAX).map(s => s.page);
           } else {
             // Gate 5: 6+ matched, multiple themes → CLARIFY(TOO_BROAD)
             console.log(`[STAGE 1]  ${matchedDocCount}/${allPages.length} docs matched, themes: [${themes.join(', ')}] → CLARIFY(TOO_BROAD)`);
             clarifyTriggerReason = 'TOO_BROAD';
             clarifyMatchedMeta = topForButtons.map(d => ({ title: d.label, theme: d.theme, keywords: d.keywords ?? [] }));
+            escapeHatchDocs = scored.slice(0, STAGE2A_SHORTLIST_MAX).map(s => s.page);
           }
         }
       }
@@ -1240,6 +1251,23 @@ export async function handleMessage(
   }
 
   // Step 3: Determine mode
+
+  // Escape hatch: if MAX_CLARIFY_ROUNDS of CLARIFY replies have already been sent,
+  // stop asking and try Stage 2A on the top-scored docs instead.
+  // If ≥1 doc passes → ANSWER; if 0 pass → BASIC (genuine fallback).
+  if (clarifyTriggerReason !== null && (context.clarifyRoundCounter ?? 0) >= MAX_CLARIFY_ROUNDS) {
+    if (escapeHatchDocs.length > 0) {
+      console.log(`[MAX_CLARIFY] ${context.clarifyRoundCounter} rounds reached → forcing Stage 2A with top ${escapeHatchDocs.length} docs`);
+      const escapeResult = await runStage2(escapeHatchDocs, routingBaseMessage, [], currentQALog, 0);
+      if (escapeResult.selectedPages.length > 0) {
+        selectedPages = escapeResult.selectedPages;
+      }
+    } else {
+      console.log(`[MAX_CLARIFY] ${context.clarifyRoundCounter} rounds reached, no escape docs → forcing BASIC`);
+    }
+    clarifyTriggerReason = null;
+  }
+
   let finalMode: RoutingMode;
   if (clarifyTriggerReason !== null) {
     finalMode = 'CLARIFY';
@@ -1256,6 +1284,7 @@ export async function handleMessage(
   // Step 4: Build reply
 
   let reply: string;
+  let ticketOffer = false;
   let knowledgeContent: string | null = BASIC_MODE;
   let queryContext: QueryContext | null = null;
   let answerSignal: import('./claude.ts').AnswerSignal | null = null;
@@ -1331,7 +1360,8 @@ export async function handleMessage(
           clarifyTriggerReason!,
           clarifyMatchedMeta,
           allAnswers,
-          context.language
+          context.language,
+          context.tools ?? []
         ),
         generateIntroLine(userMessage, clarifyTriggerReason ?? 'CLARIFY', context.language),
       ]);
@@ -1347,19 +1377,15 @@ export async function handleMessage(
       }
     }
 
-    addToHistory(sessionId, 'user', userMessage);
-    addToHistory(sessionId, 'assistant', reply);
+    recordTurn(sessionId, userMessage, reply);
 
     if (!context.originalQuestion) {
       updateContext(sessionId, { originalQuestion: userMessage });
     }
 
-    // Increment clarifyRoundCounter only for Stage 2B Decision A (not Stage 1 gates).
-    // Stage 1 gates are free — the counter tracks only the costly "we tried routing but
-    // couldn't find good docs" recovery cycles.
-    if (clarifyTriggerReason === 'STAGE2B_NEEDS_CONTEXT') {
-      updateContext(sessionId, { clarifyRoundCounter: (context.clarifyRoundCounter ?? 0) + 1 });
-    }
+    // Increment for every CLARIFY reply — ensures MAX_CLARIFY_ROUNDS applies to all
+    // CLARIFY triggers (Stage 1 gates and Stage 2B recovery alike).
+    updateContext(sessionId, { clarifyRoundCounter: (context.clarifyRoundCounter ?? 0) + 1 });
 
   } else {
     // BASIC mode — static category buttons with context-aware prepend.
@@ -1385,8 +1411,7 @@ export async function handleMessage(
       console.log('[BASIC] AI question failed — fell back to static category buttons');
     }
 
-    addToHistory(sessionId, 'user', userMessage);
-    addToHistory(sessionId, 'assistant', reply);
+    recordTurn(sessionId, userMessage, reply);
 
     if (!context.originalQuestion) {
       updateContext(sessionId, { originalQuestion: userMessage });
@@ -1440,6 +1465,10 @@ export async function handleMessage(
     const newCount = (context.frustrationCounter || 0) + 1;
     updateContext(sessionId, { frustrationCounter: newCount });
     console.log(`[agent] frustration counter: ${newCount}`);
+    if (newCount >= FRUSTRATION_THRESHOLD) {
+      ticketOffer = true;
+      console.log(`[agent] frustration threshold (${FRUSTRATION_THRESHOLD}) reached → ticket offer`);
+    }
   }
 
   const detectedTools = detectTools(userMessage);
@@ -1502,5 +1531,5 @@ export async function handleMessage(
   buffer.flush().catch(err => console.error('[turn-buffer] flush failed:', err.message));
 
   // Always return bundleId so feedback buttons appear on every response
-  return { reply, bundleId };
+  return { reply, bundleId, ...(ticketOffer ? { ticketOffer: true } : {}) };
 }

@@ -30,10 +30,10 @@ export const haikuClient = new Anthropic({
  * Sends a single prompt to Haiku and returns the raw text response.
  * Used by selectRelevantCategories() and can be mocked in unit tests.
  */
-export async function callHaiku(prompt: string): Promise<string> {
+export async function callHaiku(prompt: string, maxTokens = 120): Promise<string> {
   const response = await haikuClient.messages.create({
     model: HAIKU_MODEL,
-    max_tokens: 120,
+    max_tokens: maxTokens,
     temperature: 0,
     messages: [{
       role: 'user',

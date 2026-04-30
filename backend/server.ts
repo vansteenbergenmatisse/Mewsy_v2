@@ -103,10 +103,11 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
 
     const result = await Promise.race([outputPromise, timeoutPromise]);
     if (timeoutId) clearTimeout(timeoutId);
-    // handleMessage returns { reply, bundleId? } — include bundleId for feedback binding
+    // handleMessage returns { reply, bundleId?, ticketOffer? }
     const output = typeof result === 'string' ? result : result.reply;
     const bundleId = typeof result === 'object' && result !== null ? (result as { bundleId?: string }).bundleId : undefined;
-    return c.json({ output, ...(bundleId ? { bundleId } : {}) });
+    const ticketOffer = typeof result === 'object' && result !== null ? (result as { ticketOffer?: boolean }).ticketOffer : undefined;
+    return c.json({ output, ...(bundleId ? { bundleId } : {}), ...(ticketOffer ? { ticketOffer: true } : {}) });
   } catch (err) {
     if (timeoutId) clearTimeout(timeoutId);
     const error = err as Error;
@@ -298,6 +299,48 @@ app.post('/api/sync-context', async (c) => {
   } catch (err) {
     console.error('[sync-context] error:', (err as Error).message);
     return c.json({ error: 'Failed to sync context' }, 500);
+  }
+});
+
+// ── POST /api/create-ticket ────────────────────────────────────────────────────
+// Called by the frontend when the user accepts the Salesforce ticket offer.
+// Collects session context, calls the Salesforce stub, and returns confirmation.
+app.post('/api/create-ticket', async (c) => {
+  try {
+    const { sessionId } = await c.req.json<{ sessionId?: string }>();
+    if (!sessionId || typeof sessionId !== 'string') {
+      return c.json({ ok: false, message: 'sessionId is required' }, 400);
+    }
+
+    const { getSession } = await import('./pipeline/session.ts');
+    const { getMemoryContext } = await import('./memory/session-memory.ts');
+    const { createTicket } = await import('./integrations/salesforce/index.ts');
+
+    const session = getSession(sessionId);
+    const context = session.context as { previousQuestion?: string; tools?: string[] };
+    const { summary, rawTurns } = getMemoryContext(sessionId);
+
+    const conversationSummary = summary
+      ?? rawTurns.slice(-6).map(t => `${t.role}: ${t.content}`).join('\n');
+
+    const parts = [
+      context.previousQuestion ? `Last question: "${context.previousQuestion}"` : '',
+      context.tools?.length ? `Integration: ${context.tools.join(', ')}` : '',
+      conversationSummary ? `\nConversation:\n${conversationSummary}` : '',
+    ].filter(Boolean);
+
+    const issueDescription = parts.join('\n') || 'User requested support after repeated questions';
+
+    const result = await createTicket(context, issueDescription);
+
+    if (result.success) {
+      return c.json({ ok: true, ticketId: result.ticketId });
+    }
+    console.log('[create-ticket] Salesforce stub returned error:', result.error);
+    return c.json({ ok: false, message: 'Our team has been notified — expect a reply within 1 business day.' });
+  } catch (err) {
+    console.error('[create-ticket] error:', (err as Error).message);
+    return c.json({ ok: false, message: 'Our team has been notified — expect a reply within 1 business day.' });
   }
 });
 

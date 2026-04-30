@@ -296,6 +296,7 @@ export default function App() {
         setIsRequestInProgress(false);
         const reply = data.output || "I didn't catch that - could you rephrase?";
         const responseBundleId: string | undefined = data.bundleId;
+        const hasTicketOffer: boolean = data.ticketOffer === true;
 
         // Detect clarify_questions JSON from the backend
         try {
@@ -320,6 +321,15 @@ export default function App() {
 
         const id = makeMsgId();
         addBotMessage(reply, id, responseBundleId);
+
+        if (hasTicketOffer) {
+          setTimeout(() => {
+            setMessages(prev => [
+              ...prev,
+              { id: makeId(), role: 'ticket-offer' as const, text: '', ticketState: 'idle' as const },
+            ]);
+          }, 2000);
+        }
       })
       .catch((err) => {
         // If the request was aborted (by timeout or new request), don't show error
@@ -398,6 +408,34 @@ export default function App() {
     showThinking(selectedLanguage);
     sendToServer(contextMessage);
   }, [selectedLanguage, showThinking, sendToServer]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Salesforce ticket creation ─────────────────────────────────────────────
+
+  const handleCreateTicket = useCallback(async (msgId: string) => {
+    type TicketState = ChatMessage['ticketState'];
+    setMessages(prev => prev.map(m => m.id === msgId ? { ...m, ticketState: 'creating' as TicketState } : m));
+    try {
+      const resp = await fetch(`${BACKEND_URL}/api/create-ticket`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: getSessionId() }),
+      });
+      const data = await resp.json() as { ok: boolean; ticketId?: string; message?: string };
+      setMessages(prev => prev.map(m => m.id === msgId ? {
+        ...m,
+        ticketState: (data.ok ? 'done' : 'error') as TicketState,
+        ticketMessage: data.ok
+          ? (data.ticketId ? `Ticket #${data.ticketId} created — our team will follow up shortly.` : 'Ticket created — our team will follow up shortly.')
+          : (data.message ?? 'Our team has been notified — expect a reply within 1 business day.'),
+      } : m));
+    } catch {
+      setMessages(prev => prev.map(m => m.id === msgId ? {
+        ...m,
+        ticketState: 'error' as TicketState,
+        ticketMessage: 'Our team has been notified — expect a reply within 1 business day.',
+      } : m));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Clarify card completion ────────────────────────────────────────────────
   // Called when the user has answered (or skipped) all clarifying questions.
@@ -552,6 +590,7 @@ export default function App() {
         onSendOptionMessage={handleSendOptionMessage}
         onAddOptionButtons={handleAddOptionButtons}
         onSendClarifyAnswers={handleSendClarifyAnswers}
+        onCreateTicket={handleCreateTicket}
         onAttachFile={handleAttachFile}
         onRemoveFile={handleRemoveFile}
       />

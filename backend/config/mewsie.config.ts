@@ -79,6 +79,10 @@ export const SESSION_TTL_MINUTES = 30;
 // true = language preference is remembered across sessions; false = resets on timeout.
 export const LANGUAGE_PERSISTS_ON_TIMEOUT = true;
 
+// How often (ms) expired sessions and memory entries are swept. Shared by session.ts
+// and session-memory.ts so both cleaners stay in sync.
+export const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+
 // ── Persistence ───────────────────────────────────────────────────────────────
 
 // Master toggle for all Supabase writes. When false, the TurnBuffer.flush()

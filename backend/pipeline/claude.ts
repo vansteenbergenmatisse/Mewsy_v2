@@ -48,7 +48,7 @@ import type { TextBlockParam, MessageParam } from '@anthropic-ai/sdk/resources/m
 import { createHash } from 'crypto';
 import { ANTHROPIC_API_KEY } from '../config.ts';
 import { baseSystemPrompt } from '../../prompts/system.ts';
-import { getHistory, addToHistory } from './session.ts';
+import { getMemoryContext, recordTurn } from '../memory/session-memory.ts';
 import { callHaiku, haikuClient, HAIKU_MODEL } from '../utils/haiku.ts';
 
 // Stable 16-char hash of the current base system prompt. Changes whenever the
@@ -186,7 +186,8 @@ export interface QueryContext {
 export function buildSystemPrompt(
   knowledgeContent: string | null = null,
   sessionContext: SessionContext | null = null,
-  queryContext: QueryContext | null = null
+  queryContext: QueryContext | null = null,
+  memorySummary: string | null = null
 ): TextBlockParam[] {
   // Block 1 — static base prompt, marked for caching.
   const blocks: TextBlockParam[] = [
@@ -263,6 +264,10 @@ export function buildSystemPrompt(
     contentParts.push(summaryLines.join('\n'));
   }
 
+  if (memorySummary) {
+    contentParts.push('CONVERSATION HISTORY SUMMARY\n' + memorySummary);
+  }
+
   if (knowledgeContent === BASIC_MODE) {
     contentParts.push('[No matching documentation was found for this question. Do not guess or make up information. Answer only from what you know about Omniboost and Mews — if the topic is outside that scope, say so briefly and ask the user one short clarifying question to redirect them. Write exactly 4 bullet options (- option), each covering a distinct likely topic. Always add "- Something else" as the 5th and final bullet. Never fewer than 4, never more than 4 main options.]');
   } else if (knowledgeContent) {
@@ -314,8 +319,8 @@ export async function chat(
   sessionContext: SessionContext | null = null,
   queryContext: QueryContext | null = null
 ): Promise<ChatResult> {
-  // Get the conversation history for this session
-  const history = getHistory(sessionId);
+  // Get the rolling summary + recent raw turns from the memory module
+  const { summary: memorySummary, rawTurns } = getMemoryContext(sessionId);
 
   // Defensive strip of legacy inline language directives.
   //
@@ -326,14 +331,14 @@ export async function chat(
   // "respond in French" / "respond in English" directives in different
   // history turns. The LANGUAGE LOCK block now carries the authoritative
   // signal, so these inline notes are noise at best and harmful at worst.
-  const cleanedHistory = history.map(entry => {
+  const cleanedHistory = rawTurns.map(entry => {
     if (entry.role !== 'user' || typeof entry.content !== 'string') return entry;
     return { ...entry, content: entry.content.replace(/^\[System note:[^\]]*\]\s*\n\n/, '') };
   });
 
   // Build the full message list: everything said so far + the new message.
   // Cast history entries to MessageParam — history roles are always 'user' | 'assistant'
-  // as enforced by addToHistory(), but TypeScript sees the broader string type.
+  // as enforced by recordTurn(), but TypeScript sees the broader string type.
   const messages: MessageParam[] = [
     ...(cleanedHistory as MessageParam[]),
     { role: 'user', content: userMessage },
@@ -344,7 +349,7 @@ export async function chat(
     model: ANSWER_MODEL,
     max_tokens: MAX_TOKENS,
     temperature: TEMPERATURE,
-    system: buildSystemPrompt(knowledgeContent, sessionContext, queryContext),
+    system: buildSystemPrompt(knowledgeContent, sessionContext, queryContext, memorySummary),
     messages,
   });
   const latency_ms = Date.now() - t0;
@@ -403,9 +408,8 @@ export async function chat(
     console.log(`[chat] tier signal detected: ${tier}`);
   }
 
-  // Save this message pair to the session history (stripped of signal/contract/tier blocks)
-  addToHistory(sessionId, 'user', userMessage);
-  addToHistory(sessionId, 'assistant', reply);
+  // Record this turn fire-and-forget — summarization runs in the background on every 3rd turn
+  recordTurn(sessionId, userMessage, reply);
 
   return {
     reply,
@@ -642,7 +646,8 @@ export async function generateSmartClarifyQuestion(
   triggerReason: string,
   matchedDocMeta: { title: string; theme: string; keywords?: string[] }[],
   previousAnswers: string[] = [],
-  language: string | null = null
+  language: string | null = null,
+  knownTools: string[] = []
 ): Promise<{ question: string; options: string[] } | null> {
   const prevLower = new Set(previousAnswers.map(a => a.toLowerCase()));
   const targetLang = langName(language);
@@ -653,6 +658,12 @@ export async function generateSmartClarifyQuestion(
 
   const prevAnswerLine = previousAnswers.length > 0
     ? `\nThe user already answered: [${previousAnswers.join(', ')}]. Do NOT repeat these as options.`
+    : '';
+
+  // If the user's integration/accounting software is already known, block re-asking about it.
+  // "integration", "accounting software", and "accounting platform" are interchangeable in this context.
+  const knownToolsLine = knownTools.length > 0
+    ? `\nIMPORTANT: The user's accounting integration is already known: ${knownTools.join(', ')}. Do NOT ask which integration, accounting software, or accounting platform they use — that is already established. Ask about a different aspect of their question instead.`
     : '';
 
   const prompt = `You are a routing assistant for a customer support chatbot about Omniboost hotel accounting integrations.
@@ -675,7 +686,7 @@ Rules:
 - Do NOT use generic phrases like "General information", "Other topics", or "Getting started".
 - If documents are mostly onboarding guides for different integrations, the options should be the integration names (Xero, DATEV, QuickBooks, etc.)
 - If documents span different categories (onboarding vs troubleshooting vs configuration), the options should be the category types.
-- Keep options short (1-4 words each).${prevAnswerLine}
+- Keep options short (1-4 words each).${prevAnswerLine}${knownToolsLine}
 
 Write the question and options in ${targetLang}.
 Respond with ONLY a JSON object, no explanation:
