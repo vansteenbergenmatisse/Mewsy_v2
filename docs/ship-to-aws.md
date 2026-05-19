@@ -73,9 +73,9 @@ AWS console → App Runner → **Create service**:
 4. **Service settings**
    - Service name: `mewsie`
    - CPU: `0.5 vCPU`, Memory: `1 GB` (bump later if needed)
-   - Port: `4010`
+   - Port: `3005`
    - **Environment variables** (plain values):
-     - `PORT=4010`
+     - `PORT=3005`
      - `ENABLE_DB_WRITES=true`
      - `NODE_ENV=production`
    - **Environment variables** (from Secrets Manager — one per secret you created in Step 3):
