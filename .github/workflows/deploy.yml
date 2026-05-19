@@ -1,0 +1,60 @@
+name: build-and-deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: eu-west-1                 # ← change to your region
+  ECR_REPOSITORY: mewsie                # ← ECR repo name (create it first)
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  test:
+    name: Run test suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm --prefix frontend ci
+      - run: npm test
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  build-and-push:
+    name: Build image and push to ECR
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # for OIDC auth to AWS
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push
+        run: |
+          IMAGE_URI=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          docker build -t $IMAGE_URI:${{ env.IMAGE_TAG }} -t $IMAGE_URI:latest .
+          docker push $IMAGE_URI:${{ env.IMAGE_TAG }}
+          docker push $IMAGE_URI:latest
+
+      - name: Trigger App Runner deployment
+        run: |
+          aws apprunner start-deployment \
+            --service-arn ${{ secrets.APP_RUNNER_SERVICE_ARN }} \
+            --region ${{ env.AWS_REGION }}

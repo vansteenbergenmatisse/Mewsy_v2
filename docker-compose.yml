@@ -1,0 +1,41 @@
+# Mewsie — local Docker orchestration
+#
+# Usage:
+#   docker compose up --build              # start the API + frontend
+#   docker compose run --rm scraper        # one-shot knowledge sync
+#   docker compose down                    # stop everything
+#
+# Reads env from .env in the project root (never commit that file).
+
+services:
+  mewsie:
+    build: .
+    image: mewsie:latest
+    container_name: mewsie
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "3005"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3005/health').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # One-shot scraper — not started by `up`, only by `docker compose run --rm scraper`
+  scraper:
+    image: mewsie:latest
+    container_name: mewsie-scraper
+    profiles: ["tools"]
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+    command: ["npm", "run", "sync"]
+    depends_on:
+      - mewsie
