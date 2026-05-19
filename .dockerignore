@@ -1,0 +1,38 @@
+# Never ship secrets
+.env
+.env.*
+!.env.example
+
+# Local installs — Docker installs its own
+node_modules
+frontend/node_modules
+
+# Build artefacts — rebuilt inside the image
+frontend/dist
+dist
+
+# VCS
+.git
+.gitignore
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+.claude
+
+# Planning / docs not needed at runtime
+.planning
+docs
+
+# Logs / temp
+*.log
+logs
+
+# Tests aren't needed at runtime (run them in CI before the build)
+tests
+vitest.config.ts
+
+# Platform configs not needed in the image
+railway.toml
