@@ -24,7 +24,7 @@
 (function (window, document) {
   'use strict';
 
-  var DEFAULT_URL = 'https://mewsie.omniboost.io';
+  var DEFAULT_URL = 'https://998afrnq3y.eu-west-1.awsapprunner.com';
   var CONTAINER_ID = 'mewsie-embed-container';
 
   var state = {
