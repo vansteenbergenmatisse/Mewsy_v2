@@ -23,3 +23,6 @@ Thumbs.db
 # Editor folders
 .vscode/
 .idea/
+
+# compact-ultra session archive
+.compact-ultra/
