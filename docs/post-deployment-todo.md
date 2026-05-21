@@ -3,6 +3,8 @@
 > Open work that follows the AWS migration. Items are **independent** and **reorderable** — each block has Priority / Status / Owner / Effort fields you can edit freely. The suggested priority is opinion, not law.
 >
 > For the completed migration log, see `aws-deployment-log.md`.
+>
+> **Updated 2026-05-21:** Mewsie has been migrated from App Runner to ECS Express Mode. All commands and ARNs below have been retargeted at the ECS service. App Runner is still running in parallel pending decommission (Phase E in the deployment log). Where an item is still meaningful, it's been rewritten for ECS; where it's been superseded, the original is preserved with a strike-through and a note pointing at the new equivalent.
 
 ---
 
@@ -16,62 +18,92 @@
 
 ---
 
-## 1. Cloudflare DNS records → production domain live
+## 1. Cloudflare DNS records → production domain live (Phase D)
 
 - **Priority:** ★★★
 - **Status:** Blocked (waiting on Bart)
 - **Owner:** Bart (Cloudflare admin); Matisse to verify
 - **Effort:** Quick
 
-**What:** Add 3 CNAME records in Cloudflare for `omniboost.com` so `mewsie.omniboost.com` resolves to App Runner and the SSL cert validates.
+**What:** Add 2 CNAME records in Cloudflare for `omniboost.com` so `mewsie.omniboost.com` resolves to the ECS Express ALB and the SSL cert validates.
 
-**Why:** Without these records, the domain stays `pending_certificate_dns_validation` and Mewsie can only be reached on the default `998afrnq3y.eu-west-1.awsapprunner.com` URL. All three must be **grey-cloud (DNS only)** — orange-cloud proxying breaks the cert handshake.
+> **Updated 2026-05-21 for ECS Express.** Previously this item targeted App Runner with 3 records (1 site pointer + 2 cert validation CNAMEs). On ECS the shared ALB has its own host-header rule, so we only need 2 records.
+
+**Why:** Without these records, the ACM cert stays `PENDING_VALIDATION` and Mewsie can only be reached on the raw ECS hostname `https://me-fe213300d226440a9641c315defbd68f.ecs.eu-west-1.on.aws`. Both records must be **grey-cloud (DNS only)** — orange-cloud proxying breaks the TLS handshake against the ALB.
+
+**Records to send Bart:**
+
+| Type | Name | Target | Proxy |
+|---|---|---|---|
+| CNAME | `_6b2e2a6f069fc9b98024660e83322cc3.mewsie.omniboost.com` | `_0656ec99024903dcff45521fb2dc593f.jkddzztszm.acm-validations.aws.` | DNS-only (grey) |
+| CNAME | `mewsie.omniboost.com` | `ecs-express-gateway-alb-6cbde4d3-1287738133.eu-west-1.elb.amazonaws.com` | DNS-only (grey) |
 
 **How:**
-1. Send Bart the records (already prepared in the Slack message you sent)
-2. Bart adds them in Cloudflare → all grey cloud
-3. Run from the repo root once Bart confirms:
+1. Send Bart the records above
+2. Bart adds them in Cloudflare → both grey cloud
+3. Once Bart confirms, poll for cert issuance:
    ```bash
-   aws apprunner describe-custom-domains \
-     --service-arn arn:aws:apprunner:eu-west-1:627626160248:service/mewsie/6ca9af68b42546189a0894d11715f74b \
+   aws acm describe-certificate \
+     --certificate-arn arn:aws:acm:eu-west-1:627626160248:certificate/5846ffd0-1dc3-4a2f-8d2e-e98ac0669373 \
      --region eu-west-1 --profile sandbox \
-     --query 'CustomDomains[?DomainName==`mewsie.omniboost.com`].Status' --output text
+     --query 'Certificate.Status' --output text
    ```
-4. When status flips from `pending_certificate_dns_validation` to `active` (5–20 min after DNS propagates):
+4. When status flips from `PENDING_VALIDATION` to `ISSUED` (5–30 min after DNS propagates):
    ```bash
-   curl -sS https://mewsie.omniboost.com/health
+   # Attach cert to the shared ALB HTTPS:443 listener
+   aws elbv2 add-listener-certificates \
+     --listener-arn arn:aws:elasticloadbalancing:eu-west-1:627626160248:listener/app/ecs-express-gateway-alb-6cbde4d3/da03a5cf69d4b73d/e3c3eb3ca5ca2d37 \
+     --certificates CertificateArn=arn:aws:acm:eu-west-1:627626160248:certificate/5846ffd0-1dc3-4a2f-8d2e-e98ac0669373 \
+     --region eu-west-1 --profile sandbox
+
+   # Add a host-header rule for mewsie.omniboost.com → Mewsie target group
+   # (look up TargetGroupArn first via `aws elbv2 describe-rules --listener-arn <same>` to mirror the existing priority-1 rule)
+   aws elbv2 create-rule \
+     --listener-arn arn:aws:elasticloadbalancing:eu-west-1:627626160248:listener/app/ecs-express-gateway-alb-6cbde4d3/da03a5cf69d4b73d/e3c3eb3ca5ca2d37 \
+     --priority 2 \
+     --conditions Field=host-header,Values=mewsie.omniboost.com \
+     --actions Type=forward,TargetGroupArn=<TG_ARN_HERE> \
+     --region eu-west-1 --profile sandbox
    ```
-5. Expect `{"status":"ok"}`.
+5. Re-swap the embed loader to the custom domain (Phase D5):
+   - Edit `frontend/public/embed/mewsie-loader.js:27` → `https://mewsie.omniboost.com`
+   - Commit, docker build/push, `aws ecs update-service --force-new-deployment`
+6. Verify:
+   ```bash
+   curl -sS https://mewsie.omniboost.com/health   # → {"status":"ok"}
+   ```
 
 ---
 
 ## 2. Marion — verify Mewsie still works embedded in Base
 
 - **Priority:** ★★★
-- **Status:** Ready (can start before DNS is in)
+- **Status:** Ready (can start before DNS is in — test against the raw ECS URL first)
 - **Owner:** Marion (test); Matisse (coordinate)
 - **Effort:** Quick
 
-**What:** Confirm the Mewsie chat widget still works when embedded in the Base platform after the AWS migration. The widget hits `POST /webhook/chat` on the Mewsie backend, so any URL change has to be reflected in Base, and the CORS allowlist on Mewsie's side has to permit Base's origin.
+**What:** Confirm the Mewsie chat widget still works when embedded in the Base platform after the ECS migration. The widget hits `POST /webhook/chat` on the Mewsie backend; the embed loader URL was swapped to ECS in commit `a24f034`, so any cached old loader in Base needs a hard refresh.
 
-**Why:** The migration changed the backend host. Anything in Base that hard-codes the old Railway URL will silently break. Better to catch this before users hit it.
+> **Updated 2026-05-21 for ECS Express.** Previously this item validated against the App Runner default URL. ECS is now the default; App Runner still works but is the rollback path.
+
+**Why:** The embed loader's `DEFAULT_URL` now points at the ECS host (`https://me-fe213300d226440a9641c315defbd68f.ecs.eu-west-1.on.aws`). Anything in Base that hard-loaded the old `mewsie-loader.js` is cached against the App Runner URL — still works, but not what users will hit after Phase D5 swaps the loader to `mewsie.omniboost.com`.
 
 **How:**
-1. Ask Marion to load the page in Base that embeds Mewsie
+1. Ask Marion to **hard-refresh** the page in Base that embeds Mewsie (Cmd+Shift+R)
 2. He should:
    - Confirm the widget renders
    - Send a test message and confirm a reply comes back
-   - Open browser devtools → Network tab → confirm the request goes to `https://998afrnq3y.eu-west-1.awsapprunner.com` (or, once DNS is live, `https://mewsie.omniboost.com`) and returns 200
+   - Open browser devtools → Network tab → confirm the chat request goes to the ECS hostname (and later, once DNS is live, `https://mewsie.omniboost.com`) and returns 200
    - Check the console for any CORS errors
-3. If the widget URL inside Base is still pointing at the old Railway host, that's the fix Marion (or whoever owns Base) needs to make on the Base side
-4. If a CORS error appears, the embedding origin needs to be added to the `mewsie/allowed-origins` secret in AWS — let Matisse know which origin and he'll add it
+3. If the widget shows requests going to the old App Runner URL, Base is using a stale cached `mewsie-loader.js` — clear cache or wait for Base's CDN TTL to expire
+4. If a CORS error appears, the embedding origin needs to be added to the `mewsie/allowed-origins` secret in AWS — let Matisse know which origin and he'll add it (the parser uses exact-match, see item #8)
 
 **Message template for Marion (English):**
-> Hey Marion — we just migrated Mewsie from Railway to AWS. Can you test that the Mewsie widget still works inside Base?
-> 1. Open the Base page where Mewsie is embedded
+> Hey Marion — we just migrated Mewsie from App Runner to ECS Express Mode. Can you test that the Mewsie widget still works inside Base?
+> 1. Hard-refresh (Cmd+Shift+R) the Base page where Mewsie is embedded
 > 2. Send a test message in the widget and confirm you get a reply
-> 3. Open devtools → Network tab → check the chat request goes to `https://998afrnq3y.eu-west-1.awsapprunner.com` (later: `https://mewsie.omniboost.com`) and comes back 200
-> 4. Let me know if anything's broken or pointing at the old Railway URL.
+> 3. Open devtools → Network tab → check the chat request goes to `https://me-fe213300d226440a9641c315defbd68f.ecs.eu-west-1.on.aws` (later: `https://mewsie.omniboost.com`) and comes back 200
+> 4. Let me know if anything's broken or still pointing at the old App Runner URL.
 
 ---
 
@@ -108,19 +140,18 @@ Anything that fails goes into a new item in this file.
 ## 4. Push the local commit to GitHub
 
 - **Priority:** ★★
-- **Status:** Ready (needs Matisse's explicit OK to push)
+- **Status:** **Done 2026-05-21** — `origin/main` is at `799dff5` (commits `a2da024`, `3819832`, `c47775f`, `a24f034`, `799dff5`, `a3895ed` all pushed)
 - **Owner:** Matisse
 - **Effort:** Quick
 
-**What:** Push commit `a2da024` (`chore(deploy): align .env.example and ship-to-aws.md with Dockerfile port 3005`) from local `main` to `origin/main`.
+**What:** Push pending commits from local `main` to `origin/main`.
 
-**Why:** GitHub doesn't yet know about the port fix. Anyone else cloning the repo gets stale config. Also, GitHub Actions auto-deploy (item 8) won't run on commits that aren't on origin.
-
-**How:**
+**How (already executed):**
 ```bash
 git push origin main
 ```
-That's it. No force, no rebase — straight push of one commit ahead.
+
+**Note on the `mewsy` remote (`https://github.com/matissevs2000-creator/Mewsy.git`):** the upstream repo currently returns 404 — either deleted or renamed. Push there fails. Either fix the URL or `git remote remove mewsy`; not blocking anything.
 
 ---
 
@@ -174,13 +205,15 @@ That's it. No force, no rebase — straight push of one commit ahead.
 ## 7. GitHub Actions CI/CD — auto-deploy on push to `main`
 
 - **Priority:** ★★
-- **Status:** Ready (dormant workflow already exists at `.github/workflows/deploy.yml`)
+- **Status:** Ready — workflow file is already retargeted at ECS (commit `799dff5`); needs OIDC role + 3 repo secrets to come alive
 - **Owner:** Matisse
 - **Effort:** Medium
 
-**What:** Activate the existing CI/CD pipeline so every push to `main` runs tests, builds the image, pushes to ECR, and triggers an App Runner redeploy.
+**What:** Activate the existing CI/CD pipeline so every push to `main` runs tests, builds the image, pushes to ECR, and triggers an ECS redeploy.
 
-**Why:** Today the only way to deploy is the manual `docker build && push && start-deployment` sequence. That's fine for now but slow + error-prone. CI/CD removes the manual step.
+> **Updated 2026-05-21 for ECS Express.** The deploy step now calls `aws ecs update-service --force-new-deployment` instead of `aws apprunner start-deployment`. The repo secret is now `ECS_SERVICE_ARN` (not `APP_RUNNER_SERVICE_ARN`).
+
+**Why:** Today the only way to deploy is the manual `docker build && push && update-service` sequence. That's fine for now but slow + error-prone. CI/CD removes the manual step and gives every deploy a build log.
 
 **How:**
 1. Create a GitHub OIDC provider in AWS (one-time per account):
@@ -192,11 +225,13 @@ That's it. No force, no rebase — straight push of one commit ahead.
      --profile sandbox
    ```
 2. Create an IAM role `GitHubActions-mewsie-deploy` that trusts the OIDC provider scoped to `repo:vansteenbergenmatisse/Mewsy_v2:*`. Attach a policy allowing:
-   - `ecr:GetAuthorizationToken`, `ecr:BatchCheckLayerAvailability`, `ecr:GetDownloadUrlForLayer`, `ecr:BatchGetImage`, `ecr:InitiateLayerUpload`, `ecr:UploadLayerPart`, `ecr:CompleteLayerUpload`, `ecr:PutImage` on `*`
-   - `apprunner:StartDeployment` on the Mewsie service ARN
+   - `ecr:GetAuthorizationToken` on `*`
+   - `ecr:BatchCheckLayerAvailability`, `ecr:GetDownloadUrlForLayer`, `ecr:BatchGetImage`, `ecr:InitiateLayerUpload`, `ecr:UploadLayerPart`, `ecr:CompleteLayerUpload`, `ecr:PutImage` on `arn:aws:ecr:eu-west-1:627626160248:repository/mewsie`
+   - `ecs:UpdateService`, `ecs:DescribeServices` on `arn:aws:ecs:eu-west-1:627626160248:service/default/mewsie`
+   - `iam:PassRole` on `arn:aws:iam::627626160248:role/ecsTaskExecutionRole` and `arn:aws:iam::627626160248:role/MewsieEcsTaskRole`
 3. Add 3 GitHub repository secrets under Settings → Secrets and variables → Actions:
    - `AWS_DEPLOY_ROLE_ARN` — the role ARN from step 2
-   - `APP_RUNNER_SERVICE_ARN` — `arn:aws:apprunner:eu-west-1:627626160248:service/mewsie/6ca9af68b42546189a0894d11715f74b`
+   - `ECS_SERVICE_ARN` — `arn:aws:ecs:eu-west-1:627626160248:service/default/mewsie`
    - `ANTHROPIC_API_KEY` — needed because `npm test` makes a real API call
 4. Push a tiny commit to `main` and watch the Actions tab — pipeline should run end to end
 
@@ -209,45 +244,55 @@ That's it. No force, no rebase — straight push of one commit ahead.
 - **Owner:** Matisse
 - **Effort:** Quick
 
-**What:** Today the secret `mewsie/allowed-origins` is `https://mewsie.omniboost.com,https://*.awsapprunner.com`. The wildcard was a safety net during migration. Drop it once we're sure Base + any other embedders point at the production domain.
+**What:** Today the secret `mewsie/allowed-origins` contains both ECS and App Runner default URLs plus a legacy `https://*.awsapprunner.com` wildcard. After Phase E, drop the App Runner entries.
 
-**Why:** The `*.awsapprunner.com` wildcard would let any other App Runner service in any account talk to the Mewsie backend. Low risk because nobody's using it, but trivial to tighten.
+> **Updated 2026-05-21 for ECS Express.** Also flags a real bug: `backend/server.ts:33` uses `.includes(origin)` (exact-match). The `*` wildcard syntax has never actually matched anything — `https://*.awsapprunner.com` was dead code from day one. Worth fixing the parser as a separate small item, or accepting that the allowlist is exact-match only.
 
-**How:**
-1. Confirm Base no longer points at the App Runner default URL (depends on item 2)
-2. Confirm no other embeds rely on it
-3. Update the secret to the production domain + any partner domains:
+**Why:** Once App Runner is decommissioned (Phase E), the App Runner default URL stops resolving, so allowing it does nothing useful. Also tightens the allowlist to the surfaces we actually serve.
+
+**How (post-Phase E):**
+1. Confirm Base + any other embedders point at the production domain (depends on item 2)
+2. Update the secret to the production domain + partner domains only:
    ```bash
    aws secretsmanager put-secret-value \
      --secret-id mewsie/allowed-origins \
-     --secret-string 'https://mewsie.omniboost.com,https://<base-domain>' \
+     --secret-string 'https://mewsie.omniboost.com,https://app.omniboost.io,https://base.development.omniboost.io' \
      --region eu-west-1 --profile sandbox
    ```
-4. Redeploy:
+3. Redeploy so the running ECS task picks up the new value:
    ```bash
-   aws apprunner start-deployment \
-     --service-arn arn:aws:apprunner:eu-west-1:627626160248:service/mewsie/6ca9af68b42546189a0894d11715f74b \
-     --region eu-west-1 --profile sandbox
+   aws ecs update-service \
+     --service arn:aws:ecs:eu-west-1:627626160248:service/default/mewsie \
+     --force-new-deployment --region eu-west-1 --profile sandbox
    ```
+
+**Separate sub-item — fix the wildcard parser:** in `backend/server.ts:33`, swap the `.includes(origin)` check for a small helper that interprets `*.foo.com` as a glob (match any subdomain) but rejects `foo.*` (no domain-prefix wildcards). Add 2 tests in `tests/suites/check-cors.ts`. Out of migration scope; defer.
 
 ---
 
 ## 9. CloudWatch alarms — minimum production observability
 
 - **Priority:** ★★
-- **Status:** Optional but recommended before public launch
+- **Status:** Optional but recommended before public launch — App Runner had basic built-in monitoring; ECS Express has zero alarms by default
 - **Owner:** Matisse
 - **Effort:** Medium
 
 **What:** Set up basic alarms so we hear about problems instead of finding them in users' faces.
 
-**Why:** Currently there are no alarms at all. A spike in 5xx errors or memory exhaustion would only surface in logs.
+> **Updated 2026-05-21 for ECS Express.** Metric namespaces have changed: App Runner metrics (`AWS/AppRunner`) no longer apply once Phase E removes that service. ECS metrics live in `AWS/ECS` (task-level) and `AWS/ApplicationELB` (request-level via the shared ALB).
 
-**How** — suggested initial set:
-1. App Runner `5xxStatusResponses` > 5 in 5 min → SNS → email
-2. App Runner `MemoryUtilization` > 80% for 10 min → SNS → email
-3. App Runner `CPUUtilization` > 90% for 10 min → SNS → email
-4. (Stretch) Lambda that polls Supabase `errors` table delta — Supabase doesn't expose CloudWatch metrics directly
+**Why:** Currently there are no alarms at all. A task crash or a spike in 5xx errors only surfaces in CloudWatch logs — no proactive notification.
+
+**How** — suggested initial set (one SNS topic with email subscription, all alarms target it):
+
+| Metric (namespace / name) | Dimensions | Threshold | Why |
+|---|---|---|---|
+| `AWS/ECS / RunningTaskCount` | ClusterName=default, ServiceName=mewsie | `< 1` for 2 min | Task crashed and isn't being replaced — Mewsie is down |
+| `AWS/ECS / CPUUtilization` | same | `> 90%` for 10 min | Service is hot, may need a vCPU bump |
+| `AWS/ECS / MemoryUtilization` | same | `> 80%` for 10 min | Memory pressure — OOM imminent |
+| `AWS/ApplicationELB / HTTPCode_Target_5XX_Count` | LoadBalancer=app/ecs-express-gateway-alb-6cbde4d3/... | `> 5` in 5 min | Mewsie is throwing 5xx — investigate |
+| `AWS/ApplicationELB / TargetResponseTime` | same, TargetGroup=Mewsie's | `> 8s` p95 for 10 min | Anthropic latency or container saturation |
+| (Stretch) Lambda → Supabase `errors` table delta | n/a | configurable | Supabase doesn't expose CloudWatch metrics directly |
 
 ---
 
@@ -312,7 +357,7 @@ The first three are already separate items. Option C and D are mainly process: t
 ## 13. Cleanup
 
 - **Priority:** ★
-- **Status:** Optional
+- **Status:** Partly done — `.gitignore` updated 2026-05-21 to exclude `.compact-ultra/`
 - **Owner:** Matisse
 - **Effort:** Quick
 
@@ -320,9 +365,10 @@ The first three are already separate items. Option C and D are mainly process: t
 
 **How:**
 1. Delete `railway.toml` from the repo root — Mewsie is no longer on Railway
-2. Delete or repoint `tests/verify-deployment.ts` — it likely points at the old Railway URL
+2. Delete or repoint `tests/verify-deployment.ts` — it likely points at the old Railway URL (and now also predates ECS)
 3. De-dupe the `PORT=` line in local `.env` — there's a `PORT=3005` and a `PORT=4010`, the second wins for local `npm start` (does not affect Docker or AWS)
-4. Optionally delete the old image digest `sha256:f957c63b…` from ECR with `aws ecr batch-delete-image`
+4. Optionally delete obsolete ECR image digests with `aws ecr batch-delete-image` (current good digest: `sha256:79c8d75df0e274b818abd5083e130f979ef7a9af806548c301f7684227f08ede`)
+5. Remove the `HEALTHCHECK` line from the Dockerfile — ECS ignores container-level healthchecks and gates routing on ALB target group health instead. Keeping it is harmless but misleading.
 
 ---
 
