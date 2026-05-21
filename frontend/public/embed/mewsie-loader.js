@@ -24,7 +24,7 @@
 (function (window, document) {
   'use strict';
 
-  var DEFAULT_URL = 'https://998afrnq3y.eu-west-1.awsapprunner.com';
+  var DEFAULT_URL = 'https://me-fe213300d226440a9641c315defbd68f.ecs.eu-west-1.on.aws';
   var CONTAINER_ID = 'mewsie-embed-container';
 
   var state = {
