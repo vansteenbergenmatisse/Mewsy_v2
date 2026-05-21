@@ -509,6 +509,35 @@ aws ecs update-service \
   --force-new-deployment --region eu-west-1 --profile sandbox
 ```
 
+## CI/CD activation (2026-05-21)
+
+GitHub Actions OIDC federation set up so every push to `main` runs the test suite, builds the image, pushes to ECR, and triggers an ECS redeploy. Previously every deploy was a manual `docker build / push / update-service` sequence.
+
+### AWS-side artifacts
+
+| Resource | Value |
+|---|---|
+| OIDC provider | `arn:aws:iam::627626160248:oidc-provider/token.actions.githubusercontent.com` |
+| Deploy role | `arn:aws:iam::627626160248:role/GitHubActions-mewsie-deploy` |
+| Inline policy | `MewsieEcrEcsDeploy` (ECR push to `mewsie` repo, ECS UpdateService/DescribeServices on `mewsie` service, iam:PassRole on `ecsTaskExecutionRole` + `MewsieEcsTaskRole`) |
+| Trust condition | `repo:vansteenbergenmatisse/Mewsy_v2:*` |
+
+### GitHub-side artifacts
+
+Repo secrets set via `gh secret set` on `vansteenbergenmatisse/Mewsy_v2`:
+
+| Secret | Value | Set by |
+|---|---|---|
+| `AWS_DEPLOY_ROLE_ARN` | `arn:aws:iam::627626160248:role/GitHubActions-mewsie-deploy` | tooling, automated |
+| `ECS_SERVICE_ARN` | `arn:aws:ecs:eu-west-1:627626160248:service/default/mewsie` | tooling, automated |
+| `ANTHROPIC_API_KEY` | (manual) | **Matisse — required for `npm test` in the workflow's first job** |
+
+### Activation test
+
+After `ANTHROPIC_API_KEY` is added by Matisse, push any small commit to `main`. Watch GitHub Actions → `build-and-deploy`. Expected sequence: `test` job ~1 min → `build-and-push` job ~3 min (image to ECR) → `update-service --force-new-deployment` → canary deploy ~6–9 min → green.
+
+---
+
 ## Phase D — Custom domain (in progress)
 
 ACM cert `arn:aws:acm:eu-west-1:627626160248:certificate/5846ffd0-1dc3-4a2f-8d2e-e98ac0669373` requested 2026-05-21. Awaiting Bart to publish 2 CNAMEs in Cloudflare (validation + traffic). When `Status` flips to `ISSUED`:

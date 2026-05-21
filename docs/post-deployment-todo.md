@@ -205,9 +205,25 @@ git push origin main
 ## 7. GitHub Actions CI/CD — auto-deploy on push to `main`
 
 - **Priority:** ★★
-- **Status:** Ready — workflow file is already retargeted at ECS (commit `799dff5`); needs OIDC role + 3 repo secrets to come alive
+- **Status:** **95% done 2026-05-21** — OIDC provider + role + repo secrets set. Only `ANTHROPIC_API_KEY` repo secret remains to be added manually (it's a real credential, not auto-set).
 - **Owner:** Matisse
-- **Effort:** Medium
+- **Effort:** Quick (remaining)
+
+**Remaining step:**
+```bash
+gh secret set ANTHROPIC_API_KEY \
+  --body "<value-from-local-.env>" \
+  --repo vansteenbergenmatisse/Mewsy_v2
+```
+or via the web UI: GitHub → repo Settings → Secrets and variables → Actions → New repository secret → `ANTHROPIC_API_KEY` → paste value from local `.env`.
+
+**Activation test:** push any small commit to `main` and watch the Actions tab. First end-to-end run should take 10–14 min (test ~1 min, build/push ~3 min, ECS canary ~6–9 min).
+
+**AWS-side details (already provisioned):** see the "CI/CD activation" section in `aws-deployment-log.md`.
+
+---
+
+### Historical setup notes (already executed — kept for reference)
 
 **What:** Activate the existing CI/CD pipeline so every push to `main` runs tests, builds the image, pushes to ECR, and triggers an ECS redeploy.
 
