@@ -53,8 +53,9 @@ jobs:
           docker push $IMAGE_URI:${{ env.IMAGE_TAG }}
           docker push $IMAGE_URI:latest
 
-      - name: Trigger App Runner deployment
+      - name: Trigger ECS deployment
         run: |
-          aws apprunner start-deployment \
-            --service-arn ${{ secrets.APP_RUNNER_SERVICE_ARN }} \
+          aws ecs update-service \
+            --service ${{ secrets.ECS_SERVICE_ARN }} \
+            --force-new-deployment \
             --region ${{ env.AWS_REGION }}
