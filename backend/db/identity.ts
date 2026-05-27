@@ -82,24 +82,17 @@ export async function resolveIdentity(
       .eq('id', userId);
     console.log(`[identity] Linked browser_token to existing Base user ${baseUserId}`);
   } else {
-    // No sync-context call happened yet — create user with both identities.
-    // Use upsert with base_user_id conflict handling to prevent race conditions
-    // when sync-context and first message arrive simultaneously.
-    const { data: newUser, error } = await supabase
-      .from('users')
-      .upsert(
-        { browser_token: browserToken, base_user_id: baseUserId },
-        { onConflict: 'base_user_id' }
-      )
-      .select('id')
-      .single();
-
-    if (error || !newUser) {
-      console.error('[identity] failed to create user with base_user_id:', error?.message);
-      return { userId: 'error', conversationId: 'error' };
-    }
-    userId = newUser.id;
-    console.log(`[identity] Created/linked user with base_user_id=${baseUserId}`);
+    // SECURITY: /webhook/chat does NOT create users from a caller-supplied
+    // baseUserId. The only authoritative create path is POST /api/sync-context,
+    // which is gated by BASE_SYNC_SECRET. If we get here, Base's backend hasn't
+    // synced this user yet — fall back to anonymous (no DB binding) instead of
+    // letting a chat caller assert any baseUserId they want.
+    //
+    // The session itself still works (in-memory). When Base eventually syncs,
+    // the next chat turn will hit the `baseUser` branch above and attach the
+    // browser_token to the legitimate Base-created row.
+    console.warn(`[identity] chat saw unknown base_user_id=${baseUserId} — refusing to create (no sync-context yet)`);
+    return { userId: 'noop', conversationId: 'noop' };
   }
 
   // 2. Resolve or create conversation
@@ -165,8 +158,13 @@ export async function resolveByBaseUserId(
  * Creates or updates a user from a Base user ID.
  * Called by POST /api/sync-context. Returns { userId, isNew }.
  *
- * - First call: creates a user row with base_user_id + context fields (no browser_token).
- * - Subsequent calls: updates fields that changed (accounting software, company name).
+ * Implementation note: uses a single atomic upsert with `onConflict: 'base_user_id'`
+ * so two concurrent first-syncs for the same user can't both insert. The select-then-
+ * insert pattern this replaced raced against itself and would leave one caller with
+ * an error sentinel even though the row existed.
+ *
+ * Errors during the upsert throw — the calling route should surface a 500 so Base
+ * notices the outage instead of receiving a misleading 200.
  */
 export async function syncBaseUser(
   baseUserId: string,
@@ -178,46 +176,31 @@ export async function syncBaseUser(
 
   const supabase = getSupabase();
 
-  // Check if user exists by base_user_id
+  // Detect "new vs existing" up front so we can report isNew honestly to Base.
+  // The race window between this select and the upsert is harmless: even if a
+  // concurrent caller wins the insert, our upsert below collapses to an UPDATE
+  // via onConflict, and we still return a valid id.
   const existing = await resolveByBaseUserId(baseUserId);
 
-  if (existing) {
-    // Update fields that changed
-    const updates: Record<string, string> = {};
-    if (accountingSystem && accountingSystem !== existing.accountingSystem) {
-      updates.target_accounting_system = accountingSystem;
-    }
-    if (companyName && companyName !== existing.companyName) {
-      updates.company_name = companyName;
-    }
-    if (tier && tier !== existing.tier) {
-      updates.tier = tier;
-    }
-    if (Object.keys(updates).length > 0) {
-      await supabase.from('users').update(updates).eq('id', existing.userId);
-    }
+  // Only include fields the caller actually set — otherwise an undefined value
+  // overwrites a previously-stored real value on subsequent syncs.
+  const row: Record<string, string> = { base_user_id: baseUserId };
+  if (accountingSystem) row.target_accounting_system = accountingSystem;
+  if (tier) row.tier = tier;
+  if (companyName) row.company_name = companyName;
 
-    return { userId: existing.userId, isNew: false };
-  }
-
-  // Create new user with base_user_id (no browser_token — filled when widget opens)
-  const { data: newUser, error } = await supabase
+  const { data: upserted, error } = await supabase
     .from('users')
-    .insert({
-      base_user_id: baseUserId,
-      target_accounting_system: accountingSystem || null,
-      tier: tier || null,
-      company_name: companyName || null,
-    })
+    .upsert(row, { onConflict: 'base_user_id' })
     .select('id')
     .single();
 
-  if (error || !newUser) {
-    console.error('[identity] failed to create base user:', error?.message);
-    return { userId: 'error', isNew: false };
+  if (error || !upserted) {
+    console.error('[identity] failed to upsert base user:', error?.message);
+    throw new Error(`identity: failed to upsert user for base_user_id (${error?.message ?? 'no row returned'})`);
   }
 
-  return { userId: newUser.id, isNew: true };
+  return { userId: upserted.id, isNew: existing === null };
 }
 
 /**

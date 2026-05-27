@@ -843,6 +843,16 @@ export function parseClarifyAnswers(message: string): { q: string; a: string }[]
 
 // ── Main pipeline ───────────────────────────────────────────────────────────────
 
+// Live Base context forwarded by the frontend on every chat request. Comes
+// straight from the iframe URL params the loader script set. These fields
+// pre-fill session.context independently of the DB — so the "skip the integration
+// question" feature works even when Supabase is unreachable.
+export interface LiveBaseContext {
+  accountingSoftware: string | null;
+  tier: 'bronze' | 'silver' | 'gold' | null;
+  companyName: string | null;
+}
+
 // Called by server.ts for every incoming chat message.
 // Runs the full pipeline and returns the reply + optional bundleId for feedback.
 export async function handleMessage(
@@ -850,7 +860,8 @@ export async function handleMessage(
   userMessage: string,
   language: string | null = null,
   browserToken: string | null = null,
-  baseUserId: string | null = null
+  baseUserId: string | null = null,
+  liveContext: LiveBaseContext | null = null
 ): Promise<{ reply: string; bundleId?: string; ticketOffer?: boolean }> {
   const session = getSession(sessionId);
   const context = session.context as unknown as SessionContext;
@@ -870,40 +881,68 @@ export async function handleMessage(
     }
   }
 
-  // ── Pre-populate context from user record (Base sync or prior sessions) ──
-  if (ENABLE_DB_WRITES && isFirstMessage && userId !== 'noop') {
-    try {
-      const supabase = (await import('../db/supabase.ts')).getSupabase();
-      const { data: userRow } = await supabase
-        .from('users')
-        .select('base_user_id, target_accounting_system, tier, company_name')
-        .eq('id', userId)
-        .single();
-      if (userRow) {
-        const patch: Record<string, unknown> = {};
-        if (userRow.target_accounting_system && context.tools.length === 0) {
-          const tools = userRow.target_accounting_system.split(',').map((s: string) => s.trim()).filter(Boolean);
-          patch.tools = tools;
-          context.tools = tools;
-          console.log(`[BASE-SYNC] Pre-populated tools: ${tools.join(', ')}`);
-        }
-        if (userRow.tier && !context.tier) {
-          const validTier = userRow.tier as 'bronze' | 'silver' | 'gold';
-          patch.tier = validTier;
-          context.tier = validTier;
-          console.log(`[BASE-SYNC] Tier: ${validTier}`);
-        }
-        if (userRow.company_name && !context.companyName) {
-          patch.companyName = userRow.company_name;
-          context.companyName = userRow.company_name;
-          console.log(`[BASE-SYNC] Company: ${userRow.company_name}`);
-        }
-        if (Object.keys(patch).length > 0) {
-          updateContext(sessionId, patch);
-        }
+  // ── Pre-populate context from Base (iframe URL params + DB) ──────────────
+  // Two sources, both first-message-only, applied in priority order:
+  //   1. Live URL-param context (immediate, no DB) — works without browser_token.
+  //   2. DB row keyed on base_user_id (richer, may include data Base hasn't re-sent).
+  // Live values win on conflict because they reflect the user's *current* state in
+  // Base; the DB row may be stale if the user switched accounting tools.
+  if (isFirstMessage) {
+    const patch: Record<string, unknown> = {};
+
+    // Source 1: live URL-param context
+    if (liveContext) {
+      if (liveContext.accountingSoftware && context.tools.length === 0) {
+        const tools = liveContext.accountingSoftware
+          .split(',').map(s => s.trim()).filter(Boolean);
+        patch.tools = tools;
+        context.tools = tools;
+        console.log(`[BASE-SYNC] Live tools: ${tools.join(', ')}`);
       }
-    } catch (err) {
-      console.error('[agent] context pre-population failed:', (err as Error).message);
+      if (liveContext.tier && !context.tier) {
+        patch.tier = liveContext.tier;
+        context.tier = liveContext.tier;
+        console.log(`[BASE-SYNC] Live tier: ${liveContext.tier}`);
+      }
+      if (liveContext.companyName && !context.companyName) {
+        patch.companyName = liveContext.companyName;
+        context.companyName = liveContext.companyName;
+        console.log(`[BASE-SYNC] Live company: ${liveContext.companyName}`);
+      }
+    }
+
+    // Source 2: DB row (only if we have a baseUserId to look it up by; works even
+    // when browserToken is missing because resolveByBaseUserId queries base_user_id).
+    if (ENABLE_DB_WRITES && baseUserId) {
+      try {
+        const { resolveByBaseUserId } = await import('../db/identity.ts');
+        const dbRow = await resolveByBaseUserId(baseUserId);
+        if (dbRow) {
+          if (dbRow.accountingSystem && context.tools.length === 0) {
+            const tools = dbRow.accountingSystem.split(',').map(s => s.trim()).filter(Boolean);
+            patch.tools = tools;
+            context.tools = tools;
+            console.log(`[BASE-SYNC] DB tools: ${tools.join(', ')}`);
+          }
+          if (dbRow.tier && !context.tier) {
+            const validTier = dbRow.tier as 'bronze' | 'silver' | 'gold';
+            patch.tier = validTier;
+            context.tier = validTier;
+            console.log(`[BASE-SYNC] DB tier: ${validTier}`);
+          }
+          if (dbRow.companyName && !context.companyName) {
+            patch.companyName = dbRow.companyName;
+            context.companyName = dbRow.companyName;
+            console.log(`[BASE-SYNC] DB company: ${dbRow.companyName}`);
+          }
+        }
+      } catch (err) {
+        console.error('[agent] DB context pre-population failed:', (err as Error).message);
+      }
+    }
+
+    if (Object.keys(patch).length > 0) {
+      updateContext(sessionId, patch);
     }
   }
 
@@ -1395,7 +1434,7 @@ export async function handleMessage(
 
     // Try AI-driven question first, fall back to static buttons
     const [smartBasicResult, basicIntro] = await Promise.all([
-      generateSmartBasicQuestion(userMessage, clarifyingQA, manifest.categories, context.language),
+      generateSmartBasicQuestion(userMessage, clarifyingQA, manifest.categories, context.language, context.tools ?? []),
       generateIntroLine(userMessage, introReason, context.language),
     ]);
 

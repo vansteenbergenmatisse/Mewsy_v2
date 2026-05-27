@@ -13,7 +13,7 @@ import {
   getThinkingMessages,
   uiStr,
 } from './config/chat-config';
-import { BACKEND_URL, getSessionId, getBrowserToken, getBaseUserId, getBaseContext } from './utils/session';
+import { BACKEND_URL, getSessionId, getBrowserToken, getBaseContext } from './utils/session';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -92,24 +92,13 @@ export default function App() {
   // ── Register delegated copy-button handler once on mount ─────────────────
   useEffect(() => { registerCopyHandler(); }, []);
 
-  // ── Base context sync (iframe embed) ────────────────────────────────────────
+  // ── Base context (iframe embed) ────────────────────────────────────────
   // When Mewsie is loaded inside an iframe by mewsie-loader.js, the URL
   // carries context params (?baseUserId=...&as=...&tier=...&company=...).
-  // On mount, read them and call /api/sync-context to create/update the user.
-  useEffect(() => {
-    const ctx = getBaseContext();
-    if (!ctx.baseUserId) return; // Not an iframe embed — skip
-    fetch('/api/sync-context', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        baseUserId: ctx.baseUserId,
-        accountingSoftware: ctx.accountingSoftware,
-        tier: ctx.tier,
-        companyName: ctx.companyName,
-      }),
-    }).catch(() => { /* best-effort — identity linking in resolveIdentity is the fallback */ });
-  }, []);
+  // These are forwarded on every /webhook/chat call below — no separate
+  // /api/sync-context POST from the browser, since that endpoint is now
+  // server-to-server only (BASE_SYNC_SECRET required, can't be safely held
+  // in browser code). Persistence is Base's backend's job via /api/sync-context.
 
   // ── Thinking indicator ─────────────────────────────────────────────────────
 
@@ -287,7 +276,10 @@ export default function App() {
         sessionId: getSessionId(),
         language: selectedLanguage,
         browserToken: getBrowserToken(),
-        baseUserId: getBaseUserId(),
+        // Full Base context forwarded on every request so the backend can
+        // pre-fill session.context without a DB round-trip (iframe URL params
+        // are the authoritative live source — see backend/server.ts).
+        ...getBaseContext(),
       }),
     })
       .then(r => r.json())

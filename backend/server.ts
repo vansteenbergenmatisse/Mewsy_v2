@@ -19,7 +19,8 @@ import { PORT } from './config.ts';
 import { loadAllDocuments } from './fetch/loader.ts';
 import { handleMessage } from './pipeline/agent.ts';
 import { handlePipelineError, ErrorTypes } from './errors/errorHandler.ts';
-import { ENABLE_DB_WRITES, ALLOWED_ORIGINS } from './config/mewsie.config.ts';
+import { ENABLE_DB_WRITES, ALLOWED_ORIGINS, BASE_SYNC_SECRET } from './config/mewsie.config.ts';
+import { timingSafeEqual } from 'crypto';
 
 const app = new Hono();
 
@@ -35,22 +36,46 @@ app.use('*', cors({
   },
 }));
 
+// Prefer x-real-ip (set by trusted reverse proxy) over x-forwarded-for
+// (easily spoofed). Extract only the first IP from x-forwarded-for chains.
+// Shared by every rate-limited route so behavior stays consistent behind the ALB.
+type RateLimitCtx = { req: { header: (name: string) => string | undefined } };
+function clientIp(c: RateLimitCtx): string {
+  const realIp = c.req.header('x-real-ip');
+  if (realIp) return realIp;
+  const forwarded = c.req.header('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return 'unknown';
+}
+
 // Limit each IP to 60 requests per minute on the chat endpoint — prevents API abuse
 const chatRateLimit = rateLimiter({
   windowMs: 60_000,
   limit: 60,
   standardHeaders: 'draft-6',
-  // Prefer x-real-ip (set by trusted reverse proxy) over x-forwarded-for
-  // (easily spoofed). Extract only the first IP from x-forwarded-for chains.
-  keyGenerator: (c) => {
-    const realIp = c.req.header('x-real-ip');
-    if (realIp) return realIp;
-    const forwarded = c.req.header('x-forwarded-for');
-    if (forwarded) return forwarded.split(',')[0].trim();
-    return 'unknown';
-  },
+  keyGenerator: clientIp,
   message: { output: 'Too many requests - please slow down.' },
 });
+
+// /api/sync-context is server-to-server (one call per active user load). 30/min
+// per IP is well above expected legitimate volume and well below abuse levels.
+const syncRateLimit = rateLimiter({
+  windowMs: 60_000,
+  limit: 30,
+  standardHeaders: 'draft-6',
+  keyGenerator: clientIp,
+  message: { error: 'Too many sync requests' },
+});
+
+// Constant-time compare of the X-Mewsie-Sync-Token header against BASE_SYNC_SECRET.
+// Returns false on length mismatch (always), wrong value, or when either side is unset.
+function verifySyncSecret(provided: string | undefined): boolean {
+  if (!BASE_SYNC_SECRET || !provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(BASE_SYNC_SECRET);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
 
 // If the Anthropic API takes longer than 30 seconds, give up and return an error.
 // This prevents the browser from hanging forever on a slow response.
@@ -64,8 +89,15 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   try {
-    const body = await c.req.json<{ chatInput?: unknown; sessionId?: unknown; language?: unknown; browserToken?: unknown; baseUserId?: unknown }>();
-    const { chatInput, sessionId, language, browserToken, baseUserId } = body;
+    const body = await c.req.json<{
+      chatInput?: unknown; sessionId?: unknown; language?: unknown;
+      browserToken?: unknown; baseUserId?: unknown;
+      accountingSoftware?: unknown; tier?: unknown; companyName?: unknown;
+    }>();
+    const {
+      chatInput, sessionId, language, browserToken, baseUserId,
+      accountingSoftware, tier, companyName,
+    } = body;
 
     console.log(`\n${'─'.repeat(60)}`);
     console.log(`[REQUEST]  session=${String(sessionId ?? '?').slice(0, 12)}`);
@@ -93,8 +125,26 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
     const baseId =
       typeof baseUserId === 'string' && baseUserId.length > 0 && baseUserId.length <= 200 ? baseUserId : null;
 
+    // Live Base context from iframe URL params — frontend forwards these on every
+    // chat so the pipeline can pre-fill session.context without a DB round-trip.
+    // Sanitization here is permissive (length-cap + tier allowlist); the prompt
+    // builder in claude.ts applies the strict character filter before interpolation.
+    const VALID_TIERS = new Set(['bronze', 'silver', 'gold']);
+    const liveAccounting =
+      typeof accountingSoftware === 'string' && accountingSoftware.length > 0 && accountingSoftware.length <= 200
+        ? accountingSoftware : null;
+    const liveTier =
+      typeof tier === 'string' && VALID_TIERS.has(tier) ? (tier as 'bronze' | 'silver' | 'gold') : null;
+    const liveCompany =
+      typeof companyName === 'string' && companyName.length > 0 && companyName.length <= 200
+        ? companyName : null;
+
     // Hand off to agent.ts, which runs the full CAG pipeline and returns a reply
-    const outputPromise = handleMessage(sessionId, chatInput, lang, token, baseId);
+    const outputPromise = handleMessage(sessionId, chatInput, lang, token, baseId, {
+      accountingSoftware: liveAccounting,
+      tier: liveTier,
+      companyName: liveCompany,
+    });
 
     // Race between the pipeline and a 30-second timeout
     const timeoutPromise = new Promise<never>((_, reject) => {
@@ -266,10 +316,22 @@ app.post('/api/help-open', async (c) => {
 });
 
 // ── POST /api/sync-context ──────────────────────────────────────────────────
-// Called by the mewsie-sync.js script embedded in Base (Omniboost main product).
-// Creates or updates a Mewsie customer record from Base's user identity.
-// First call creates customer; subsequent calls update if fields changed.
-app.post('/api/sync-context', async (c) => {
+// Server-to-server: Base's backend POSTs the current user's identity + tier +
+// company so Mewsie can persist (and personalize answers).
+//
+// Security model:
+//   C1 auth         — shared secret in X-Mewsie-Sync-Token (timingSafeEqual)
+//   C2 rate limit   — 30/min/IP (syncRateLimit middleware below)
+//   C3 input        — baseUserId required, optional fields validated/clamped
+//   C7 idempotency  — handled inside syncBaseUser via atomic upsert
+//   C8 concurrency  — same upsert is race-safe (ON CONFLICT base_user_id)
+//   C9 audit        — DB row contains last write; identity layer logs creates/links
+//   C10 abuse       — rate limit + secret-gated; no $ exposure on this surface
+app.post('/api/sync-context', syncRateLimit, async (c) => {
+  if (!verifySyncSecret(c.req.header('x-mewsie-sync-token'))) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
   if (!ENABLE_DB_WRITES) return c.json({ ok: true, isNew: false, userId: 'noop' });
 
   try {

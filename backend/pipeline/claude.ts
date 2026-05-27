@@ -280,19 +280,26 @@ export function buildSystemPrompt(
 
   // Block 3 — session context, injected when available.
   if (sessionContext && typeof sessionContext === 'object') {
-    // Sanitize companyName to prevent prompt injection — strip anything that
-    // looks like an instruction, keep only alphanumeric, spaces, and basic punctuation.
-    const rawCompany = sessionContext.companyName || '';
-    const safeCompany = rawCompany
-      .replace(/[\n\r]/g, ' ')           // no newlines (block injection)
-      .replace(/[^\p{L}\p{N}\s&.,''()\-]/gu, '') // keep letters, numbers, basic punctuation
-      .slice(0, 100)                      // cap length
-      .trim() || 'not known';
+    // Strip anything that could escape the SESSION CONTEXT block and inject
+    // instructions: no newlines, keep only letters/numbers/spaces/basic punctuation.
+    // Applied to every Base-supplied string (companyName, tools) because Base is
+    // an external system whose data flows directly into the Sonnet system prompt.
+    const sanitize = (raw: string, max: number): string =>
+      raw
+        .replace(/[\n\r]/g, ' ')
+        .replace(/[^\p{L}\p{N}\s&.,''()\-]/gu, '')
+        .slice(0, max)
+        .trim();
+
+    const safeCompany = sanitize(sessionContext.companyName || '', 100) || 'not known';
+    const safeTools = (sessionContext.tools ?? [])
+      .map(t => sanitize(t, 60))
+      .filter(Boolean);
 
     const contextText = [
       'SESSION CONTEXT',
       `Language: ${sessionContext.language || 'not specified'}`,
-      `Known tools: ${sessionContext.tools && sessionContext.tools.length > 0 ? sessionContext.tools.join(', ') : 'none mentioned'}`,
+      `Known tools: ${safeTools.length > 0 ? safeTools.join(', ') : 'none mentioned'}`,
       `Setup type: ${sessionContext.setupType || 'not confirmed'}`,
       `Tier: ${sessionContext.tier || 'not confirmed'}`,
       `Company: ${safeCompany}`,
@@ -793,7 +800,8 @@ export async function generateSmartBasicQuestion(
   userMessage: string,
   qaLog: { q: string; a: string }[],
   categories: { id: string; label: string; description: string }[],
-  language: string | null
+  language: string | null,
+  knownTools: string[] = []
 ): Promise<{ question: string; options: string[] } | null> {
   const targetLang = langName(language);
 
@@ -804,6 +812,12 @@ export async function generateSmartBasicQuestion(
   const categoryList = categories
     .map(c => `- ${c.label}: ${c.description}`)
     .join('\n');
+
+  // Mirror the CLARIFY-branch guard so BASIC doesn't ask "which accounting tool"
+  // when Base already told us. Same wording, same effect.
+  const knownToolsLine = knownTools.length > 0
+    ? `\nIMPORTANT: The user's accounting integration is already known: ${knownTools.join(', ')}. Do NOT ask which integration, accounting software, or accounting platform they use — that is already established. Ask about a different aspect of their question instead.`
+    : '';
 
   const prompt = `You are a routing assistant for a customer support chatbot about Omniboost hotel accounting integrations.
 
@@ -817,7 +831,7 @@ ${categoryList}
 Generate ONE clarifying question with exactly 4 options to narrow down what the user needs.
 CRITICAL: Options must correspond to real topics from the list above. Do NOT invent topics that aren't covered in the knowledge base. Use the exact category names or descriptions as inspiration for options.
 
-Keep options short (1-4 words each). Write in ${targetLang}.
+Keep options short (1-4 words each). Write in ${targetLang}.${knownToolsLine}
 Respond with ONLY a JSON object, no explanation:
 {"question": "your question", "options": ["opt1", "opt2", "opt3", "opt4"]}`;
 

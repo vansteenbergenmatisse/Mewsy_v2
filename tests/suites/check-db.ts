@@ -244,23 +244,24 @@ export async function checkDb({ pass, fail, skip, results }: Reporter): Promise<
 
       try {
         const syncResult = await syncBaseUser('nonexistent_test_user_xyz', null, null, null);
-        if (syncResult.userId && syncResult.userId !== 'error') {
+        if (syncResult.userId) {
           // Clean up the test user we just created
           const { getSupabase } = await import('../../backend/db/supabase.ts');
           await getSupabase().from('users').delete().eq('id', syncResult.userId);
           pass('syncBaseUser() creates a new user when base user does not exist');
           results.push({ ok: true });
-        } else if (syncResult.userId === 'error') {
-          // Likely migration not applied
-          skip('syncBaseUser()', 'base_user_id column not yet added — run migration 0001');
-          results.push({ ok: 'skip' });
         } else {
-          pass('syncBaseUser() returned a result');
-          results.push({ ok: true });
+          fail('syncBaseUser()', `Got: ${JSON.stringify(syncResult)}`);
+          results.push({ ok: false });
         }
       } catch (err) {
         const msg = (err as Error).message;
-        if (msg.includes('base_user_id') || msg.includes('schema cache')) {
+        // Distinguish network/host failures from schema failures so a stale
+        // SUPABASE_URL doesn't get mis-attributed to a missing migration.
+        if (msg.includes('fetch failed') || msg.includes('ENOTFOUND') || msg.includes('getaddrinfo')) {
+          skip('syncBaseUser()', 'DB unreachable — check SUPABASE_URL / network');
+          results.push({ ok: 'skip' });
+        } else if (msg.includes('schema cache') || msg.includes('column "base_user_id"')) {
           skip('syncBaseUser()', 'base_user_id column not yet added — run migration 0001');
           results.push({ ok: 'skip' });
         } else {

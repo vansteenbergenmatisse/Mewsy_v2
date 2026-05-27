@@ -24,6 +24,9 @@ const REQUIRED: { key: string; critical: boolean }[] = [
   { key: 'SUPABASE_URL',       critical: false },
   { key: 'SUPABASE_SERVICE_KEY', critical: false },
   { key: 'ENABLE_DB_WRITES',   critical: false },
+  // Required for /api/sync-context to accept Base's POSTs. Optional in dev,
+  // but if missing in production no Base sync will ever succeed.
+  { key: 'BASE_SYNC_SECRET',   critical: false },
 ];
 
 export async function checkEnv({ pass, fail, skip, results }: Reporter): Promise<void> {

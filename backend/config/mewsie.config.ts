@@ -96,6 +96,14 @@ export const ALLOWED_ORIGINS: string[] = (process.env.ALLOWED_ORIGINS || '')
   .map(s => s.trim())
   .filter(Boolean);
 
+// ── Base integration ──────────────────────────────────────────────────────────
+
+// Shared secret required on POST /api/sync-context. Base's backend sends it
+// as `X-Mewsie-Sync-Token` so only authorized callers can create/update users.
+// Set in AWS Secrets Manager in production; commit a dev value to .env locally.
+// When unset, /api/sync-context refuses all requests (fail closed).
+export const BASE_SYNC_SECRET: string = process.env.BASE_SYNC_SECRET || '';
+
 // ── Response batching ──────────────────────────────────────────────────────────
 
 // Word count above which a long response is split into batches for streaming.
