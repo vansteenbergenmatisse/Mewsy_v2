@@ -911,29 +911,38 @@ export async function handleMessage(
       }
     }
 
-    // Source 2: DB row (only if we have a baseUserId to look it up by; works even
-    // when browserToken is missing because resolveByBaseUserId queries base_user_id).
-    if (ENABLE_DB_WRITES && baseUserId) {
+    // Source 2: DB row — only when identity has been verifiably bound to this
+    // browser_token by resolveIdentity above (userId !== 'noop'). Without that
+    // gate, anyone supplying a guessed/leaked baseUserId could read another
+    // user's tier/tools/company. The live-context block above still covers the
+    // legitimate case (Base sets URL params on iframe load), so the DB read is
+    // only the "returning user, no fresh URL params" fallback — and only when
+    // the browser has proven ownership of the linked Base row.
+    if (ENABLE_DB_WRITES && userId !== 'noop') {
       try {
-        const { resolveByBaseUserId } = await import('../db/identity.ts');
-        const dbRow = await resolveByBaseUserId(baseUserId);
-        if (dbRow) {
-          if (dbRow.accountingSystem && context.tools.length === 0) {
-            const tools = dbRow.accountingSystem.split(',').map(s => s.trim()).filter(Boolean);
+        const supabase = (await import('../db/supabase.ts')).getSupabase();
+        const { data: userRow } = await supabase
+          .from('users')
+          .select('target_accounting_system, tier, company_name')
+          .eq('id', userId)
+          .single();
+        if (userRow) {
+          if (userRow.target_accounting_system && context.tools.length === 0) {
+            const tools = userRow.target_accounting_system.split(',').map((s: string) => s.trim()).filter(Boolean);
             patch.tools = tools;
             context.tools = tools;
             console.log(`[BASE-SYNC] DB tools: ${tools.join(', ')}`);
           }
-          if (dbRow.tier && !context.tier) {
-            const validTier = dbRow.tier as 'bronze' | 'silver' | 'gold';
+          if (userRow.tier && !context.tier) {
+            const validTier = userRow.tier as 'bronze' | 'silver' | 'gold';
             patch.tier = validTier;
             context.tier = validTier;
             console.log(`[BASE-SYNC] DB tier: ${validTier}`);
           }
-          if (dbRow.companyName && !context.companyName) {
-            patch.companyName = dbRow.companyName;
-            context.companyName = dbRow.companyName;
-            console.log(`[BASE-SYNC] DB company: ${dbRow.companyName}`);
+          if (userRow.company_name && !context.companyName) {
+            patch.companyName = userRow.company_name;
+            context.companyName = userRow.company_name;
+            console.log(`[BASE-SYNC] DB company: ${userRow.company_name}`);
           }
         }
       } catch (err) {

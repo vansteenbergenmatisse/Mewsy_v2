@@ -67,6 +67,19 @@ export const clientWithCaching = new Anthropic({
 // Matches the sentinel value set in agent.ts.
 const BASIC_MODE = '__BASIC_MODE__';
 
+// Strips anything that could break out of a system-prompt / Haiku-prompt block
+// and inject instructions. Applied to every untrusted string (companyName,
+// accountingSoftware, etc.) before interpolation into any prompt — Base URL
+// params are the canonical "untrusted" source today, but this also defends
+// against tool names that detectTools() pulled from a user message.
+export function sanitizePromptString(raw: string, max: number): string {
+  return raw
+    .replace(/[\n\r]/g, ' ')
+    .replace(/[^\p{L}\p{N}\s&.,''()\-]/gu, '')
+    .slice(0, max)
+    .trim();
+}
+
 // ── Language resolution for Haiku-driven responses ────────────────────────────
 //
 // Maps the frontend language code to a plain-English language name used in
@@ -280,20 +293,12 @@ export function buildSystemPrompt(
 
   // Block 3 — session context, injected when available.
   if (sessionContext && typeof sessionContext === 'object') {
-    // Strip anything that could escape the SESSION CONTEXT block and inject
-    // instructions: no newlines, keep only letters/numbers/spaces/basic punctuation.
-    // Applied to every Base-supplied string (companyName, tools) because Base is
-    // an external system whose data flows directly into the Sonnet system prompt.
-    const sanitize = (raw: string, max: number): string =>
-      raw
-        .replace(/[\n\r]/g, ' ')
-        .replace(/[^\p{L}\p{N}\s&.,''()\-]/gu, '')
-        .slice(0, max)
-        .trim();
-
-    const safeCompany = sanitize(sessionContext.companyName || '', 100) || 'not known';
+    // Sanitize every Base-supplied string before it enters the Sonnet system
+    // prompt — see sanitizePromptString() above. Shared helper so the CLARIFY
+    // and BASIC Haiku prompts use the exact same allow-list.
+    const safeCompany = sanitizePromptString(sessionContext.companyName || '', 100) || 'not known';
     const safeTools = (sessionContext.tools ?? [])
-      .map(t => sanitize(t, 60))
+      .map(t => sanitizePromptString(t, 60))
       .filter(Boolean);
 
     const contextText = [
@@ -669,8 +674,11 @@ export async function generateSmartClarifyQuestion(
 
   // If the user's integration/accounting software is already known, block re-asking about it.
   // "integration", "accounting software", and "accounting platform" are interchangeable in this context.
-  const knownToolsLine = knownTools.length > 0
-    ? `\nIMPORTANT: The user's accounting integration is already known: ${knownTools.join(', ')}. Do NOT ask which integration, accounting software, or accounting platform they use — that is already established. Ask about a different aspect of their question instead.`
+  // Sanitize each tool name before interpolation — these can originate from Base URL params
+  // (untrusted) and would otherwise be a prompt-injection vector into the Haiku call.
+  const safeKnownTools = knownTools.map(t => sanitizePromptString(t, 60)).filter(Boolean);
+  const knownToolsLine = safeKnownTools.length > 0
+    ? `\nIMPORTANT: The user's accounting integration is already known: ${safeKnownTools.join(', ')}. Do NOT ask which integration, accounting software, or accounting platform they use — that is already established. Ask about a different aspect of their question instead.`
     : '';
 
   const prompt = `You are a routing assistant for a customer support chatbot about Omniboost hotel accounting integrations.
@@ -814,9 +822,12 @@ export async function generateSmartBasicQuestion(
     .join('\n');
 
   // Mirror the CLARIFY-branch guard so BASIC doesn't ask "which accounting tool"
-  // when Base already told us. Same wording, same effect.
-  const knownToolsLine = knownTools.length > 0
-    ? `\nIMPORTANT: The user's accounting integration is already known: ${knownTools.join(', ')}. Do NOT ask which integration, accounting software, or accounting platform they use — that is already established. Ask about a different aspect of their question instead.`
+  // when Base already told us. Same wording, same sanitizer — knownTools can
+  // originate from untrusted Base URL params and would otherwise be a prompt-
+  // injection vector into this Haiku call.
+  const safeKnownTools = knownTools.map(t => sanitizePromptString(t, 60)).filter(Boolean);
+  const knownToolsLine = safeKnownTools.length > 0
+    ? `\nIMPORTANT: The user's accounting integration is already known: ${safeKnownTools.join(', ')}. Do NOT ask which integration, accounting software, or accounting platform they use — that is already established. Ask about a different aspect of their question instead.`
     : '';
 
   const prompt = `You are a routing assistant for a customer support chatbot about Omniboost hotel accounting integrations.
