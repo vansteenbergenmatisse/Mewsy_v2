@@ -63,6 +63,41 @@ async function checkLoader({ pass, fail, results }: Reporter): Promise<void> {
   }
 }
 
+// ── parseTools (Base accountingSoftware normalization, no API key needed) ─────
+// Locks in the empty-collapse guard: a whitespace-only / comma-only value must
+// become [] (not [""]) so it never leaves context.tools "non-empty" yet useless,
+// which would silently re-trigger the "which integration?" question.
+
+async function checkParseTools({ pass, fail, results }: Reporter): Promise<void> {
+  const { parseTools } = await import(`${ROOT}/backend/utils/tools.ts`);
+
+  const cases: Array<{ input: string | null | undefined; expected: string[]; label: string }> = [
+    { input: 'QuickBooks', expected: ['QuickBooks'], label: 'single tool' },
+    { input: 'Xero, DATEV', expected: ['Xero', 'DATEV'], label: 'comma-separated → two tools' },
+    { input: '  Exact Online  ', expected: ['Exact Online'], label: 'trims surrounding whitespace' },
+    { input: ' , , ', expected: [], label: 'whitespace/comma-only collapses to []' },
+    { input: '', expected: [], label: 'empty string → []' },
+    { input: null, expected: [], label: 'null → []' },
+    { input: undefined, expected: [], label: 'undefined → []' },
+  ];
+
+  for (const { input, expected, label } of cases) {
+    try {
+      const got = parseTools(input) as string[];
+      if (JSON.stringify(got) === JSON.stringify(expected)) {
+        pass(`parseTools: ${label}`);
+        results.push({ ok: true });
+      } else {
+        fail(`parseTools: ${label}`, `parseTools(${JSON.stringify(input)}) → ${JSON.stringify(got)}, expected ${JSON.stringify(expected)}`);
+        results.push({ ok: false });
+      }
+    } catch (err) {
+      fail(`parseTools: ${label}`, (err as Error).message);
+      results.push({ ok: false });
+    }
+  }
+}
+
 // ── Config sanity (no API key needed) ────────────────────────────────────────
 
 async function checkConfigSanity({ pass, fail, results }: Reporter): Promise<void> {
@@ -480,6 +515,7 @@ async function checkPipelineBehaviours({ pass, fail, skip, results }: Reporter):
 export async function checkPipeline({ pass, fail, skip, results }: Reporter): Promise<void> {
   await checkErrorHandler({ pass, fail, skip, results });
   await checkLoader({ pass, fail, skip, results });
+  await checkParseTools({ pass, fail, skip, results });
   await checkConfigSanity({ pass, fail, skip, results });
 
   const hasApiKey = !!process.env.ANTHROPIC_API_KEY;

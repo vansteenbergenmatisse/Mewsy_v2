@@ -85,6 +85,7 @@ import type { Manifest } from '../types/manifest.ts';
 import { migrateManifest } from '../scraper/pipeline/manifest.ts';
 import { TurnBuffer } from '../db/turn-buffer.ts';
 import { resolveIdentity, updateUserAccountingSystem } from '../db/identity.ts';
+import { parseTools } from '../utils/tools.ts';
 
 // __dirname is not available in ES modules by default — this reconstructs it
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -239,7 +240,7 @@ const SHORT_STOPWORDS = new Set([
   'some', 'with', 'from', 'that', 'this', 'what', 'when', 'who',
 ]);
 
-export function findShortTokenCandidates(msgTokens: string[], pages: ManifestPage[]): string[] {
+export function findShortTokenCandidates(msgTokens: string[], pages: ManifestPage[], knownTools: string[] = []): string[] {
   const shortTokens = msgTokens.filter(t => t.length >= 2 && t.length < 5 && !SHORT_STOPWORDS.has(t));
   if (shortTokens.length === 0) return [];
 
@@ -267,11 +268,25 @@ export function findShortTokenCandidates(msgTokens: string[], pages: ManifestPag
     }
   }
 
-  // Return top 3 unique candidates, shortest edit distance first, then alphabetically
-  return candidates
+  // Top 3 unique candidates, shortest edit distance first, then alphabetically
+  let result = candidates
     .sort((a, b) => a.dist - b.dist || a.keyword.localeCompare(b.keyword))
     .slice(0, 3)
     .map(c => c.keyword);
+
+  // If the integration is already known (Base passed it, or it was detected
+  // earlier), drop any candidate that merely re-offers a known tool — otherwise
+  // we'd surface "Did you mean QuickBooks?" to a user we already know uses
+  // QuickBooks, which reads as the bot asking which integration despite knowing.
+  if (knownTools.length > 0) {
+    const known = knownTools.map(t => t.toLowerCase()).filter(Boolean);
+    result = result.filter(cand => {
+      const c = cand.toLowerCase();
+      return !known.some(t => t === c || t.includes(c) || c.includes(t));
+    });
+  }
+
+  return result;
 }
 
 // ── CLARIFY button selection ────────────────────────────────────────────────────
@@ -882,22 +897,32 @@ export async function handleMessage(
   }
 
   // ── Pre-populate context from Base (iframe URL params + DB) ──────────────
-  // Two sources, both first-message-only, applied in priority order:
-  //   1. Live URL-param context (immediate, no DB) — works without browser_token.
-  //   2. DB row keyed on base_user_id (richer, may include data Base hasn't re-sent).
-  // Live values win on conflict because they reflect the user's *current* state in
-  // Base; the DB row may be stale if the user switched accounting tools.
-  if (isFirstMessage) {
+  // Two sources, applied in priority order; live values win on conflict because
+  // they reflect the user's *current* state in Base (the DB row may be stale if
+  // the user switched accounting tools).
+  //
+  //   1. Live URL-param context (immediate, no DB) — runs on EVERY turn while a
+  //      field is still empty. The per-field guards (length===0 / !context.x)
+  //      make re-runs no-ops once set, so this is idempotent. It is intentionally
+  //      NOT gated on isFirstMessage: a value that only arrives on a later message
+  //      (e.g. the first turn ran before Base's params were present) must still
+  //      take effect rather than being silently ignored. (history is currently
+  //      always empty in production, so isFirstMessage is always true — decoupling
+  //      here is behaviour-preserving today and removes a latent landmine if
+  //      conversation history is ever wired into the session store.)
+  {
     const patch: Record<string, unknown> = {};
-
-    // Source 1: live URL-param context
     if (liveContext) {
       if (liveContext.accountingSoftware && context.tools.length === 0) {
-        const tools = liveContext.accountingSoftware
-          .split(',').map(s => s.trim()).filter(Boolean);
-        patch.tools = tools;
-        context.tools = tools;
-        console.log(`[BASE-SYNC] Live tools: ${tools.join(', ')}`);
+        const tools = parseTools(liveContext.accountingSoftware);
+        // Guard: never overwrite tools with an empty array. A degenerate value
+        // (" ", ",") parses to [] — leaving tools unset keeps the door open for
+        // a later, real value instead of locking in a useless empty list.
+        if (tools.length > 0) {
+          patch.tools = tools;
+          context.tools = tools;
+          console.log(`[BASE-SYNC] Live tools: ${tools.join(', ')}`);
+        }
       }
       if (liveContext.tier && !context.tier) {
         patch.tier = liveContext.tier;
@@ -910,46 +935,50 @@ export async function handleMessage(
         console.log(`[BASE-SYNC] Live company: ${liveContext.companyName}`);
       }
     }
+    if (Object.keys(patch).length > 0) {
+      updateContext(sessionId, patch);
+    }
+  }
 
-    // Source 2: DB row — only when identity has been verifiably bound to this
-    // browser_token by resolveIdentity above (userId !== 'noop'). Without that
-    // gate, anyone supplying a guessed/leaked baseUserId could read another
-    // user's tier/tools/company. The live-context block above still covers the
-    // legitimate case (Base sets URL params on iframe load), so the DB read is
-    // only the "returning user, no fresh URL params" fallback — and only when
-    // the browser has proven ownership of the linked Base row.
-    if (ENABLE_DB_WRITES && userId !== 'noop') {
-      try {
-        const supabase = (await import('../db/supabase.ts')).getSupabase();
-        const { data: userRow } = await supabase
-          .from('users')
-          .select('target_accounting_system, tier, company_name')
-          .eq('id', userId)
-          .single();
-        if (userRow) {
-          if (userRow.target_accounting_system && context.tools.length === 0) {
-            const tools = userRow.target_accounting_system.split(',').map((s: string) => s.trim()).filter(Boolean);
+  //   2. DB row keyed on the bound user — first message only, and only when the
+  //      browser has proven ownership of the linked Base row (userId !== 'noop').
+  //      Without that gate, anyone supplying a guessed/leaked baseUserId could
+  //      read another user's tier/tools/company. The live-context block above
+  //      still covers the legitimate case (Base sets URL params on iframe load),
+  //      so the DB read is only the "returning user, no fresh URL params" fallback.
+  if (isFirstMessage && ENABLE_DB_WRITES && userId !== 'noop') {
+    const patch: Record<string, unknown> = {};
+    try {
+      const supabase = (await import('../db/supabase.ts')).getSupabase();
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('target_accounting_system, tier, company_name')
+        .eq('id', userId)
+        .single();
+      if (userRow) {
+        if (userRow.target_accounting_system && context.tools.length === 0) {
+          const tools = parseTools(userRow.target_accounting_system);
+          if (tools.length > 0) {
             patch.tools = tools;
             context.tools = tools;
             console.log(`[BASE-SYNC] DB tools: ${tools.join(', ')}`);
           }
-          if (userRow.tier && !context.tier) {
-            const validTier = userRow.tier as 'bronze' | 'silver' | 'gold';
-            patch.tier = validTier;
-            context.tier = validTier;
-            console.log(`[BASE-SYNC] DB tier: ${validTier}`);
-          }
-          if (userRow.company_name && !context.companyName) {
-            patch.companyName = userRow.company_name;
-            context.companyName = userRow.company_name;
-            console.log(`[BASE-SYNC] DB company: ${userRow.company_name}`);
-          }
         }
-      } catch (err) {
-        console.error('[agent] DB context pre-population failed:', (err as Error).message);
+        if (userRow.tier && !context.tier) {
+          const validTier = userRow.tier as 'bronze' | 'silver' | 'gold';
+          patch.tier = validTier;
+          context.tier = validTier;
+          console.log(`[BASE-SYNC] DB tier: ${validTier}`);
+        }
+        if (userRow.company_name && !context.companyName) {
+          patch.companyName = userRow.company_name;
+          context.companyName = userRow.company_name;
+          console.log(`[BASE-SYNC] DB company: ${userRow.company_name}`);
+        }
       }
+    } catch (err) {
+      console.error('[agent] DB context pre-population failed:', (err as Error).message);
     }
-
     if (Object.keys(patch).length > 0) {
       updateContext(sessionId, patch);
     }
@@ -1204,7 +1233,7 @@ export async function handleMessage(
         // known keywords, surface them as a targeted CLARIFY ("Did you mean X, Y, Z?")
         // instead of showing the generic 3-question carousel.
         const msgTokensForCandidates = stage1Query.toLowerCase().split(/[\s,.()\-/]+/).filter(Boolean);
-        shortTokenCandidates = findShortTokenCandidates(msgTokensForCandidates, allPages);
+        shortTokenCandidates = findShortTokenCandidates(msgTokensForCandidates, allPages, context.tools);
         if (shortTokenCandidates.length > 0) {
           clarifyTriggerReason = 'TOO_BROAD';
           console.log(`[STAGE 1]  0/${allPages.length} docs matched, short token → CLARIFY candidates: [${shortTokenCandidates.join(', ')}]`);

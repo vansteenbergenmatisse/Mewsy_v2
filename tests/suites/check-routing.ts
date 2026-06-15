@@ -287,6 +287,27 @@ export async function checkRouting({ pass, fail, skip, results }: Reporter): Pro
     results.push({ ok: false });
   }
 
+  // Test: when the integration is already known, "xer" no longer re-offers Xero
+  // (suppressed) — the bot shouldn't ask "Did you mean Xero?" to a Xero user.
+  const xeroKnownCandidates = findShortTokenCandidates(xeroTokens, pages, ['Xero']);
+  if (!xeroKnownCandidates.some((c: string) => /xero/i.test(c))) {
+    pass('short-token: known tool ["Xero"] suppresses the Xero candidate for "xer"');
+    results.push({ ok: true });
+  } else {
+    fail('short-token: known Xero should suppress the Xero candidate', `Got: [${xeroKnownCandidates.join(', ')}]`);
+    results.push({ ok: false });
+  }
+
+  // Test: a *different* known tool does NOT suppress an unrelated candidate
+  const xeroOtherKnown = findShortTokenCandidates(xeroTokens, pages, ['QuickBooks']);
+  if (xeroOtherKnown.some((c: string) => /xero/i.test(c))) {
+    pass('short-token: unrelated known tool ["QuickBooks"] still surfaces Xero for "xer"');
+    results.push({ ok: true });
+  } else {
+    fail('short-token: QuickBooks known should NOT suppress Xero candidate', `Got: [${xeroOtherKnown.join(', ')}]`);
+    results.push({ ok: false });
+  }
+
   // Test: common stop words like "for", "the" do NOT produce candidates
   const stopWordTokens = ['for', 'the', 'how'];
   const stopCandidates = findShortTokenCandidates(stopWordTokens, pages);

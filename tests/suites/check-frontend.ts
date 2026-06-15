@@ -947,6 +947,74 @@ export async function checkFrontend({ pass, fail, skip: _skip, results }: Report
     }
   }
 
+  // ── getBaseContext (real fn — browser globals shimmed) ─────────────────────
+  // Regression guard for the persistence fix: as/tier/company must survive in
+  // sessionStorage (like baseUserId) so a later message whose URL no longer
+  // carries the params still reports the integration. Without this, Mewsie
+  // "forgets" QuickBooks on the next turn and re-asks "which tool?".
+  {
+    const store: Record<string, string> = {};
+    const fakeSession = {
+      getItem: (k: string): string | null => (Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null),
+      setItem: (k: string, v: string): void => { store[k] = v; },
+      removeItem: (k: string): void => { delete store[k]; },
+      clear: (): void => { for (const k of Object.keys(store)) delete store[k]; },
+    };
+    const glob = globalThis as unknown as Record<string, unknown>;
+    const prevWindow = glob.window;
+    const prevSession = glob.sessionStorage;
+    glob.window = { location: { search: '' } };
+    glob.sessionStorage = fakeSession;
+    const setSearch = (s: string): void => {
+      (glob.window as { location: { search: string } }).location.search = s;
+    };
+
+    type BaseCtx = { baseUserId: string | null; accountingSoftware: string | null; tier: string | null; companyName: string | null };
+    try {
+      const { getBaseContext } = await import(`${ROOT}/frontend/src/utils/session.ts`);
+
+      // 1) First load: all params on the URL → returned AND persisted
+      setSearch('?baseUserId=806114148-29&as=QuickBooks&tier=bronze&company=48%20Park%20Street');
+      const first = getBaseContext() as BaseCtx;
+      if (first.accountingSoftware === 'QuickBooks' && first.tier === 'bronze' && first.companyName === '48 Park Street' && first.baseUserId === '806114148-29') {
+        pass('getBaseContext: reads baseUserId/as/tier/company from the iframe URL on first load');
+        results.push({ ok: true });
+      } else {
+        fail('getBaseContext first load', `Got: ${JSON.stringify(first)}`);
+        results.push({ ok: false });
+      }
+
+      // 2) Later message: URL no longer carries the params → restored from storage
+      setSearch('');
+      const second = getBaseContext() as BaseCtx;
+      if (second.accountingSoftware === 'QuickBooks' && second.tier === 'bronze' && second.companyName === '48 Park Street' && second.baseUserId === '806114148-29') {
+        pass('getBaseContext: restores as/tier/company from sessionStorage when the URL is cleared (integration not forgotten)');
+        results.push({ ok: true });
+      } else {
+        fail('getBaseContext persistence fallback', `Got: ${JSON.stringify(second)}`);
+        results.push({ ok: false });
+      }
+
+      // 3) Nothing on URL and nothing stored → all null
+      fakeSession.clear();
+      setSearch('');
+      const empty = getBaseContext() as BaseCtx;
+      if (empty.accountingSoftware === null && empty.tier === null && empty.companyName === null && empty.baseUserId === null) {
+        pass('getBaseContext: returns all-null when no URL params and nothing persisted');
+        results.push({ ok: true });
+      } else {
+        fail('getBaseContext empty state', `Got: ${JSON.stringify(empty)}`);
+        results.push({ ok: false });
+      }
+    } catch (err) {
+      fail('getBaseContext (real fn) setup', (err as Error).message);
+      results.push({ ok: false });
+    } finally {
+      glob.window = prevWindow;
+      glob.sessionStorage = prevSession;
+    }
+  }
+
   // ── Callout variants ──────────────────────────────────────────────────────
 
   // [warn]

@@ -198,6 +198,37 @@ export async function checkServer({ pass, fail, skip, results }: Reporter): Prom
       results.push({ ok: 'skip' });
     }
 
+    // ── Live Base context: a tool arriving on a LATER message still suppresses
+    // the "which integration?" question. Message 1 (same session) carries no
+    // tool; message 2 carries QuickBooks. Locks the contract that the live
+    // pre-fill is applied per-turn (not only on the first message), so a value
+    // Base sends late is never silently ignored.
+    if (process.env.ANTHROPIC_API_KEY) {
+      const ctxSession = `srv-ctx-${Date.now()}`;
+      const tok = 'bt_srvctx';
+      await fetchJson(`${BASE}/webhook/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatInput: 'How do I map a revenue account?', sessionId: ctxSession, browserToken: tok }),
+      });
+      const withTool = await fetchJson(`${BASE}/webhook/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatInput: 'How do I map a revenue account?', sessionId: ctxSession, browserToken: tok, accountingSoftware: 'QuickBooks', tier: 'bronze', companyName: '48 Park Street' }),
+      });
+      const out2 = String((withTool.body as { output?: unknown })?.output ?? '');
+      if (withTool.status === 200 && !/which\s+(accounting|integration)/i.test(out2)) {
+        pass('POST /webhook/chat: a tool sent on a later message suppresses the "which integration?" question');
+        results.push({ ok: true });
+      } else {
+        fail('POST /webhook/chat later-message tool suppresses integration question', `status ${withTool.status}, output: ${out2.slice(0, 200)}`);
+        results.push({ ok: false });
+      }
+    } else {
+      skip('POST /webhook/chat later-message tool suppresses integration question', 'ANTHROPIC_API_KEY not set');
+      results.push({ ok: 'skip' });
+    }
+
     // ── Wrong HTTP method → 404 ────────────────────────────────────────────
     // Hono returns 404 for GET on a POST-only route
     const wrongMethod = await fetchJson(`${BASE}/webhook/chat`);

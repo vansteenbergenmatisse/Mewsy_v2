@@ -130,14 +130,18 @@ app.post('/webhook/chat', chatRateLimit, async (c) => {
     // Sanitization here is permissive (length-cap + tier allowlist); the prompt
     // builder in claude.ts applies the strict character filter before interpolation.
     const VALID_TIERS = new Set(['bronze', 'silver', 'gold']);
+    // Trim before the length check — a whitespace-only value (" ", ",") would
+    // otherwise pass length>0, survive as non-null, then get emptied downstream
+    // (parseTools), leaving context.tools=[] and re-triggering the integration
+    // question. Trimming coerces blank input to null up front.
+    const trimmedAccounting = typeof accountingSoftware === 'string' ? accountingSoftware.trim() : '';
     const liveAccounting =
-      typeof accountingSoftware === 'string' && accountingSoftware.length > 0 && accountingSoftware.length <= 200
-        ? accountingSoftware : null;
+      trimmedAccounting.length > 0 && trimmedAccounting.length <= 200 ? trimmedAccounting : null;
     const liveTier =
       typeof tier === 'string' && VALID_TIERS.has(tier) ? (tier as 'bronze' | 'silver' | 'gold') : null;
+    const trimmedCompany = typeof companyName === 'string' ? companyName.trim() : '';
     const liveCompany =
-      typeof companyName === 'string' && companyName.length > 0 && companyName.length <= 200
-        ? companyName : null;
+      trimmedCompany.length > 0 && trimmedCompany.length <= 200 ? trimmedCompany : null;
 
     // Hand off to agent.ts, which runs the full CAG pipeline and returns a reply
     const outputPromise = handleMessage(sessionId, chatInput, lang, token, baseId, {

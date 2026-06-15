@@ -17,8 +17,16 @@ export function getBaseUserId(): string | null {
   return sessionStorage.getItem('Mewsie_base_user_id');
 }
 
-// Reads Base context from URL params (set by mewsie-loader.js iframe).
-// Returns null values for any params not present.
+// Reads Base context from URL params (set by mewsie-loader.js iframe), then
+// persists each value to sessionStorage — exactly like getBaseUserId() does.
+//
+// Why persist: the loader only puts as/tier/company on the *initial* iframe URL.
+// If the query string later changes (SPA navigation, an in-iframe reload after a
+// backend restart or session TTL wipe), reading the URL fresh would return null
+// and Mewsie would "forget" the integration and start asking "which tool?" again
+// — even though baseUserId survived (it was persisted). Persisting all four keeps
+// them in lockstep, so the backend pre-fill can re-populate context on any later
+// message. URL value always wins when present; sessionStorage is the fallback.
 export function getBaseContext(): {
   baseUserId: string | null;
   accountingSoftware: string | null;
@@ -26,11 +34,19 @@ export function getBaseContext(): {
   companyName: string | null;
 } {
   const params = new URLSearchParams(window.location.search);
+  const persisted = (urlKey: string, storeKey: string): string | null => {
+    const fromUrl = params.get(urlKey);
+    if (fromUrl) {
+      sessionStorage.setItem(storeKey, fromUrl);
+      return fromUrl;
+    }
+    return sessionStorage.getItem(storeKey);
+  };
   return {
     baseUserId: getBaseUserId(),
-    accountingSoftware: params.get('as'),
-    tier: params.get('tier'),
-    companyName: params.get('company'),
+    accountingSoftware: persisted('as', 'Mewsie_as'),
+    tier: persisted('tier', 'Mewsie_tier'),
+    companyName: persisted('company', 'Mewsie_company'),
   };
 }
 

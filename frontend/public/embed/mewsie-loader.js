@@ -157,6 +157,9 @@
         console.error('[MewsieEmbed] init() requires config.baseUserId');
         return;
       }
+      if (!config.accountingSoftware) {
+        console.warn('[MewsieEmbed] init() called without accountingSoftware — Mewsie cannot know the integration and will ask the user which accounting tool they use. Pass accountingSoftware (e.g. "QuickBooks") to skip that question.');
+      }
       state.config = config;
       state.initialized = true;
 
