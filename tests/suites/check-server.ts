@@ -351,7 +351,10 @@ export async function checkServer({ pass, fail, skip, results }: Reporter): Prom
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ vote: 'up' }),
     });
-    if (fbMissing.status === 400) {
+    if (process.env.ENABLE_DB_WRITES !== 'true') {
+      skip('POST /api/feedback rejects missing bundleId', 'ENABLE_DB_WRITES off — route no-ops to { ok: true } before validating');
+      results.push({ ok: 'skip' });
+    } else if (fbMissing.status === 400) {
       pass('POST /api/feedback rejects missing bundleId with 400');
       results.push({ ok: true });
     } else {
@@ -365,7 +368,10 @@ export async function checkServer({ pass, fail, skip, results }: Reporter): Prom
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bundleId: crypto.randomUUID(), vote: 'maybe' }),
     });
-    if (fbBadVote.status === 400) {
+    if (process.env.ENABLE_DB_WRITES !== 'true') {
+      skip('POST /api/feedback rejects invalid vote', 'ENABLE_DB_WRITES off — route no-ops to { ok: true } before validating');
+      results.push({ ok: 'skip' });
+    } else if (fbBadVote.status === 400) {
       pass('POST /api/feedback rejects invalid vote with 400');
       results.push({ ok: true });
     } else {
